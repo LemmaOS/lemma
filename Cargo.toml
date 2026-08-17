@@ -1,0 +1,22 @@
+[workspace]
+resolver = "2"
+members = ["crates/server", "crates/db", "crates/rpc"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+
+[workspace.dependencies]
+# 本地依赖
+lemma-db = { path = "crates/db" }
+lemma-rpc = { path = "crates/rpc" }
+# 远程依赖
+axum = "0.8"
+connectrpc = "0.8.1"
+sqlx = { version = "0.9.0", features = [
+    "postgres",
+    "runtime-tokio",
+    "tls-rustls",
+    "migrate",
+] }
+tokio = { version = "1.53.1", features = ["full"] }

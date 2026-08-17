@@ -1,0 +1,7 @@
+[package]
+name = "lemma-rpc"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+connectrpc.workspace = true

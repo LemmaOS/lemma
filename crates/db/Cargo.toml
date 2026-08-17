@@ -1,0 +1,8 @@
+[package]
+name = "lemma-db"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+sqlx.workspace = true
+tokio.workspace = true
