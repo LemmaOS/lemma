@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package lemma.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// 用户角色：owner 为首个注册用户，当前与 normal 权益相同
+enum Role {
+  ROLE_UNSPECIFIED = 0;
+  ROLE_OWNER = 1;
+  ROLE_NORMAL = 2;
+}
+
+message User {
+  string id = 1;
+  string username = 2;
+  string email = 3;
+  Role role = 4;
+  google.protobuf.Timestamp created_at = 5;
+}
+
+// 令牌对：access 短寿命，refresh 存库、可吊销
+message AuthTokens {
+  string access_token = 1;
+  google.protobuf.Timestamp access_token_expires_at = 2;
+  string refresh_token = 3;
+}
+
+message SignUpRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message SignUpResponse {
+  User user = 1;
+  AuthTokens tokens = 2;
+}
+
+message LoginRequest {
+  // username 与 email 二选一
+  string username = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message LoginResponse {
+  User user = 1;
+  AuthTokens tokens = 2;
+}
+
+message RefreshRequest {
+  string refresh_token = 1;
+}
+
+message RefreshResponse {
+  AuthTokens tokens = 1;
+}
+
+message LogoutRequest {
+  string refresh_token = 1;
+}
+
+message LogoutResponse {}
+
+message MeRequest {}
+
+message MeResponse {
+  User user = 1;
+}
+
+service AuthService {
+  // 首个注册用户成为 owner
+  rpc SignUp(SignUpRequest) returns (SignUpResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  // refresh 轮换：旧 token 立即作废
+  rpc Refresh(RefreshRequest) returns (RefreshResponse);
+  // 吊销当前 refresh token
+  rpc Logout(LogoutRequest) returns (LogoutResponse);
+  rpc Me(MeRequest) returns (MeResponse);
+}
