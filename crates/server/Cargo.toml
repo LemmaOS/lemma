@@ -5,6 +5,6 @@ edition.workspace = true
 
 [dependencies]
 lemma-db.workspace = true
-lemma-rpc.workspace = true
+lemma-proto.workspace = true
 axum.workspace = true
 tokio.workspace = true

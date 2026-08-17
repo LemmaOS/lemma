@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["crates/server", "crates/db", "crates/rpc"]
+members = ["crates/server", "crates/db", "crates/proto"]
 
 [workspace.package]
 version = "0.1.0"
@@ -9,7 +9,7 @@ edition = "2024"
 [workspace.dependencies]
 # 本地依赖
 lemma-db = { path = "crates/db" }
-lemma-rpc = { path = "crates/rpc" }
+lemma-proto = { path = "crates/proto" }
 # 远程依赖
 axum = "0.8"
 connectrpc = "0.8.1"

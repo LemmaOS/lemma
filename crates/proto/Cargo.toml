@@ -1,5 +1,5 @@
 [package]
-name = "lemma-rpc"
+name = "lemma-proto"
 version.workspace = true
 edition.workspace = true
 
