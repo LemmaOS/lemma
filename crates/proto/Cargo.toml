@@ -4,4 +4,11 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
-connectrpc.workspace = true
+buffa.workspace = true
+buffa-types.workspace = true
+connectrpc = { workspace = true, features = ["server", "axum"] }
+serde.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+connectrpc-build.workspace = true

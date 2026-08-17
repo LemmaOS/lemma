@@ -1,14 +1,6 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+// 生成代码挂载点：类型与服务定义在编译期从 proto/ 生成
+pub mod proto {
+    connectrpc::include_generated!();
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use proto::lemma;
