@@ -1,0 +1,23 @@
+# Rust
+target/
+
+# Node JS
+node_modules/
+
+# Web（Vite）
+
+# Desktop（Electron Forge）
+
+# Android / KMP
+
+# 环境变量与密钥
+.env
+.env.*
+!.env.example
+
+# IDE
+.vscode/*
+
+# 系统
+.DS_Store
+Thumbs.db
