@@ -1,6 +1,6 @@
 # Lemma — 技术设计文档（v0）
 
-> 对应 PRD：`docs/prd/v0-prd.md` | 版本：v0.6 | 状态：评审中
+> 对应 PRD：`docs/prd/v0-prd.md` | 版本：v0.7 | 状态：评审中
 >
 > 本文档只描述粗粒度架构与关键技术选型；各领域设计在实现推进到对应阶段时再逐节填写，填写前不预设实现细节。
 > 文档只保留当前状态，历史变更由 git 提交记录承载。
@@ -52,7 +52,31 @@ graph LR
 
 ## 3. Monorepo 布局
 
-（待填写）
+```
+lemma/
+├── Cargo.toml               # Rust workspace 根
+├── justfile                 # 统一任务入口（proto lint/build/gen）
+├── package.json             # npm workspace 根（web 及未来的 desktop）
+├── crates/
+│   ├── server/              # bin：入口 + 全部业务逻辑
+│   ├── db/                  # lib：连接池、实体、查询、迁移
+│   └── proto/               # lib：proto 编译期生成（connectrpc-build）
+├── proto/                   # 契约唯一事实源（buf 管理）
+│   └── lemma/v1/
+├── web/                     # React Web 端（Vite）
+├── desktop/                 # Electron 壳，复用 web/ 产物（M3）
+├── mobile/                  # KMP + CMP（M4）
+│   ├── shared/
+│   └── androidApp/
+├── deploy/                  # docker-compose.yml + .env.example
+└── docs/
+```
+
+**双端代码生成管线**（Rust 与 TS 均从 `proto/` 生成，均不入 git）：
+
+- Rust：`crates/proto/build.rs` 编译期经 connectrpc-build 生成到 OUT_DIR，`cargo build` 自动重生成
+- TS：`just proto-gen` 经 buf + 本地 protoc-gen-es 插件生成到 `web/src/gen/`
+- 契约变更后：`just proto-lint && just proto-build && just proto-gen && cargo build` 全绿再提交
 
 ## 4. 后端架构
 
@@ -64,7 +88,17 @@ graph LR
 
 ## 6. 接口设计
 
-（待填写）
+契约放 `proto/lemma/v1/`，正式定义以 proto 为准（已全部定稿，buf STANDARD 通过）：
+
+| 服务                | 职责                                                          |
+| ------------------- | ------------------------------------------------------------- |
+| AuthService         | 注册（首个用户 owner）、登录、刷新（轮换）、登出、当前用户   |
+| ProviderService     | 供应商 CRUD（Key 脱敏返回）+ 远程模型列表拉取                 |
+| ConversationService | 会话/消息管理、归档、解档、归档列表、彻底删除                 |
+| ChatService         | 发消息（服务端流）、中断、续传（服务端流，按字符 offset 重放）|
+| SyncService         | 增量 Pull（游标 + 循环分页）+ 常驻 Watch 流（提示 + 心跳）    |
+
+约定：认证走 `Authorization: Bearer` 请求头；所有数据按当前用户做归属校验；响应一律独立命名的 XxxResponse 包裹，不复用实体消息；实体不带协议字段（sync_seq 等只出现在对应协议载荷中）。
 
 ## 7. 客户端架构
 
