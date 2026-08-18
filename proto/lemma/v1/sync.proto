@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package lemma.v1;
+
+import "lemma/v1/conversation.proto";
+
+// 增量同步：sync_seq 定序 + LWW；断线重连后必须补拉
+service SyncService {
+  rpc Pull(PullRequest) returns (PullResponse);
+  // 长驻流：变更提示与心跳
+  rpc Watch(WatchRequest) returns (stream WatchResponse);
+}
+
+// 实体与其变更序号
+message SyncConversation {
+  Conversation conversation = 1;
+  int64 sync_seq = 2;
+}
+
+message SyncMessage {
+  Message message = 1;
+  int64 sync_seq = 2;
+}
+
+message WatchHint {
+  // 服务端当前头部的 sync_seq，客户端落后则 Pull
+  int64 sync_seq = 1;
+}
+
+message WatchHeartbeat {}
+
+message WatchResponse {
+  oneof kind {
+    WatchHint hint = 1;
+    WatchHeartbeat heartbeat = 2;
+  }
+}
+
+message PullRequest {
+  // 客户端游标，首次传 0
+  int64 after = 1;
+}
+
+message PullResponse {
+  repeated SyncConversation conversations = 1;
+  repeated SyncMessage messages = 2;
+  // 归档元数据全量刷新（量小，不做增量）
+  repeated Conversation archived = 3;
+  // 返回数据的最大 sync_seq，作为下次游标
+  int64 next_after = 4;
+  // 仍有未拉取的变更，客户端应继续循环 Pull
+  bool has_more = 5;
+}
+
+message WatchRequest {}
