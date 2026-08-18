@@ -1,14 +1,15 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
+pub mod entity;
+pub mod tokens;
+pub mod users;
+
+use sqlx::PgPool;
+use sqlx::postgres::PgPoolOptions;
+
+pub async fn connect(url: &str) -> sqlx::Result<PgPool> {
+    PgPoolOptions::new().connect(url).await
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
+// 启动时执行迁移（嵌入编译产物）
+pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
+    sqlx::migrate!("./migrations").run(pool).await
 }
