@@ -17,11 +17,8 @@ lerna-debug.log*
 dist
 dist-ssr
 *.local
-# proto 生成的 TS 代码（just proto-gen 生成，不入库）
+# proto 生成的 TS 代码
 web/src/gen
-# tsc 增量编译缓存（workspace 下被 tsc -b 写入各包内）
-node_modules/.tmp
-.vite-temp
 
 # Desktop（Electron Forge）
 
