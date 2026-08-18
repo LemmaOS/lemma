@@ -1,0 +1,14 @@
+{
+    "name": "lemma",
+    "version": "0.1.0",
+    "private": true,
+    "workspaces": [
+        "web"
+    ],
+    "scripts": {
+        "gen:proto": "cd proto && buf generate"
+    },
+    "devDependencies": {
+        "@bufbuild/protoc-gen-es": "^2.14.0"
+    }
+}
