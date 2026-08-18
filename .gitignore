@@ -45,3 +45,6 @@ web/src/gen
 # 系统
 .DS_Store
 Thumbs.db
+
+# 数据库
+/data/

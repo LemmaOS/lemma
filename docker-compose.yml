@@ -1,0 +1,20 @@
+name: lemma
+
+services:
+  database:
+    image: paradedb/paradedb:pg18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${LEMMA_DB:-lemma-db}
+      POSTGRES_USER: ${LEMMA_DB_USER:-lemma}
+      POSTGRES_PASSWORD: ${LEMMA_DB_PASSWORD:?please set LEMMA_DB_PASSWORD in .env}
+    ports:
+      # if you don't want to expose the database to the host, you can comment out the following line
+      - "5432:5432"
+    volumes:
+      - ./data/postgres:/var/lib/postgresql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${LEMMA_DB_USER:-lemma} -d ${LEMMA_DB:-lemma-db}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
