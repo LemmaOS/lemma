@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+package lemma.v1;
+
+// 对话编排：发消息（服务端流）、中断、断线续传
+service ChatService {
+  rpc SendMessage(SendMessageRequest) returns (stream SendMessageResponse);
+  rpc AbortMessage(AbortMessageRequest) returns (AbortMessageResponse);
+  rpc ResumeStream(ResumeStreamRequest) returns (stream ResumeStreamResponse);
+}
+
+message TokenUsage {
+  int32 prompt_tokens = 1;
+  int32 completion_tokens = 2;
+  int32 total_tokens = 3;
+}
+
+message ChatStarted {
+  string message_id = 1;
+  // 回显客户端生成 ID，关联乐观渲染与重发去重
+  string client_msg_id = 2;
+}
+
+message ChatDelta {
+  string content = 1;
+}
+
+message ChatDone {
+  TokenUsage usage = 1;
+}
+
+message ChatAborted {}
+
+message ChatError {
+  string message = 1;
+}
+
+// 统一流事件
+message ChatEvent {
+  oneof kind {
+    ChatStarted started = 1;
+    ChatDelta delta = 2;
+    ChatDone done = 3;
+    ChatAborted aborted = 4;
+    ChatError error = 5;
+  }
+}
+
+message SendMessageRequest {
+  string conversation_id = 1;
+  string content = 2;
+  // 本次回复使用的供应商与模型（模型与会话解耦，随时可换）
+  string provider_id = 3;
+  string model = 4;
+  string client_msg_id = 5;
+}
+
+message SendMessageResponse {
+  ChatEvent event = 1;
+}
+
+message AbortMessageRequest {
+  string message_id = 1;
+}
+
+message AbortMessageResponse {}
+
+// 续传：服务端按 offset 重放缺失内容，流仍在进行则继续实时推送
+message ResumeStreamRequest {
+  string message_id = 1;
+  // 已收到的字符数
+  int64 offset = 2;
+}
+
+message ResumeStreamResponse {
+  ChatEvent event = 1;
+}
