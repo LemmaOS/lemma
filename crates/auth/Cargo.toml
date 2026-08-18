@@ -1,0 +1,19 @@
+[package]
+name = "lemma-auth"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+chrono.workspace = true
+serde.workspace = true
+uuid.workspace = true
+jsonwebtoken.workspace = true
+argon2.workspace = true
+rand.workspace = true
+sha2.workspace = true
+hex.workspace = true
+lemma-db.workspace = true
+lemma-proto.workspace = true
+sqlx.workspace = true
+buffa-types.workspace = true
+connectrpc.workspace = true

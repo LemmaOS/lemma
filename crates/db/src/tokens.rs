@@ -74,9 +74,10 @@ where
     sqlx::query(
         r#"
         WITH RECURSIVE chain AS (
-            SELECT id FROM refresh_tokens WHERE id = $1
+            SELECT id, replaced_by FROM refresh_tokens WHERE id = $1
             UNION ALL
-            SELECT r.id FROM refresh_tokens r JOIN chain c ON r.replaced_by = c.id
+            SELECT r.id, r.replaced_by FROM refresh_tokens r
+                JOIN chain c ON r.id = c.replaced_by
         )
         UPDATE refresh_tokens SET revoked_at = now()
         WHERE id IN (SELECT id FROM chain) AND revoked_at IS NULL
