@@ -1,0 +1,123 @@
+syntax = "proto3";
+
+package lemma.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// 会话状态（仅客户端可见状态）
+enum ConversationStatus {
+  CONVERSATION_STATUS_UNSPECIFIED = 0;
+  CONVERSATION_STATUS_ACTIVE = 1;
+  CONVERSATION_STATUS_ARCHIVED = 2;
+}
+
+// 消息状态
+enum MessageStatus {
+  MESSAGE_STATUS_UNSPECIFIED = 0;
+  MESSAGE_STATUS_STREAMING = 1;
+  MESSAGE_STATUS_DONE = 2;
+  MESSAGE_STATUS_ABORTED = 3;
+  MESSAGE_STATUS_ERROR = 4;
+}
+
+message Conversation {
+  string id = 1;
+  string title = 2;
+  ConversationStatus status = 3;
+  // 归档元数据（仅 archived 时有值）
+  google.protobuf.Timestamp archived_at = 4;
+  int32 message_count = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+// sync_seq 为所有变更的绝对时序依据
+message Message {
+  string id = 1;
+  string conversation_id = 2;
+  string role = 3; // user | assistant | system
+  string content = 4;
+  // 来源模型（仅 assistant 有值）
+  string provider_id = 5;
+  string model = 6;
+  MessageStatus status = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ListConversationsRequest {}
+
+message ListConversationsResponse {
+  repeated Conversation conversations = 1;
+}
+
+message CreateConversationRequest {}
+
+message CreateConversationResponse {
+  Conversation conversation = 1;
+}
+
+message RenameConversationRequest {
+  string id = 1;
+  string title = 2;
+}
+
+message RenameConversationResponse {
+  Conversation conversation = 1;
+}
+
+message ListMessagesRequest {
+  string conversation_id = 1;
+  // (created_at, id) keyset 分页，不传则从头
+  string before_id = 2;
+  int32 limit = 3;
+}
+
+message ListMessagesResponse {
+  repeated Message messages = 1;
+  // 是否还有更早的历史
+  bool has_more = 2;
+}
+
+message ArchiveConversationRequest {
+  string id = 1;
+}
+
+message ArchiveConversationResponse {
+  Conversation conversation = 1;
+}
+
+message RestoreConversationRequest {
+  string id = 1;
+}
+
+message RestoreConversationResponse {
+  Conversation conversation = 1;
+}
+
+message ListArchivedRequest {}
+
+message ListArchivedResponse {
+  repeated Conversation conversations = 1;
+}
+
+message DeleteArchivedRequest {
+  string id = 1;
+}
+
+message DeleteArchivedResponse {}
+
+service ConversationService {
+  rpc ListConversations(ListConversationsRequest) returns (ListConversationsResponse);
+  rpc CreateConversation(CreateConversationRequest) returns (CreateConversationResponse);
+  rpc RenameConversation(RenameConversationRequest) returns (RenameConversationResponse);
+  rpc ListMessages(ListMessagesRequest) returns (ListMessagesResponse);
+  // 归档：置状态、导出 S3、清热数据
+  rpc ArchiveConversation(ArchiveConversationRequest) returns (ArchiveConversationResponse);
+  // 解档：从 S3 恢复消息，回到活跃列表
+  rpc RestoreConversation(RestoreConversationRequest) returns (RestoreConversationResponse);
+  // 归档元数据全量
+  rpc ListArchived(ListArchivedRequest) returns (ListArchivedResponse);
+  // 彻底删除，不可恢复
+  rpc DeleteArchived(DeleteArchivedRequest) returns (DeleteArchivedResponse);
+}
