@@ -1,0 +1,84 @@
+syntax = "proto3";
+
+package lemma.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// 供应商协议类型
+enum ProviderKind {
+  PROVIDER_KIND_UNSPECIFIED = 0;
+  PROVIDER_KIND_OPENAI = 1; // OpenAI Compatible
+  PROVIDER_KIND_ANTHROPIC = 2; // Anthropic Messages API
+  PROVIDER_KIND_GEMINI = 3; // Gemini Content Generation API
+}
+
+// 供应商配置（每用户独立，互不可见）
+message Provider {
+  string id = 1;
+  ProviderKind kind = 2;
+  string name = 3; // 用户起的别名
+  string base_url = 4;
+  string api_key = 5; // 返回时脱敏，如 sk-****abc
+  repeated string models = 6; // 可用模型名列表
+  bool enabled = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+message ListProvidersRequest {}
+
+message ListProvidersResponse {
+  repeated Provider providers = 1;
+}
+
+message CreateProviderRequest {
+  ProviderKind kind = 1;
+  string name = 2;
+  string base_url = 3;
+  string api_key = 4;
+  repeated string models = 5;
+}
+
+message UpdateProviderRequest {
+  string id = 1;
+  // 更新字段（api_key 为空表示不变更）
+  optional string name = 2;
+  optional string base_url = 3;
+  optional string api_key = 4;
+  optional bool enabled = 5;
+}
+
+message DeleteProviderRequest {
+  string id = 1;
+}
+
+message DeleteProviderResponse {}
+
+message FetchModelsRequest {
+  // 用已有配置的凭证拉取；id 与 (kind/base_url/api_key) 二选一
+  string id = 1;
+  ProviderKind kind = 2;
+  string base_url = 3;
+  string api_key = 4;
+}
+
+message FetchModelsResponse {
+  repeated string models = 1;
+}
+
+message CreateProviderResponse {
+  Provider provider = 1;
+}
+
+message UpdateProviderResponse {
+  Provider provider = 1;
+}
+
+service ProviderService {
+  rpc ListProviders(ListProvidersRequest) returns (ListProvidersResponse);
+  rpc CreateProvider(CreateProviderRequest) returns (CreateProviderResponse);
+  rpc UpdateProvider(UpdateProviderRequest) returns (UpdateProviderResponse);
+  rpc DeleteProvider(DeleteProviderRequest) returns (DeleteProviderResponse);
+  // 拉取供应商远程模型列表
+  rpc FetchModels(FetchModelsRequest) returns (FetchModelsResponse);
+}
