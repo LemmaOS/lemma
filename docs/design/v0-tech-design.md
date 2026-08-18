@@ -57,6 +57,7 @@ lemma/
 ├── Cargo.toml               # Rust workspace 根
 ├── justfile                 # 统一任务入口（proto lint/build/gen）
 ├── package.json             # npm workspace 根（web 及未来的 desktop）
+├── docker-compose.yml       # 开发环境编排（数据库）
 ├── crates/
 │   ├── server/              # bin：入口 + 全部业务逻辑
 │   ├── db/                  # lib：连接池、实体、查询、迁移
@@ -68,7 +69,7 @@ lemma/
 ├── mobile/                  # KMP + CMP（M4）
 │   ├── shared/
 │   └── androidApp/
-├── deploy/                  # docker-compose.yml + .env.example
+├── deploy/                  # 部署编排（server + db）+ .env.example（M5）
 └── docs/
 ```
 
