@@ -18,5 +18,9 @@ sqlx.workspace = true
 buffa-types.workspace = true
 connectrpc.workspace = true
 
+[dev-dependencies]
+buffa.workspace = true
+http.workspace = true
+
 [lints]
 workspace = true

@@ -48,10 +48,11 @@ sha2 = "0.11.0"
 aes-gcm = "0.11.0"
 base64 = "0.23.1"
 reqwest = { version = "0.13.4", features = ["json", "stream"] }
+http = "1.5.0"
 
 [workspace.lints.clippy]
 unwrap_used = "deny"
 expect_used = "warn"
 
-# [workspace.lints.rust]
-# linker_messages = "allow"
+[workspace.lints.rust]
+linker_messages = "allow"

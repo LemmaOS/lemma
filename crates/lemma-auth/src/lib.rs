@@ -37,3 +37,25 @@ pub fn require_user(
     uuid::Uuid::parse_str(&claims.sub)
         .map_err(|_| connectrpc::ConnectError::unauthenticated("invalid access token"))
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+
+    #[test]
+    fn hash_token_is_deterministic() {
+        assert_eq!(hash_token("abc"), hash_token("abc"));
+        assert_ne!(hash_token("abc"), hash_token("abd"));
+    }
+
+    #[test]
+    fn refresh_token_is_unique_hex() {
+        let a = generate_refresh_token();
+        let b = generate_refresh_token();
+        assert_eq!(a.len(), 64);
+        assert!(a.chars().all(|c| c.is_ascii_hexdigit()));
+        assert_ne!(a, b);
+    }
+}

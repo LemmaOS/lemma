@@ -19,3 +19,22 @@ pub fn verify_password(password: &str, hash: &str) -> bool {
         .verify_password(password.as_bytes(), &parsed)
         .is_ok()
 }
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::unwrap_used)]
+
+    use super::*;
+
+    #[test]
+    fn hash_and_verify_roundtrip() {
+        let hash = hash_password("password123").unwrap();
+        assert!(verify_password("password123", &hash));
+        assert!(!verify_password("wrong", &hash));
+    }
+
+    #[test]
+    fn malformed_hash_fails_closed() {
+        assert!(!verify_password("password123", "not-a-hash"));
+    }
+}

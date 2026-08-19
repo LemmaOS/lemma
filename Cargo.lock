@@ -1584,10 +1584,12 @@ name = "lemma-auth"
 version = "0.1.0"
 dependencies = [
  "argon2",
+ "buffa",
  "buffa-types",
  "chrono",
  "connectrpc",
  "hex",
+ "http",
  "jsonwebtoken",
  "lemma-db",
  "lemma-proto",
