@@ -21,3 +21,19 @@ pub fn hash_token(token: &str) -> String {
     hasher.update(token.as_bytes());
     hex::encode(hasher.finalize())
 }
+
+// 校验 Bearer access token，返回 user_id；各服务统一走这里做鉴权
+pub fn require_user(
+    secret: &str,
+    ctx: &connectrpc::RequestContext,
+) -> Result<uuid::Uuid, connectrpc::ConnectError> {
+    let token = ctx
+        .header("authorization")
+        .and_then(|v| v.to_str().ok())
+        .and_then(|v| v.strip_prefix("Bearer "))
+        .ok_or_else(|| connectrpc::ConnectError::unauthenticated("missing bearer token"))?;
+    let claims = verify_access_token(secret, token)
+        .map_err(|_| connectrpc::ConnectError::unauthenticated("invalid access token"))?;
+    uuid::Uuid::parse_str(&claims.sub)
+        .map_err(|_| connectrpc::ConnectError::unauthenticated("invalid access token"))
+}

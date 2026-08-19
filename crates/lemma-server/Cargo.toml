@@ -4,10 +4,14 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+lemma-auth.workspace = true
 lemma-db.workspace = true
 lemma-proto.workspace = true
-lemma-auth.workspace = true
+lemma-providers.workspace = true
 dotenvy.workspace = true
-connectrpc = { workspace = true, features = ["axum"] }
+connectrpc.workspace = true
 axum.workspace = true
 tokio.workspace = true
+
+[lints]
+workspace = true

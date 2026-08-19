@@ -12,8 +12,7 @@ use uuid::Uuid;
 
 use crate::jwt::ACCESS_TOKEN_TTL_SECS;
 use crate::{
-    generate_refresh_token, hash_password, hash_token, sign_access_token, verify_access_token,
-    verify_password,
+    generate_refresh_token, hash_password, hash_token, sign_access_token, verify_password,
 };
 
 // refresh token 寿命 30 天（滑动）
@@ -64,19 +63,6 @@ impl AuthService {
         };
         Ok((tokens, refresh_id))
     }
-
-    // 校验 Bearer access token，返回 user_id
-    fn authenticate(&self, ctx: &RequestContext) -> Result<Uuid, ConnectError> {
-        let token = ctx
-            .header("authorization")
-            .and_then(|v| v.to_str().ok())
-            .and_then(|v| v.strip_prefix("Bearer "))
-            .ok_or_else(|| ConnectError::unauthenticated("missing bearer token"))?;
-        let claims = verify_access_token(&self.secret, token)
-            .map_err(|_| ConnectError::unauthenticated("invalid access token"))?;
-        Uuid::parse_str(&claims.sub)
-            .map_err(|_| ConnectError::unauthenticated("invalid access token"))
-    }
 }
 
 fn user_to_proto(u: &DbUser) -> User {
@@ -126,7 +112,8 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
                 "username and email required, password at least 8 chars",
             ));
         }
-        let hash = hash_password(password);
+        let hash = hash_password(password)
+            .map_err(|e| ConnectError::internal(format!("hash password: {e}")))?;
         let user = match users::insert(&self.pool, username, email, &hash).await {
             Ok(u) => u,
             // 并发首批注册撞 owner 索引：按 normal 重试一次
@@ -227,7 +214,7 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
         ctx: RequestContext,
         _request: ServiceRequest<'_, lemma_proto::lemma::v1::MeRequest>,
     ) -> ServiceResult<MeResponse> {
-        let user_id = self.authenticate(&ctx)?;
+        let user_id = crate::require_user(&self.secret, &ctx)?;
         let user = users::find_by_id(&self.pool, user_id)
             .await
             .map_err(map_db)?

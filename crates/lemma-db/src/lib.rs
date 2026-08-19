@@ -1,4 +1,5 @@
 pub mod entity;
+pub mod providers;
 pub mod tokens;
 pub mod users;
 

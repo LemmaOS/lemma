@@ -17,3 +17,6 @@ lemma-proto.workspace = true
 sqlx.workspace = true
 buffa-types.workspace = true
 connectrpc.workspace = true
+
+[lints]
+workspace = true

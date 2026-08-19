@@ -37,6 +37,8 @@ pub struct Provider {
     pub enabled: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub api_path: String,
+    pub models_path: String,
 }
 
 #[derive(Debug, Clone, sqlx::FromRow)]

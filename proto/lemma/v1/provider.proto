@@ -16,13 +16,20 @@ enum ProviderKind {
 message Provider {
   string id = 1;
   ProviderKind kind = 2;
-  string name = 3; // 用户起的别名
-  string base_url = 4;
-  string api_key = 5; // 返回时脱敏，如 sk-****abc
-  repeated string models = 6; // 可用模型名列表
+  string name = 3;
+  string base_url = 4; // 含版本段，如 https://api.openai.com/v1
+  string api_key = 5; // 返回时脱敏
+  repeated string models = 6;
   bool enabled = 7;
-  google.protobuf.Timestamp created_at = 8;
-  google.protobuf.Timestamp updated_at = 9;
+  string api_path = 8; // 留空按 kind 默认
+  string models_path = 9; // 留空为 /models
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// 区分"未提供"与"清空"
+message ProviderModelsPatch {
+  repeated string models = 1;
 }
 
 message ListProvidersRequest {}
@@ -37,15 +44,20 @@ message CreateProviderRequest {
   string base_url = 3;
   string api_key = 4;
   repeated string models = 5;
+  string api_path = 6;
+  string models_path = 7;
 }
 
 message UpdateProviderRequest {
   string id = 1;
-  // 更新字段（api_key 为空表示不变更）
+  // 未设置的字段不变更
   optional string name = 2;
   optional string base_url = 3;
   optional string api_key = 4;
   optional bool enabled = 5;
+  optional ProviderModelsPatch models = 6;
+  optional string api_path = 7;
+  optional string models_path = 8;
 }
 
 message DeleteProviderRequest {
@@ -55,11 +67,12 @@ message DeleteProviderRequest {
 message DeleteProviderResponse {}
 
 message FetchModelsRequest {
-  // 用已有配置的凭证拉取；id 与 (kind/base_url/api_key) 二选一
+  // id 与 (kind/base_url/api_key) 二选一
   string id = 1;
   ProviderKind kind = 2;
   string base_url = 3;
   string api_key = 4;
+  string models_path = 5;
 }
 
 message FetchModelsResponse {

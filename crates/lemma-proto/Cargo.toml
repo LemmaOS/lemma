@@ -6,9 +6,12 @@ edition.workspace = true
 [dependencies]
 buffa.workspace = true
 buffa-types.workspace = true
-connectrpc = { workspace = true, features = ["server", "axum"] }
+connectrpc.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
 [build-dependencies]
 connectrpc-build.workspace = true
+
+[lints]
+workspace = true
