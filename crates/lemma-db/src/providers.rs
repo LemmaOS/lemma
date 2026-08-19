@@ -15,6 +15,7 @@ pub struct NewProvider<'a> {
     pub models: &'a [String],
 }
 
+#[derive(Default)]
 pub struct ProviderPatch {
     pub name: Option<String>,
     pub base_url: Option<String>,

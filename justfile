@@ -13,3 +13,11 @@ proto-build:
 # [proto] 代码生成
 proto-gen:
     npm run gen:proto
+
+# [rust] clippy 检查
+rust-lint:
+    cargo clippy --workspace --all-targets
+
+# [rust] 测试
+rust-test:
+    cargo test --workspace
