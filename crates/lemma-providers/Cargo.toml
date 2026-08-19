@@ -21,3 +21,6 @@ buffa-types.workspace = true
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+lemma-auth.workspace = true

@@ -2,7 +2,7 @@ use buffa::EnumValue;
 use buffa_types::google::protobuf::Timestamp;
 use connectrpc::{ConnectError, RequestContext, Response, ServiceRequest, ServiceResult};
 use lemma_db::entity::Provider as DbProvider;
-use lemma_db::providers::{self, NewProvider, ProviderPatch};
+use crate::providers::{self, NewProvider, ProviderPatch};
 use lemma_proto::lemma::v1::{
     CreateProviderResponse, DeleteProviderResponse, FetchModelsResponse, ListProvidersResponse,
     Provider, ProviderKind, UpdateProviderResponse,

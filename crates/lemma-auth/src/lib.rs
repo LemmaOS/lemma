@@ -1,6 +1,8 @@
 mod jwt;
 mod password;
 mod service;
+pub mod tokens;
+pub mod users;
 
 pub use jwt::{Claims, sign_access_token, verify_access_token};
 pub use password::{hash_password, verify_password};

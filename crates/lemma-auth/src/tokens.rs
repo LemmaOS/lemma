@@ -1,5 +1,5 @@
-use crate::entity::RefreshToken;
 use chrono::{DateTime, Utc};
+use lemma_db::entity::RefreshToken;
 use uuid::Uuid;
 
 pub async fn insert<'e, E>(

@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used)]
 
 use chrono::{DateTime, Duration, Utc};
-use lemma_db::{tokens, users};
+use lemma_auth::{tokens, users};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -18,7 +18,7 @@ fn expires() -> DateTime<Utc> {
     Utc::now() + Duration::days(30)
 }
 
-#[sqlx::test]
+#[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn insert_and_find_by_hash(pool: PgPool) {
     let uid = new_user(&pool).await;
     let id = Uuid::new_v4();
@@ -35,7 +35,7 @@ async fn insert_and_find_by_hash(pool: PgPool) {
     assert!(row.replaced_by.is_none());
 }
 
-#[sqlx::test]
+#[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn mark_replaced_links_old_to_new(pool: PgPool) {
     let uid = new_user(&pool).await;
     let (a, b) = (Uuid::new_v4(), Uuid::new_v4());
@@ -53,7 +53,7 @@ async fn mark_replaced_links_old_to_new(pool: PgPool) {
     assert_eq!(row.replaced_by, Some(b));
 }
 
-#[sqlx::test]
+#[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn revoke_is_guarded_by_revoked_at(pool: PgPool) {
     let uid = new_user(&pool).await;
     let id = Uuid::new_v4();
@@ -66,7 +66,7 @@ async fn revoke_is_guarded_by_revoked_at(pool: PgPool) {
 }
 
 // 回归：链式吊销必须覆盖全部后代（曾只吊销链首）
-#[sqlx::test]
+#[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn revoke_chain_revokes_all_descendants(pool: PgPool) {
     let uid = new_user(&pool).await;
     let (a, b, c) = (Uuid::new_v4(), Uuid::new_v4(), Uuid::new_v4());

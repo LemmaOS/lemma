@@ -1,7 +1,4 @@
 pub mod entity;
-pub mod providers;
-pub mod tokens;
-pub mod users;
 
 use sqlx::PgPool;
 use sqlx::postgres::PgPoolOptions;

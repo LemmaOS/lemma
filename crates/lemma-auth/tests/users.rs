@@ -1,9 +1,9 @@
 #![allow(clippy::unwrap_used)]
 
-use lemma_db::users;
+use lemma_auth::users;
 use sqlx::PgPool;
 
-#[sqlx::test]
+#[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn first_user_is_owner(pool: PgPool) {
     let u = users::insert(&pool, "alice", "alice@example.com", "hash")
         .await
@@ -11,7 +11,7 @@ async fn first_user_is_owner(pool: PgPool) {
     assert_eq!(u.role, "owner");
 }
 
-#[sqlx::test]
+#[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn second_user_is_normal(pool: PgPool) {
     users::insert(&pool, "alice", "alice@example.com", "hash")
         .await
@@ -22,7 +22,7 @@ async fn second_user_is_normal(pool: PgPool) {
     assert_eq!(u.role, "normal");
 }
 
-#[sqlx::test]
+#[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn find_by_login_matches_username_or_email(pool: PgPool) {
     users::insert(&pool, "alice", "alice@example.com", "hash")
         .await
@@ -37,7 +37,7 @@ async fn find_by_login_matches_username_or_email(pool: PgPool) {
     assert!(users::find_by_login(&pool, "carol").await.unwrap().is_none());
 }
 
-#[sqlx::test]
+#[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn find_by_id_miss_returns_none(pool: PgPool) {
     let id = uuid::Uuid::new_v4();
     assert!(users::find_by_id(&pool, id).await.unwrap().is_none());

@@ -1,4 +1,4 @@
-use crate::entity::Provider;
+use lemma_db::entity::Provider;
 use sqlx::QueryBuilder;
 use sqlx::types::Json;
 use uuid::Uuid;

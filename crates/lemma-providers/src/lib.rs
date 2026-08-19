@@ -1,5 +1,6 @@
 mod crypto;
 mod models;
+pub mod providers;
 mod service;
 
 pub use crypto::{CryptoError, derive_key, mask, open, seal};
