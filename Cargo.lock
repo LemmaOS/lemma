@@ -1601,6 +1601,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "lemma-conversations"
+version = "0.1.0"
+dependencies = [
+ "buffa",
+ "buffa-types",
+ "chrono",
+ "connectrpc",
+ "http",
+ "lemma-auth",
+ "lemma-db",
+ "lemma-proto",
+ "sqlx",
+ "uuid",
+]
+
+[[package]]
 name = "lemma-db"
 version = "0.1.0"
 dependencies = [
@@ -1651,6 +1667,7 @@ dependencies = [
  "connectrpc",
  "dotenvy",
  "lemma-auth",
+ "lemma-conversations",
  "lemma-db",
  "lemma-proto",
  "lemma-providers",

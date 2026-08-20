@@ -1,6 +1,7 @@
 mod config;
 
 use lemma_auth::AuthService;
+use lemma_conversations::ConversationService;
 use lemma_providers::ProviderService;
 
 use std::sync::Arc;
@@ -15,13 +16,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let auth = Arc::new(AuthService::new(pool.clone(), config.jwt_secret.clone()));
     let provider = Arc::new(ProviderService::new(
-        pool,
-        config.jwt_secret,
+        pool.clone(),
+        config.jwt_secret.clone(),
         config.secret_key,
     ));
+    let conversations = Arc::new(ConversationService::new(pool, config.jwt_secret));
     let connect = connectrpc::Router::new()
         .add_service(auth)
-        .add_service(provider);
+        .add_service(provider)
+        .add_service(conversations);
 
     let app = axum::Router::new().fallback_service(connect.into_axum_service());
     let listener = tokio::net::TcpListener::bind("0.0.0.0:1025").await?;

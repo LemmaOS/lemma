@@ -1,0 +1,22 @@
+[package]
+name = "lemma-conversations"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+lemma-db.workspace = true
+lemma-proto.workspace = true
+lemma-auth.workspace = true
+sqlx.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+connectrpc.workspace = true
+buffa.workspace = true
+buffa-types.workspace = true
+
+[dev-dependencies]
+buffa.workspace = true
+http.workspace = true
+
+[lints]
+workspace = true

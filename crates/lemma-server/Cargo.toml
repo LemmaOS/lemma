@@ -8,6 +8,7 @@ lemma-auth.workspace = true
 lemma-db.workspace = true
 lemma-proto.workspace = true
 lemma-providers.workspace = true
+lemma-conversations.workspace = true
 dotenvy.workspace = true
 connectrpc.workspace = true
 axum.workspace = true
