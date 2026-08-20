@@ -27,14 +27,24 @@ async fn find_by_login_matches_username_or_email(pool: PgPool) {
     users::insert(&pool, "alice", "alice@example.com", "hash")
         .await
         .unwrap();
-    assert!(users::find_by_login(&pool, "alice").await.unwrap().is_some());
+    assert!(
+        users::find_by_login(&pool, "alice")
+            .await
+            .unwrap()
+            .is_some()
+    );
     assert!(
         users::find_by_login(&pool, "alice@example.com")
             .await
             .unwrap()
             .is_some()
     );
-    assert!(users::find_by_login(&pool, "carol").await.unwrap().is_none());
+    assert!(
+        users::find_by_login(&pool, "carol")
+            .await
+            .unwrap()
+            .is_none()
+    );
 }
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]

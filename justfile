@@ -14,6 +14,10 @@ proto-build:
 proto-gen:
     npm run gen:proto
 
+# [rust] 开发运行
+rust-dev:
+    cargo run
+
 # [rust] clippy 检查
 rust-lint:
     cargo clippy --workspace --all-targets
@@ -21,3 +25,7 @@ rust-lint:
 # [rust] 测试
 rust-test:
     cargo test --workspace
+
+# [rust] 格式化
+rust-fmt:
+    cargo fmt --all

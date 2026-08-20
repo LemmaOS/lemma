@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used)]
 
-use lemma_providers::providers::{self, NewProvider, ProviderPatch};
 use lemma_auth::users;
+use lemma_providers::providers::{self, NewProvider, ProviderPatch};
 use sqlx::PgPool;
 use uuid::Uuid;
 
