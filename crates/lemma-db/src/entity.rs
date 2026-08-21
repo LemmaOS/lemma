@@ -70,6 +70,7 @@ pub struct Message {
     pub content: String,
     pub provider_id: Option<Uuid>,
     pub model: Option<String>,
+    pub client_msg_id: Option<String>,
     pub status: String,
     pub token_usage: Option<Json<TokenUsage>>,
     pub sync_seq: i64,
