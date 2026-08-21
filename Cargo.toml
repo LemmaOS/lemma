@@ -7,6 +7,7 @@ members = [
     "crates/lemma-auth",
     "crates/lemma-providers",
     "crates/lemma-conversations",
+    "crates/lemma-chat",
 ]
 
 [workspace.package]
@@ -20,6 +21,7 @@ lemma-proto = { path = "crates/lemma-proto" }
 lemma-auth = { path = "crates/lemma-auth" }
 lemma-providers = { path = "crates/lemma-providers" }
 lemma-conversations = { path = "crates/lemma-conversations" }
+lemma-chat = { path = "crates/lemma-chat" }
 # 远程依赖
 axum = "0.8.9"
 buffa = { version = "0.8.1", features = ["json"] }
@@ -51,6 +53,9 @@ aes-gcm = "0.11.0"
 base64 = "0.23.1"
 reqwest = { version = "0.13.4", features = ["json", "stream"] }
 http = "1.5.0"
+dashmap = "6.2.1"
+tokio-stream = { version = "0.1.19", features = ["sync"] }
+futures = "0.3.34"
 
 [workspace.lints.clippy]
 unwrap_used = "deny"
