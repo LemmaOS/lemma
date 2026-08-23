@@ -28,7 +28,7 @@ interface ProvidersState {
     list: Provider[];
     loaded: boolean;
     refresh: () => Promise<void>;
-    create: (input: NewProvider) => Promise<void>;
+    create: (input: NewProvider) => Promise<Provider>;
     update: (id: string, patch: ProviderPatch) => Promise<void>;
     remove: (id: string) => Promise<void>;
     // 已存供应商传 id；表单未保存时传 kind/baseUrl/apiKey 试临时凭证
@@ -54,6 +54,7 @@ export const useProvidersStore = create<ProvidersState>()((set) => ({
         const res = await providerClient.createProvider(input);
         if (!res.provider) throw new Error("no provider in response");
         set((s) => ({ list: [...s.list, res.provider!] }));
+        return res.provider;
     },
 
     update: async (id, patch) => {
