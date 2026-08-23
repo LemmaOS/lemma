@@ -41,6 +41,8 @@ web/src/gen
 
 # AI Agent
 .zcode/
+.claude/
+.codex/
 
 # 系统
 .DS_Store
@@ -48,3 +50,6 @@ Thumbs.db
 
 # 数据库
 /data/
+
+# 临时文件
+/tmp/
