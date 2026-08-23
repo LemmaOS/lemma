@@ -14,6 +14,7 @@ lemma-sync.workspace = true
 dotenvy.workspace = true
 connectrpc.workspace = true
 axum.workspace = true
+rust-embed.workspace = true
 tokio.workspace = true
 
 [lints]

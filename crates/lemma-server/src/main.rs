@@ -1,4 +1,5 @@
 mod config;
+mod web;
 
 use std::sync::Arc;
 
@@ -43,7 +44,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(chat)
         .add_service(sync);
 
-    let app = axum::Router::new().fallback_service(connect.into_axum_service());
+    // RPC 路径形如 /lemma.v1.AuthService/Login：第一段含服务名，
+    // axum 路由只能按完整段匹配，所以每个服务显式挂一条前缀；
+    // 其余路径交给内嵌的前端静态资源（SPA 回退 index.html）
+    let connect_service = connect.into_axum_service();
+    let mut app = axum::Router::new().fallback(web::handler);
+    for svc in [
+        "AuthService",
+        "ProviderService",
+        "ConversationService",
+        "ChatService",
+        "SyncService",
+    ] {
+        app = app.route_service(
+            &format!("/lemma.v1.{svc}/{{*path}}"),
+            connect_service.clone(),
+        );
+    }
     let listener = tokio::net::TcpListener::bind("0.0.0.0:1025").await?;
     println!("listening on {}", listener.local_addr()?);
     axum::serve(listener, app).await?;

@@ -29,3 +29,15 @@ rust-test:
 # [rust] 格式化
 rust-fmt:
     cargo fmt --all
+
+# [web] 构建前端产物（server 二进制内嵌的就是它）
+web-build:
+    cd web && npm run build
+
+# [web] 前端开发服务器（vite，/lemma.v1.* 代理到 127.0.0.1:1025）
+web-dev:
+    cd web && npm run dev
+
+# [web] 前端单元测试
+web-test:
+    cd web && npm test
