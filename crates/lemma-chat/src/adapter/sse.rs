@@ -9,6 +9,7 @@ use lemma_db::entity::TokenUsage;
 use super::{AdapterError, AdapterEvent, BoxEventStream, ByteStream};
 
 /// 解析一行 SSE data 载荷的结果
+#[derive(Debug)]
 pub enum Parsed {
     Skip,
     Delta(String),
