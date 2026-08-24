@@ -1,7 +1,7 @@
+import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Eye, EyeOff } from "lucide-react";
-import type { ProviderType } from "@/mocks";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,36 +12,76 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { ProviderKind } from "@/gen/lemma/v1/provider_pb";
 
 export interface NewProviderData {
+    kind: ProviderKind;
     name: string;
-    type: ProviderType;
     baseUrl: string;
     apiKey: string;
 }
 
 interface NewProviderFormProps {
-    onSave: (data: NewProviderData) => void;
+    onSave: (data: NewProviderData) => Promise<void>;
     onCancel: () => void;
 }
 
-const PROVIDER_TYPES: ProviderType[] = ["openai", "anthropic", "gemini"];
+// 新建时切类型预填官方端点；用户改过就不动
+const DEFAULT_BASE_URLS: Partial<Record<ProviderKind, string>> = {
+    [ProviderKind.OPENAI]: "https://api.openai.com/v1",
+    [ProviderKind.ANTHROPIC]: "https://api.anthropic.com/v1",
+    [ProviderKind.GEMINI]: "https://generativelanguage.googleapis.com/v1beta",
+};
+
+const KIND_OPTIONS = [
+    { value: "openai", kind: ProviderKind.OPENAI },
+    { value: "anthropic", kind: ProviderKind.ANTHROPIC },
+    { value: "gemini", kind: ProviderKind.GEMINI },
+] as const;
 
 export function NewProviderForm({ onSave, onCancel }: NewProviderFormProps) {
     const { t } = useTranslation();
     const [name, setName] = useState("");
-    const [type, setType] = useState<ProviderType>("openai");
-    const [baseUrl, setBaseUrl] = useState("");
+    const [kind, setKind] = useState<ProviderKind>(ProviderKind.OPENAI);
+    const [baseUrl, setBaseUrl] = useState(
+        DEFAULT_BASE_URLS[ProviderKind.OPENAI] ?? "",
+    );
     const [apiKey, setApiKey] = useState("");
     const [showKey, setShowKey] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [failed, setFailed] = useState(false);
 
-    const handleSave = () => {
-        onSave({
-            name: name.trim() || type,
-            type,
-            baseUrl: baseUrl.trim(),
-            apiKey: apiKey.trim(),
+    const handleKindChange = (value: string) => {
+        const option = KIND_OPTIONS.find((o) => o.value === value);
+        if (!option) return;
+        setKind(option.kind);
+        setBaseUrl((current) => {
+            const untouched =
+                current === "" ||
+                Object.values(DEFAULT_BASE_URLS).includes(current);
+            return untouched
+                ? (DEFAULT_BASE_URLS[option.kind] ?? current)
+                : current;
         });
+    };
+
+    const handleSave = async () => {
+        setBusy(true);
+        setFailed(false);
+        try {
+            const kindLabel =
+                KIND_OPTIONS.find((o) => o.kind === kind)?.value ?? "provider";
+            await onSave({
+                kind,
+                name: name.trim() || kindLabel,
+                baseUrl: baseUrl.trim(),
+                apiKey: apiKey.trim(),
+            });
+        } catch {
+            setFailed(true);
+        } finally {
+            setBusy(false);
+        }
     };
 
     return (
@@ -51,18 +91,18 @@ export function NewProviderForm({ onSave, onCancel }: NewProviderFormProps) {
             </h2>
             <div className="mt-6 flex max-w-md flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
-                    <Label htmlFor="np-type">{t("providers.type")}</Label>
+                    <Label htmlFor="np-kind">{t("providers.type")}</Label>
                     <Select
-                        value={type}
-                        onValueChange={(v) => setType(v as ProviderType)}
+                        value={KIND_OPTIONS.find((o) => o.kind === kind)?.value}
+                        onValueChange={handleKindChange}
                     >
-                        <SelectTrigger id="np-type" className="w-full">
+                        <SelectTrigger id="np-kind" className="w-full">
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                            {PROVIDER_TYPES.map((pt) => (
-                                <SelectItem key={pt} value={pt}>
-                                    {pt}
+                            {KIND_OPTIONS.map((o) => (
+                                <SelectItem key={o.value} value={o.value}>
+                                    {o.value}
                                 </SelectItem>
                             ))}
                         </SelectContent>
@@ -115,8 +155,17 @@ export function NewProviderForm({ onSave, onCancel }: NewProviderFormProps) {
                         </button>
                     </div>
                 </div>
+                {failed && (
+                    <p className="text-xs text-destructive">
+                        {t("providers.saveFailed")}
+                    </p>
+                )}
                 <div className="flex items-center gap-2 pt-2">
-                    <Button type="button" onClick={handleSave}>
+                    <Button
+                        type="button"
+                        onClick={() => void handleSave()}
+                        disabled={busy}
+                    >
                         {t("common.save")}
                     </Button>
                     <Button type="button" variant="outline" onClick={onCancel}>

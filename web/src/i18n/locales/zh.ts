@@ -132,6 +132,13 @@ export default {
         modelIdPlaceholder: "model-id",
         enableModel: "启用模型",
         noModels: "没有符合当前筛选的模型。",
+        saveFailed: "保存失败。",
+        baseUrlDesc: "API 接口地址（含版本段）。",
+        apiKeyKeepHint: "留空表示沿用当前密钥。",
+        fetchFailed: "拉取失败，请检查 URL 和 API key。",
+        deleteProvider: "删除供应商",
+        deleteConfirm: "删除该供应商？",
+        emptyList: "还没有供应商。",
     },
     settings: {
         title: "设置",

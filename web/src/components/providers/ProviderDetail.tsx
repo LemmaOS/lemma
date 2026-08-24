@@ -1,45 +1,21 @@
-import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import {
     Check,
     Eye,
     EyeOff,
     Lock,
-    MoreHorizontal,
     Plus,
     RefreshCw,
-    Settings,
-    Undo2,
-    Video,
-    Wrench,
+    Trash2,
     X,
 } from "lucide-react";
-import type {
-    ModelCapability,
-    ModelKind,
-    Provider,
-    ProviderModel,
-} from "@/mocks";
-import { mockRemoteModels } from "@/mocks";
-import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-
-/* ------------------------------- helpers ------------------------------- */
-
-function formatContext(contextK: number): string {
-    return contextK >= 1000 ? `${contextK / 1000}M` : `${contextK}K`;
-}
-
-type ModelTab = "all" | ModelKind;
+import type { Provider } from "@/gen/lemma/v1/provider_pb";
+import { cn } from "@/lib/utils";
 
 function FieldRow({
     label,
@@ -65,185 +41,52 @@ function FieldRow({
     );
 }
 
-function CapabilityIcon({
-    icon: Icon,
-    label,
-    active,
-}: {
-    icon: React.ComponentType<{ className?: string }>;
-    label: string;
-    active: boolean;
-}) {
-    return (
-        <span title={label} aria-label={label}>
-            <Icon
-                className={cn(
-                    "size-4",
-                    active
-                        ? "text-muted-foreground"
-                        : "text-muted-foreground/30",
-                )}
-            />
-        </span>
-    );
-}
-
-const CAPABILITIES: {
-    key: ModelCapability;
-    icon: React.ComponentType<{ className?: string }>;
-    labelKey: string;
-}[] = [
-    { key: "vision", icon: Eye, labelKey: "providers.capVision" },
-    { key: "video", icon: Video, labelKey: "providers.capVideo" },
-    { key: "tools", icon: Wrench, labelKey: "providers.capTools" },
-];
-
-/* --------------------------- model list block --------------------------- */
-
 interface ModelListProps {
-    models: ProviderModel[];
-    onChange: (models: ProviderModel[]) => void;
+    models: string[];
+    onChange: (models: string[]) => void;
+    onFetch: () => Promise<string[]>;
 }
 
-function ModelList({ models, onChange }: ModelListProps) {
+/** 模型列表：搜索、远程拉取（合并去重）、手动增删 */
+function ModelList({ models, onChange, onFetch }: ModelListProps) {
     const { t } = useTranslation();
     const [query, setQuery] = useState("");
-    const [tab, setTab] = useState<ModelTab>("all");
     const [fetching, setFetching] = useState(false);
+    const [fetchState, setFetchState] = useState<"idle" | "ok" | "fail">(
+        "idle",
+    );
     const [adding, setAdding] = useState(false);
-    const [newName, setNewName] = useState("");
-    const [newModelId, setNewModelId] = useState("");
-
-    const counts = useMemo(() => {
-        const c: Record<ModelTab, number> = {
-            all: models.length,
-            chat: 0,
-            image: 0,
-            embedding: 0,
-        };
-        for (const m of models) c[m.kind] += 1;
-        return c;
-    }, [models]);
+    const [newModel, setNewModel] = useState("");
 
     const visible = useMemo(() => {
         const q = query.trim().toLowerCase();
-        return models.filter((m) => {
-            if (tab !== "all" && m.kind !== tab) return false;
-            if (
-                q &&
-                !m.name.toLowerCase().includes(q) &&
-                !m.modelId.toLowerCase().includes(q)
-            )
-                return false;
-            return true;
-        });
-    }, [models, query, tab]);
+        return q ? models.filter((m) => m.toLowerCase().includes(q)) : models;
+    }, [models, query]);
 
-    const enabledModels = visible.filter((m) => m.enabled);
-    const disabledModels = visible.filter((m) => !m.enabled);
-
-    const toggleModel = (id: string, enabled: boolean) => {
-        onChange(models.map((m) => (m.id === id ? { ...m, enabled } : m)));
-    };
-
-    const fetchRemote = () => {
+    const fetchRemote = async () => {
         if (fetching) return;
         setFetching(true);
-        window.setTimeout(() => {
-            const existing = new Set(models.map((m) => m.modelId));
-            const incoming: ProviderModel[] = mockRemoteModels
-                .filter((modelId) => !existing.has(modelId))
-                .map((modelId) => ({
-                    id: `m-${Date.now()}-${modelId}`,
-                    name: modelId,
-                    modelId,
-                    kind: "chat",
-                    capabilities: ["tools"],
-                    contextK: 128,
-                    enabled: false,
-                }));
-            onChange([...models, ...incoming]);
+        setFetchState("idle");
+        try {
+            const remote = await onFetch();
+            onChange(Array.from(new Set([...models, ...remote])));
+            setFetchState("ok");
+        } catch {
+            setFetchState("fail");
+        } finally {
             setFetching(false);
-        }, 1200);
+        }
     };
 
     const confirmAdd = () => {
-        const modelId = newModelId.trim();
-        const name = newName.trim() || modelId;
-        if (!modelId) return;
-        onChange([
-            {
-                id: `m-${Date.now()}`,
-                name,
-                modelId,
-                kind: "chat",
-                capabilities: ["tools"],
-                contextK: 128,
-                enabled: true,
-            },
-            ...models,
-        ]);
-        setNewName("");
-        setNewModelId("");
+        const id = newModel.trim();
+        setNewModel("");
         setAdding(false);
+        if (!id || models.includes(id)) return;
+        onChange([id, ...models]);
     };
 
-    const cancelAdd = () => {
-        setNewName("");
-        setNewModelId("");
-        setAdding(false);
-    };
-
-    const tabs: { key: ModelTab; labelKey: string }[] = [
-        { key: "all", labelKey: "providers.tabAll" },
-        { key: "chat", labelKey: "providers.tabChat" },
-        { key: "image", labelKey: "providers.tabImage" },
-        { key: "embedding", labelKey: "providers.tabEmbedding" },
-    ];
-
-    const renderRow = (model: ProviderModel) => (
-        <div
-            key={model.id}
-            className="flex items-center gap-3 border-b border-border/60 py-3"
-        >
-            <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold">
-                {model.name.charAt(0).toUpperCase()}
-            </span>
-            <span
-                className={cn(
-                    "truncate text-sm font-medium",
-                    !model.enabled && "text-muted-foreground",
-                )}
-            >
-                {model.name}
-            </span>
-            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
-                {model.modelId}
-            </span>
-            <div className="ml-auto flex shrink-0 items-center gap-3">
-                <div className="flex items-center gap-2">
-                    {CAPABILITIES.map(({ key, icon, labelKey }) => (
-                        <CapabilityIcon
-                            key={key}
-                            icon={icon}
-                            label={t(labelKey)}
-                            active={model.capabilities.includes(key)}
-                        />
-                    ))}
-                </div>
-                <span className="w-10 text-right text-xs text-muted-foreground">
-                    {formatContext(model.contextK)}
-                </span>
-                <Switch
-                    checked={model.enabled}
-                    onCheckedChange={(checked) =>
-                        toggleModel(model.id, checked)
-                    }
-                    aria-label={t("providers.enableModel")}
-                />
-            </div>
-        </div>
-    );
+    const remove = (id: string) => onChange(models.filter((m) => m !== id));
 
     return (
         <section className="pt-6">
@@ -262,7 +105,7 @@ function ModelList({ models, onChange }: ModelListProps) {
                         type="button"
                         variant="outline"
                         size="sm"
-                        onClick={fetchRemote}
+                        onClick={() => void fetchRemote()}
                         disabled={fetching}
                     >
                         <RefreshCw
@@ -280,58 +123,45 @@ function ModelList({ models, onChange }: ModelListProps) {
                         variant="outline"
                         size="icon"
                         className="size-8"
-                        aria-label={t("providers.newModel")}
+                        aria-label={t("providers.addModel")}
                         onClick={() => setAdding((v) => !v)}
                     >
                         <Plus className="size-4" />
                     </Button>
-                    <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="size-8"
-                        aria-label={t("providers.moreActions")}
-                    >
-                        <MoreHorizontal className="size-4" />
-                    </Button>
                 </div>
             </div>
 
-            <div className="mt-3 flex items-center gap-4 border-b border-border">
-                {tabs.map(({ key, labelKey }) => (
-                    <button
-                        key={key}
-                        type="button"
-                        onClick={() => setTab(key)}
-                        aria-pressed={tab === key}
-                        className={cn(
-                            "-mb-px border-b-2 border-transparent pb-2 text-sm transition-colors",
-                            tab === key
-                                ? "border-primary text-foreground"
-                                : "text-muted-foreground hover:text-foreground",
-                        )}
-                    >
-                        {t(labelKey)}
-                        <span className="ml-1 text-xs text-muted-foreground">
-                            {counts[key]}
-                        </span>
-                    </button>
-                ))}
-            </div>
+            {fetchState !== "idle" && (
+                <p
+                    className={cn(
+                        "pt-2 text-xs",
+                        fetchState === "ok"
+                            ? "text-muted-foreground"
+                            : "text-destructive",
+                    )}
+                >
+                    {fetchState === "ok"
+                        ? t("providers.modelsFetched")
+                        : t("providers.fetchFailed")}
+                </p>
+            )}
 
             {adding && (
                 <div className="flex items-center gap-2 border-b border-border/60 py-3">
                     <Input
-                        value={newName}
-                        onChange={(e) => setNewName(e.target.value)}
-                        placeholder={t("providers.modelNamePlaceholder")}
-                        className="h-8 flex-1"
-                    />
-                    <Input
-                        value={newModelId}
-                        onChange={(e) => setNewModelId(e.target.value)}
-                        placeholder={t("providers.modelIdPlaceholder")}
+                        value={newModel}
+                        onChange={(e) => setNewModel(e.target.value)}
+                        placeholder={t("providers.modelPlaceholder")}
                         className="h-8 flex-1 font-mono"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                                e.preventDefault();
+                                confirmAdd();
+                            } else if (e.key === "Escape") {
+                                setNewModel("");
+                                setAdding(false);
+                            }
+                        }}
                     />
                     <Button
                         type="button"
@@ -340,7 +170,7 @@ function ModelList({ models, onChange }: ModelListProps) {
                         className="size-8 shrink-0"
                         aria-label={t("providers.addModel")}
                         onClick={confirmAdd}
-                        disabled={!newModelId.trim()}
+                        disabled={!newModel.trim()}
                     >
                         <Check className="size-4" />
                     </Button>
@@ -350,30 +180,38 @@ function ModelList({ models, onChange }: ModelListProps) {
                         size="icon"
                         className="size-8 shrink-0"
                         aria-label={t("common.cancel")}
-                        onClick={cancelAdd}
+                        onClick={() => {
+                            setNewModel("");
+                            setAdding(false);
+                        }}
                     >
                         <X className="size-4" />
                     </Button>
                 </div>
             )}
 
-            {enabledModels.length > 0 && (
-                <>
-                    <p className="pt-4 pb-1 text-xs text-muted-foreground">
-                        {t("providers.enabledGroup")}
-                    </p>
-                    {enabledModels.map(renderRow)}
-                </>
-            )}
-            {disabledModels.length > 0 && (
-                <>
-                    <p className="pt-4 pb-1 text-xs text-muted-foreground">
-                        {t("providers.disabledGroup")}
-                    </p>
-                    {disabledModels.map(renderRow)}
-                </>
-            )}
-            {visible.length === 0 && (
+            {visible.length > 0 ? (
+                visible.map((model) => (
+                    <div
+                        key={model}
+                        className="flex items-center gap-3 border-b border-border/60 py-3"
+                    >
+                        <span className="truncate font-mono text-sm">
+                            {model}
+                        </span>
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="ml-auto size-7 shrink-0 text-muted-foreground hover:text-destructive"
+                            aria-label={t("providers.removeModel")}
+                            onClick={() => remove(model)}
+                        >
+                            <X className="size-3.5" />
+                        </Button>
+                    </div>
+                ))
+            ) : (
                 <p className="py-8 text-center text-sm text-muted-foreground">
                     {t("providers.noModels")}
                 </p>
@@ -382,37 +220,65 @@ function ModelList({ models, onChange }: ModelListProps) {
     );
 }
 
-/* ------------------------------ detail panel ---------------------------- */
-
 interface ProviderDetailProps {
     provider: Provider;
-    models: ProviderModel[];
     onToggleEnabled: (enabled: boolean) => void;
-    onModelsChange: (models: ProviderModel[]) => void;
+    onSaveBaseUrl: (baseUrl: string) => Promise<void>;
+    onSaveApiKey: (apiKey: string) => Promise<void>;
+    onModelsChange: (models: string[]) => void;
+    onFetchModels: () => Promise<string[]>;
+    onDelete: () => void;
 }
 
 export function ProviderDetail({
     provider,
-    models,
     onToggleEnabled,
+    onSaveBaseUrl,
+    onSaveApiKey,
     onModelsChange,
+    onFetchModels,
+    onDelete,
 }: ProviderDetailProps) {
     const { t } = useTranslation();
-    const [apiKey, setApiKey] = useState(provider.apiKeyMasked);
+    const [apiKey, setApiKey] = useState("");
     const [showKey, setShowKey] = useState(false);
-    const [proxyUrl, setProxyUrl] = useState(provider.baseUrl);
-    const [clientMode, setClientMode] = useState(false);
-    const [checkModel, setCheckModel] = useState<string | undefined>(undefined);
-    const [checkState, setCheckState] = useState<
-        "idle" | "checking" | "success"
-    >("idle");
+    const [baseUrl, setBaseUrl] = useState(provider.baseUrl);
+    const [savingKey, setSavingKey] = useState(false);
+    const [savingUrl, setSavingUrl] = useState(false);
+    const [saveFailed, setSaveFailed] = useState(false);
 
-    const enabledModels = models.filter((m) => m.enabled);
+    const apiKeyDirty = apiKey.trim().length > 0;
+    const baseUrlDirty =
+        baseUrl.trim() !== provider.baseUrl && baseUrl.trim().length > 0;
 
-    const runCheck = () => {
-        if (checkState === "checking") return;
-        setCheckState("checking");
-        window.setTimeout(() => setCheckState("success"), 1000);
+    const saveApiKey = async () => {
+        setSavingKey(true);
+        setSaveFailed(false);
+        try {
+            await onSaveApiKey(apiKey.trim());
+            setApiKey("");
+        } catch {
+            setSaveFailed(true);
+        } finally {
+            setSavingKey(false);
+        }
+    };
+
+    const saveBaseUrl = async () => {
+        setSavingUrl(true);
+        setSaveFailed(false);
+        try {
+            await onSaveBaseUrl(baseUrl.trim());
+        } catch {
+            setBaseUrl(provider.baseUrl);
+            setSaveFailed(true);
+        } finally {
+            setSavingUrl(false);
+        }
+    };
+
+    const handleDelete = () => {
+        if (window.confirm(t("providers.deleteConfirm"))) onDelete();
     };
 
     return (
@@ -427,9 +293,11 @@ export function ProviderDetail({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        aria-label={t("providers.providerSettings")}
+                        className="text-muted-foreground hover:text-destructive"
+                        aria-label={t("providers.deleteProvider")}
+                        onClick={handleDelete}
                     >
-                        <Settings className="size-4" />
+                        <Trash2 className="size-4" />
                     </Button>
                     <Switch
                         checked={provider.enabled}
@@ -442,14 +310,17 @@ export function ProviderDetail({
             <section className="mt-4">
                 <FieldRow
                     label={t("providers.apiKey")}
-                    description={t("providers.apiKeyDesc")}
+                    description={t("providers.apiKeyKeepHint")}
                 >
                     <div className="relative flex-1">
                         <Input
                             type={showKey ? "text" : "password"}
                             value={apiKey}
                             onChange={(e) => setApiKey(e.target.value)}
-                            placeholder={t("providers.apiKeyPlaceholder")}
+                            placeholder={
+                                provider.apiKey ||
+                                t("providers.apiKeyPlaceholder")
+                            }
                             className="pr-9"
                         />
                         <button
@@ -469,81 +340,39 @@ export function ProviderDetail({
                             )}
                         </button>
                     </div>
+                    <Button
+                        type="button"
+                        size="sm"
+                        disabled={!apiKeyDirty || savingKey}
+                        onClick={() => void saveApiKey()}
+                    >
+                        {t("common.save")}
+                    </Button>
                 </FieldRow>
 
                 <FieldRow
-                    label={t("providers.proxyUrl")}
-                    description={t("providers.proxyDesc")}
+                    label={t("providers.baseUrl")}
+                    description={t("providers.baseUrlDesc")}
                 >
                     <Input
-                        value={proxyUrl}
-                        onChange={(e) => setProxyUrl(e.target.value)}
+                        value={baseUrl}
+                        onChange={(e) => setBaseUrl(e.target.value)}
                         placeholder={t("providers.baseUrlPlaceholder")}
-                        className="flex-1"
+                        className="flex-1 font-mono text-xs"
                     />
                     <Button
                         type="button"
-                        variant="ghost"
-                        size="icon"
-                        aria-label={t("providers.resetProxy")}
-                        onClick={() => setProxyUrl(provider.baseUrl)}
+                        size="sm"
+                        disabled={!baseUrlDirty || savingUrl}
+                        onClick={() => void saveBaseUrl()}
                     >
-                        <Undo2 className="size-4" />
+                        {t("common.save")}
                     </Button>
                 </FieldRow>
 
-                <FieldRow
-                    label={t("providers.clientMode")}
-                    description={t("providers.clientModeDesc")}
-                >
-                    <Switch
-                        checked={clientMode}
-                        onCheckedChange={setClientMode}
-                        aria-label={t("providers.clientMode")}
-                    />
-                </FieldRow>
-
-                <FieldRow
-                    label={t("providers.connectivityCheck")}
-                    description={t("providers.checkDesc")}
-                >
-                    <Select value={checkModel} onValueChange={setCheckModel}>
-                        <SelectTrigger
-                            className="flex-1"
-                            aria-label={t("providers.selectModelPlaceholder")}
-                        >
-                            <SelectValue
-                                placeholder={t(
-                                    "providers.selectModelPlaceholder",
-                                )}
-                            />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {enabledModels.map((m) => (
-                                <SelectItem key={m.id} value={m.modelId}>
-                                    {m.name}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                    <Button
-                        type="button"
-                        variant="outline"
-                        onClick={runCheck}
-                        disabled={
-                            checkState === "checking" ||
-                            enabledModels.length === 0
-                        }
-                    >
-                        {checkState === "checking"
-                            ? t("providers.checking")
-                            : t("providers.check")}
-                    </Button>
-                </FieldRow>
-                {checkState === "success" && (
-                    <p className="flex items-center gap-1.5 pt-2 text-xs text-muted-foreground">
-                        <Check className="size-3.5 text-primary" />
-                        {t("providers.checkSuccess")}
+                {saveFailed && (
+                    <p className="pt-2 text-xs text-destructive">
+                        {t("providers.saveFailed")}
                     </p>
                 )}
 
@@ -553,7 +382,11 @@ export function ProviderDetail({
                 </p>
             </section>
 
-            <ModelList models={models} onChange={onModelsChange} />
+            <ModelList
+                models={provider.models}
+                onChange={onModelsChange}
+                onFetch={onFetchModels}
+            />
         </div>
     );
 }

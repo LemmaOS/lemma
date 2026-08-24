@@ -136,6 +136,13 @@ export default {
         modelIdPlaceholder: "model-id",
         enableModel: "Enable model",
         noModels: "No models match the current filter.",
+        saveFailed: "Save failed.",
+        baseUrlDesc: "API endpoint, including the version segment.",
+        apiKeyKeepHint: "Leave blank to keep the current key.",
+        fetchFailed: "Fetch failed. Check the URL and API key.",
+        deleteProvider: "Delete provider",
+        deleteConfirm: "Delete this provider?",
+        emptyList: "No providers yet.",
     },
     settings: {
         title: "Settings",

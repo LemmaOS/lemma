@@ -1,69 +1,47 @@
 import { useState } from "react";
-import type { Provider, ProviderModel } from "@/mocks";
-import { mockProviderModels, mockProviders } from "@/mocks";
-import {
-    SettingsNav,
-    type SettingsSection,
-} from "@/components/providers/SettingsNav";
+import { useTranslation } from "react-i18next";
+
 import { AppearancePanel } from "@/components/providers/AppearancePanel";
-import { ProviderListPane } from "@/components/providers/ProviderListPane";
-import { ProviderDetail } from "@/components/providers/ProviderDetail";
 import {
     NewProviderForm,
     type NewProviderData,
 } from "@/components/providers/NewProviderForm";
+import { ProviderDetail } from "@/components/providers/ProviderDetail";
+import { ProviderListPane } from "@/components/providers/ProviderListPane";
+import {
+    SettingsNav,
+    type SettingsSection,
+} from "@/components/providers/SettingsNav";
+import { useProviders } from "@/hooks/useProviders";
 
 export default function ProvidersPage() {
+    const { t } = useTranslation();
     const [section, setSection] = useState<SettingsSection>("providers");
-    const [providers, setProviders] = useState<Provider[]>(mockProviders);
-    const [selectedId, setSelectedId] = useState<string | null>(
-        mockProviders[0]?.id ?? null,
-    );
+    const store = useProviders();
+    const [selectedId, setSelectedId] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
-    const [modelsByProvider, setModelsByProvider] =
-        useState<Record<string, ProviderModel[]>>(mockProviderModels);
 
-    const selected = providers.find((p) => p.id === selectedId) ?? null;
+    // 未手选时默认选中第一个（派生值，避免 effect 里 setState）
+    const effectiveSelectedId =
+        selectedId ?? (store.loaded ? (store.list[0]?.id ?? null) : null);
+    const selected =
+        store.list.find((p) => p.id === effectiveSelectedId) ?? null;
 
-    const handleSelect = (id: string) => {
-        setCreating(false);
-        setSelectedId(id);
-    };
-
-    const handleCreate = () => {
-        setCreating(true);
-    };
-
-    const handleSaveNew = (data: NewProviderData) => {
-        const provider: Provider = {
-            id: `p-${Date.now()}`,
+    const handleSaveNew = async (data: NewProviderData) => {
+        const provider = await store.create({
+            kind: data.kind,
             name: data.name,
-            type: data.type,
             baseUrl: data.baseUrl,
-            apiKeyMasked: data.apiKey,
+            apiKey: data.apiKey,
             models: [],
-            configured: Boolean(data.apiKey),
-            enabled: false,
-        };
-        setProviders((current) => [...current, provider]);
+        });
         setSelectedId(provider.id);
         setCreating(false);
     };
 
-    const handleToggleEnabled = (id: string, enabled: boolean) => {
-        setProviders((current) =>
-            current.map((p) => (p.id === id ? { ...p, enabled } : p)),
-        );
-    };
-
-    const handleModelsChange = (
-        providerId: string,
-        models: ProviderModel[],
-    ) => {
-        setModelsByProvider((current) => ({
-            ...current,
-            [providerId]: models,
-        }));
+    const handleDelete = async (id: string) => {
+        await store.remove(id);
+        setSelectedId(null);
     };
 
     return (
@@ -76,10 +54,13 @@ export default function ProvidersPage() {
             ) : (
                 <>
                     <ProviderListPane
-                        providers={providers}
-                        selectedId={creating ? null : selectedId}
-                        onSelect={handleSelect}
-                        onCreate={handleCreate}
+                        providers={store.list}
+                        selectedId={creating ? null : effectiveSelectedId}
+                        onSelect={(id) => {
+                            setCreating(false);
+                            setSelectedId(id);
+                        }}
+                        onCreate={() => setCreating(true)}
                     />
                     <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border bg-background">
                         {creating ? (
@@ -87,23 +68,33 @@ export default function ProvidersPage() {
                                 onSave={handleSaveNew}
                                 onCancel={() => setCreating(false)}
                             />
+                        ) : selected ? (
+                            <ProviderDetail
+                                key={selected.id}
+                                provider={selected}
+                                onToggleEnabled={(enabled) =>
+                                    void store.update(selected.id, { enabled })
+                                }
+                                onSaveBaseUrl={(baseUrl) =>
+                                    store.update(selected.id, { baseUrl })
+                                }
+                                onSaveApiKey={(apiKey) =>
+                                    store.update(selected.id, { apiKey })
+                                }
+                                onModelsChange={(models) =>
+                                    void store.update(selected.id, { models })
+                                }
+                                onFetchModels={() =>
+                                    store.fetchModels({ id: selected.id })
+                                }
+                                onDelete={() => void handleDelete(selected.id)}
+                            />
                         ) : (
-                            selected && (
-                                <ProviderDetail
-                                    key={selected.id}
-                                    provider={selected}
-                                    models={modelsByProvider[selected.id] ?? []}
-                                    onToggleEnabled={(enabled) =>
-                                        handleToggleEnabled(
-                                            selected.id,
-                                            enabled,
-                                        )
-                                    }
-                                    onModelsChange={(models) =>
-                                        handleModelsChange(selected.id, models)
-                                    }
-                                />
-                            )
+                            <div className="grid h-full place-items-center text-sm text-muted-foreground">
+                                {store.loaded
+                                    ? t("providers.emptyList")
+                                    : t("common.loading")}
+                            </div>
                         )}
                     </main>
                 </>

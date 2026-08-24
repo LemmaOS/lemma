@@ -1,15 +1,15 @@
-import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { ChevronDown, Plus, Search } from "lucide-react";
-import type { Provider } from "@/mocks";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
+import type { Provider } from "@/gen/lemma/v1/provider_pb";
+import { cn } from "@/lib/utils";
+import { ChevronDown, Plus, Search } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 interface ProviderListPaneProps {
     providers: Provider[];
