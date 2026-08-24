@@ -1,16 +1,4 @@
-import { useMemo } from "react";
-import { Link } from "react-router";
-import {
-    Archive,
-    ChevronDown,
-    LogOut,
-    PanelLeft,
-    Plus,
-    Settings,
-} from "lucide-react";
-import { useTranslation } from "react-i18next";
-import { mockUser } from "@/mocks";
-import type { Session } from "@/mocks";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -19,8 +7,20 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { cn } from "@/lib/utils";
+import { mockUser, type Session } from "@/mocks";
+import { useAuth } from "@/stores/auth";
+import {
+    Archive,
+    ChevronDown,
+    LogOut,
+    PanelLeft,
+    Plus,
+    Settings,
+} from "lucide-react";
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
 
 interface AppSidebarProps {
     /** Non-archived sessions shown in the sidebar list. */
@@ -60,12 +60,8 @@ export function AppSidebar({
     onCollapse,
 }: AppSidebarProps) {
     const { t } = useTranslation();
-
-    const stats = [
-        { label: t("stats.sessions"), value: mockUser.stats.sessions },
-        { label: t("stats.topics"), value: mockUser.stats.topics },
-        { label: t("stats.messages"), value: mockUser.stats.messages },
-    ];
+    const username = useAuth((s) => s.user?.username ?? "");
+    const logout = useAuth((s) => s.logout);
 
     const sorted = useMemo(
         () =>
@@ -213,17 +209,10 @@ export function AppSidebar({
                             <p className="text-sm font-medium">
                                 {mockUser.name}
                             </p>
-                            <div className="mt-3 grid grid-cols-3 gap-2">
-                                {stats.map((stat) => (
-                                    <div key={stat.label}>
-                                        <p className="text-sm font-semibold tabular-nums">
-                                            {stat.value}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {stat.label}
-                                        </p>
-                                    </div>
-                                ))}
+                            <div className="px-2 py-2">
+                                <p className="text-sm font-medium">
+                                    {username}
+                                </p>
                             </div>
                         </div>
                         <DropdownMenuSeparator />
@@ -233,11 +222,13 @@ export function AppSidebar({
                                 {t("sidebar.appSettings")}
                             </Link>
                         </DropdownMenuItem>
-                        <DropdownMenuItem asChild>
-                            <Link to="/login">
-                                <LogOut className="size-4" />
-                                {t("sidebar.signOut")}
-                            </Link>
+                        <DropdownMenuItem
+                            onClick={() => {
+                                void logout();
+                            }}
+                        >
+                            <LogOut className="size-4" />
+                            {t("sidebar.signOut")}
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>

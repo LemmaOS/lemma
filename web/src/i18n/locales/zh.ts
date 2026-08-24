@@ -27,6 +27,11 @@ export default {
         createAccount: "创建账号",
         forgotPassword: "忘记密码？",
         selfHostedNote: "自托管：你的对话数据永远不会离开你的服务器。",
+        identifier: "邮箱或用户名",
+        identifierPlaceholder: "you@example.com",
+        loginFailed: "登录失败，请检查凭据。",
+        signupFailed: "创建账号失败。",
+        passwordMismatch: "两次输入的密码不一致。",
     },
     chat: {
         emptyTitle: "今天想聊点什么？",

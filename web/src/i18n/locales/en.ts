@@ -28,6 +28,11 @@ export default {
         forgotPassword: "Forgot password?",
         selfHostedNote:
             "Self-hosted: your conversations never leave your server.",
+        identifier: "Email or username",
+        identifierPlaceholder: "you@example.com",
+        loginFailed: "Sign-in failed. Check your credentials.",
+        signupFailed: "Could not create the account.",
+        passwordMismatch: "Passwords do not match.",
     },
     chat: {
         emptyTitle: "How can I help you today?",
