@@ -1,10 +1,17 @@
+import { useTranslation } from "react-i18next";
+import { Navigate } from "react-router";
+
 import { AuthCard } from "@/components/auth/AuthCard";
 import { LanguageToggle } from "@/components/LanguageToggle";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { useTranslation } from "react-i18next";
+import { useAuth } from "@/stores/auth";
 
 export default function LoginPage() {
     const { t } = useTranslation();
+    const user = useAuth((s) => s.user);
+
+    // 已登录（含登录成功的瞬间）直接进聊天页
+    if (user) return <Navigate to="/" replace />;
 
     return (
         <div className="relative min-h-dvh grid place-items-center bg-background px-4">
