@@ -1,0 +1,207 @@
+import "fake-indexeddb/auto";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("@/lib/clients", () => ({
+    syncClient: { pull: vi.fn(), watch: vi.fn() },
+}));
+
+import type { PullResponse, WatchResponse } from "@/gen/lemma/v1/sync_pb";
+import { syncClient } from "@/lib/clients";
+import {
+    closeDb,
+    conversationToRow,
+    getCursor,
+    type LemmaDb,
+    listMessages,
+    messageToRow,
+    openDb,
+    upsertConversations,
+    upsertMessages,
+} from "@/lib/db";
+import { applyPull, pullAll, startSync, stopSync } from "@/lib/sync";
+import { useSyncStatus } from "@/stores/sync";
+
+const pullMock = syncClient.pull as unknown as ReturnType<typeof vi.fn>;
+const watchMock = syncClient.watch as unknown as ReturnType<typeof vi.fn>;
+
+function convProto(id: string, status: 1 | 2 = 1) {
+    return {
+        $typeName: "lemma.v1.Conversation" as const,
+        id,
+        title: `t-${id}`,
+        status,
+        archivedAt: undefined,
+        messageCount: 0,
+        createdAt: undefined,
+        updatedAt: undefined,
+    };
+}
+
+function convEntry(id: string, syncSeq: bigint, status: 1 | 2 = 1) {
+    return {
+        $typeName: "lemma.v1.SyncConversation" as const,
+        conversation: convProto(id, status),
+        syncSeq,
+    };
+}
+
+function pullRes(over: Partial<PullResponse>): PullResponse {
+    return {
+        conversations: [],
+        messages: [],
+        archived: [],
+        nextAfter: 0n,
+        hasMore: false,
+        ...over,
+    } as PullResponse;
+}
+
+function hintRes(seq: bigint): WatchResponse {
+    return {
+        kind: { case: "hint", value: { syncSeq: seq } },
+    } as WatchResponse;
+}
+
+/** 产出若干事件后永远挂起（模拟常驻流） */
+function streamOf(events: WatchResponse[]): AsyncIterable<WatchResponse> {
+    return (async function* () {
+        for (const e of events) yield e;
+        await new Promise(() => {});
+    })();
+}
+
+function errorStream(): AsyncIterable<WatchResponse> {
+    // 手写异步迭代器：第一次 next 就 reject，模拟连接即断
+    return {
+        [Symbol.asyncIterator]() {
+            return {
+                next: () => Promise.reject(new Error("connection lost")),
+            };
+        },
+    };
+}
+
+async function waitFor(
+    cond: () => boolean | Promise<boolean>,
+    timeoutMs = 3000,
+): Promise<void> {
+    const start = Date.now();
+    for (;;) {
+        if (await cond()) return;
+        if (Date.now() - start > timeoutMs) throw new Error("waitFor timeout");
+        await new Promise((r) => setTimeout(r, 20));
+    }
+}
+
+describe("sync", () => {
+    let db: LemmaDb;
+
+    beforeEach(async () => {
+        closeDb();
+        db = openDb("sync-test");
+        await db.delete();
+        await db.open();
+    });
+
+    afterEach(() => {
+        stopSync();
+        vi.clearAllMocks();
+    });
+
+    it("pullAll 循环分页直到 hasMore=false，游标持久化", async () => {
+        pullMock
+            .mockResolvedValueOnce(
+                pullRes({
+                    conversations: [convEntry("c1", 1n)],
+                    nextAfter: 1n,
+                    hasMore: true,
+                }),
+            )
+            .mockResolvedValueOnce(
+                pullRes({
+                    conversations: [convEntry("c2", 2n)],
+                    nextAfter: 2n,
+                    hasMore: false,
+                }),
+            );
+
+        await pullAll();
+
+        expect(pullMock).toHaveBeenCalledTimes(2);
+        expect(pullMock.mock.calls[0][0]).toEqual({ after: 0n });
+        expect(pullMock.mock.calls[1][0]).toEqual({ after: 1n });
+        expect(await getCursor(db)).toBe(2n);
+        expect((await db.conversations.toArray()).map((r) => r.id)).toEqual([
+            "c1",
+            "c2",
+        ]);
+    });
+
+    it("applyPull：归档全量刷新清理彻底删除的会话及其消息", async () => {
+        await upsertConversations(db, [
+            conversationToRow(convProto("a1", 2), 3n),
+        ]);
+        await upsertMessages(db, [
+            messageToRow(
+                {
+                    $typeName: "lemma.v1.Message",
+                    id: "m1",
+                    conversationId: "a1",
+                    role: "user",
+                    content: "x",
+                    providerId: "",
+                    model: "",
+                    status: 4,
+                    createdAt: undefined,
+                    updatedAt: undefined,
+                } as never,
+                3n,
+            ),
+        ]);
+
+        await applyPull(db, pullRes({ archived: [convProto("a2", 2)] }));
+
+        expect(await db.conversations.get("a1")).toBeUndefined();
+        expect(await listMessages(db, "a1")).toEqual([]);
+        expect(await db.conversations.get("a2")).toBeDefined();
+    });
+
+    it("watch 连接后先补拉，hint 落后时再拉", async () => {
+        let calls = 0;
+        pullMock.mockImplementation(() => {
+            calls += 1;
+            // 第一次（连上补拉）是空页；hint 触发后返回新数据
+            if (calls === 1) return Promise.resolve(pullRes({ nextAfter: 0n }));
+            return Promise.resolve(
+                pullRes({
+                    conversations: [convEntry("c9", 5n)],
+                    nextAfter: 5n,
+                }),
+            );
+        });
+        watchMock.mockImplementation(() => streamOf([hintRes(5n)]));
+
+        startSync();
+        await waitFor(async () => (await getCursor(db)) === 5n);
+
+        expect(pullMock).toHaveBeenCalledTimes(2);
+        expect(await db.conversations.get("c9")).toBeDefined();
+    });
+
+    it("断流后指数退避重连并恢复在线", async () => {
+        pullMock.mockResolvedValue(pullRes({}));
+        let watchCalls = 0;
+        watchMock.mockImplementation(() => {
+            watchCalls += 1;
+            // 第一次直接断，第二次挂起（保持连接）
+            return watchCalls === 1 ? errorStream() : streamOf([]);
+        });
+
+        startSync();
+        await waitFor(() => useSyncStatus.getState().online === false);
+        // 退避起点 1s，等重连发生
+        await waitFor(() => useSyncStatus.getState().online === true);
+
+        expect(watchCalls).toBe(2);
+    });
+});
