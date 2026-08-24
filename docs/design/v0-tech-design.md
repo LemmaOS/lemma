@@ -85,7 +85,18 @@ lemma/
 
 ## 5. 数据与同步
 
-（待填写）
+**权威在服务端**。PostgreSQL 里 conversations/messages 每行带 `sync_seq`，取自一个全局序列；所有 UPDATE 必须显式 `sync_seq = nextval('sync_seq')`（列默认值只作用于 INSERT），保证任何变更都能被增量同步看见。
+
+**同步协议**（SyncService）：
+
+- `Pull(after)` → 增量条目（每条带自己的 `syncSeq`）+ 归档会话全量列表；客户端持游标循环分页直到 `hasMore=false`，游标持久化在本地。
+- `Watch()` 常驻服务端流：数据变更发 `hint{syncSeq}`，另有心跳；客户端发现 hint 的 syncSeq 领先本地游标就发起一次 Pull。
+- 无删除墓碑：归档是状态翻转（出现在增量里），彻底删除通过归档全量列表的 diff 发现（在旧缓存里、不在新列表里 ⇒ 级联清掉）。
+- 冲突语义是 LWW：同一条目只接受 syncSeq 更大的版本。
+
+**客户端缓存**（web）：IndexedDB（Dexie），每个用户一个库 `lemma-<userId>`，登出不清、切号换库。三张表：conversations、messages（复合索引 `[conversationId+createdAtMs]`）、meta（存同步游标）。proto 实体拍平成行：Timestamp 转毫秒、bigint 转字符串（IndexedDB 索引不支持 bigint）。
+
+**同步引擎**（`web/src/lib/sync.ts`）：`pullAll` 游标循环补拉、并发调用合并成同一次；`watchLoop` 连上先补拉再消费 hint，断流后指数退避重连（1s 起步、封顶 30s），Pull 失败也走同一个重连循环，不另开重试路径。引擎不反向 import stores，补拉完成后通过 `onSynced` 监听器通知上层回灌。
 
 ## 6. 接口设计
 
@@ -103,7 +114,23 @@ lemma/
 
 ## 7. 客户端架构
 
-（待填写）
+React 19 + Vite + Tailwind v4 + shadcn（Radix 组件），状态用 zustand，国际化 i18next（zh/en，选择持久化在 `lemma.lang`），主题三态 light/dark/system（`data-theme` 属性 + 首帧内联脚本防闪烁，`lemma.theme`）。
+
+分层（依赖单向，自上而下）：
+
+| 层             | 位置                | 职责                                                        |
+| -------------- | ------------------- | ----------------------------------------------------------- |
+| 生成物         | `src/gen`           | buf 生成，不入 git                                           |
+| 客户端         | `src/lib/clients`   | connect-es 客户端 + transport（dev 走 vite proxy）          |
+| 缓存/引擎      | `src/lib/db`、`sync`| IndexedDB 缓存层 + 同步引擎（见 §5），不依赖 stores         |
+| 状态           | `src/stores`        | zustand：auth / conversations / chat / providers / sync     |
+| 视图           | `src/pages`、`components` | 页面与组件；`hooks/` 只是 store 的统一入口              |
+
+数据流：**缓存优先读**——打开 App 先从 IndexedDB 铺数据（离线也能秒开），同步引擎在后台收敛后通过 `onSynced` 回调让 stores 再读一遍缓存；**变更走 RPC**，成功后乐观更新 UI 并触发一次 `pullAll` 让缓存即时收敛（watch hint 3 秒内兜底）。
+
+聊天特例：流式期间本地流是权威，`syncFromCache` 跳过回灌；断线续传按已收字符数 offset 重放（最多 3 次）；发送/中断结束后主动补拉。
+
+性能：三个路由页 + Markdown 渲染（MessageContent）各自懒加载拆包；生产构建由 rust-embed 嵌进服务端二进制，单文件部署。
 
 ## 8. 部署
 
