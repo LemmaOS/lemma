@@ -19,3 +19,28 @@ export function clearTokens(): void {
     localStorage.removeItem(ACCESS_KEY);
     localStorage.removeItem(REFRESH_KEY);
 }
+
+// token 载荷里的用户 id（仅做身份变化检测，不验签）
+function userIdOf(token: string): string | null {
+    try {
+        // JWT 载荷是 base64url 编码，先转成标准 base64 再解码
+        const raw = token.split(".")[1] ?? "";
+        const b64 = raw.replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(
+            atob(b64 + "=".repeat((4 - (b64.length % 4)) % 4)),
+        ) as { sub?: string };
+        return payload.sub ?? null;
+    } catch {
+        return null;
+    }
+}
+
+// 多标签页共用 localStorage：别的标签页换了账号时，本页强制重载，避免拿错 token 写脏缓存
+export function installCrossTabGuard(): void {
+    window.addEventListener("storage", (event) => {
+        if (event.key !== ACCESS_KEY) return;
+        const prev = event.oldValue ? userIdOf(event.oldValue) : null;
+        const next = event.newValue ? userIdOf(event.newValue) : null;
+        if (prev && next && prev !== next) window.location.reload();
+    });
+}

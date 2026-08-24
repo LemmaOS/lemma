@@ -111,7 +111,9 @@ function SessionRow({
                 active && "bg-sidebar-accent font-medium",
             )}
         >
-            <span className="flex-1 truncate text-left">{session.title}</span>
+            <span className="flex-1 truncate text-left">
+                {session.title || t("sidebar.newChat")}
+            </span>
             <span className="flex shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
                 <button
                     type="button"
@@ -156,7 +158,7 @@ function ArchivedRow({
     return (
         <div className="group flex w-full items-center rounded-md px-3 py-1.5 text-sm truncate hover:bg-accent/60 transition-colors">
             <span className="flex-1 truncate text-left text-muted-foreground">
-                {session.title}
+                {session.title || t("sidebar.newChat")}
             </span>
             <span className="flex shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
                 <button
