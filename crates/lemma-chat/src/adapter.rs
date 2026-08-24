@@ -1,5 +1,6 @@
 //! 供应商协议适配层：把各家 API 的流式响应统一成 AdapterEvent 流
 
+mod anthropic;
 mod openai;
 mod sse;
 
@@ -10,6 +11,7 @@ use futures::{Stream, StreamExt};
 
 use lemma_db::entity::TokenUsage;
 
+pub use anthropic::AnthropicMessages;
 pub use openai::OpenAiCompatible;
 
 pub type BoxEventStream = Pin<Box<dyn Stream<Item = Result<AdapterEvent, AdapterError>> + Send>>;
