@@ -2,6 +2,18 @@ use lemma_db::entity::{Message, TokenUsage};
 use sqlx::types::Json;
 use uuid::Uuid;
 
+// 发送事务先锁会话行：串行化同会话的 seq 取号，并发双发也得到确定顺序
+pub async fn lock_conversation<'e, E>(executor: E, conversation_id: Uuid) -> sqlx::Result<()>
+where
+    E: sqlx::Executor<'e, Database = sqlx::Postgres>,
+{
+    sqlx::query("SELECT id FROM conversations WHERE id = $1 FOR UPDATE")
+        .bind(conversation_id)
+        .execute(executor)
+        .await?;
+    Ok(())
+}
+
 pub async fn insert_user_message<'e, E>(
     executor: E,
     conversation_id: Uuid,
@@ -11,7 +23,11 @@ where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
 {
     sqlx::query_as::<_, Message>(
-        "INSERT INTO messages (conversation_id, role, content) VALUES ($1, 'user', $2) RETURNING *",
+        r#"
+        INSERT INTO messages (conversation_id, role, content, seq)
+        VALUES ($1, 'user', $2, (SELECT COALESCE(MAX(seq), 0) + 1 FROM messages WHERE conversation_id = $1))
+        RETURNING *
+        "#,
     )
     .bind(conversation_id)
     .bind(content)
@@ -32,8 +48,8 @@ where
 {
     sqlx::query_as::<_, Message>(
         r#"
-        INSERT INTO messages (conversation_id, role, content, provider_id, model, status, client_msg_id)
-        VALUES ($1, 'assistant', '', $2, $3, 'streaming', $4)
+        INSERT INTO messages (conversation_id, role, content, provider_id, model, status, client_msg_id, seq)
+        VALUES ($1, 'assistant', '', $2, $3, 'streaming', $4, (SELECT COALESCE(MAX(seq), 0) + 1 FROM messages WHERE conversation_id = $1))
         RETURNING *
         "#,
     )
@@ -90,7 +106,7 @@ where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
 {
     sqlx::query_as::<_, Message>(
-        "SELECT * FROM messages WHERE conversation_id = $1 AND status = 'done' ORDER BY created_at, id",
+        "SELECT * FROM messages WHERE conversation_id = $1 AND status = 'done' ORDER BY seq, id",
     )
     .bind(conversation_id)
     .fetch_all(executor)

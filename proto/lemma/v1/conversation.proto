@@ -29,6 +29,7 @@ message Conversation {
   int32 message_count = 5;
   google.protobuf.Timestamp created_at = 6;
   google.protobuf.Timestamp updated_at = 7;
+  // 会话内单调递增序号（插入顺序），展示排序以此为准
 }
 
 // sync_seq 为所有变更的绝对时序依据
@@ -43,6 +44,7 @@ message Message {
   MessageStatus status = 7;
   google.protobuf.Timestamp created_at = 8;
   google.protobuf.Timestamp updated_at = 9;
+  int64 seq = 10;
 }
 
 message ListConversationsRequest {}

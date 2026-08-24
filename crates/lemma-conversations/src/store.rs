@@ -160,8 +160,8 @@ where
             SELECT m.* FROM messages m
             JOIN messages b ON b.id = $2 AND b.conversation_id = $1
             WHERE m.conversation_id = $1
-              AND (m.created_at, m.id) < (b.created_at, b.id)
-            ORDER BY m.created_at DESC, m.id DESC
+              AND m.seq < b.seq
+            ORDER BY m.seq DESC
             LIMIT $3
             "#,
         )
@@ -172,7 +172,7 @@ where
         .await?
     } else {
         sqlx::query_as::<_, Message>(
-            "SELECT * FROM messages WHERE conversation_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2",
+            "SELECT * FROM messages WHERE conversation_id = $1 ORDER BY seq DESC LIMIT $2",
         )
         .bind(conversation_id)
         .bind(limit + 1)

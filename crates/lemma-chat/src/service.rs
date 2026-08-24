@@ -149,6 +149,9 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
 
         // 事务：user 消息 + assistant 占位
         let mut tx = self.pool.begin().await.map_err(map_db)?;
+        store::lock_conversation(&mut *tx, conversation_id)
+            .await
+            .map_err(map_db)?;
         store::insert_user_message(&mut *tx, conversation_id, request.content)
             .await
             .map_err(map_db)?;

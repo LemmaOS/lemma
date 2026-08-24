@@ -17,8 +17,9 @@ async fn new_user(pool: &PgPool) -> Uuid {
 async fn seed_message(pool: &PgPool, conv: Uuid, offset_secs: f64) {
     sqlx::query(
         r#"
-        INSERT INTO messages (id, conversation_id, role, content, created_at)
-        VALUES ($1, $2, 'user', 'm', now() - make_interval(secs => $3))
+        INSERT INTO messages (id, conversation_id, role, content, created_at, seq)
+        VALUES ($1, $2, 'user', 'm', now() - make_interval(secs => $3),
+                (SELECT COALESCE(MAX(seq), 0) + 1 FROM messages WHERE conversation_id = $2))
         "#,
     )
     .bind(Uuid::new_v4())

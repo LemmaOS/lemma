@@ -76,4 +76,5 @@ pub struct Message {
     pub sync_seq: i64,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    pub seq: i64,
 }
