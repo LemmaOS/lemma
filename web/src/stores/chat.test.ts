@@ -171,6 +171,7 @@ it("open 优先读本地缓存", async () => {
             model: "",
             status: MessageStatus.DONE,
             createdAtMs: 1,
+            seq: 1,
             syncSeq: "1",
         },
     ]);

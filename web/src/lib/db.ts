@@ -24,6 +24,8 @@ export interface MessageRow {
     model: string;
     status: number; // MessageStatus
     createdAtMs: number;
+    // 会话内单调序号（插入顺序）；number 安全到 2^53，现实不可能超
+    seq: number;
     syncSeq: string;
 }
 
@@ -44,6 +46,16 @@ export class LemmaDb extends Dexie {
             messages: "id, [conversationId+createdAtMs]",
             meta: "key",
         });
+        this.version(2)
+            .stores({
+                conversations: "id, updatedAtMs",
+                messages: "id, [conversationId+seq]",
+                meta: "key",
+            })
+            .upgrade(async (tx) => {
+                await tx.table("messages").clear();
+                await tx.table("meta").delete("cursor");
+            });
     }
 }
 
@@ -94,6 +106,7 @@ export function messageToRow(m: Message, syncSeq: bigint): MessageRow {
         providerId: m.providerId,
         model: m.model,
         status: m.status,
+        seq: Number(m.seq),
         createdAtMs: ms(m.createdAt),
         syncSeq: syncSeq.toString(),
     };
@@ -129,13 +142,13 @@ export async function listArchived(db: LemmaDb): Promise<ConversationRow[]> {
         .sort((a, b) => (b.archivedAtMs ?? 0) - (a.archivedAtMs ?? 0));
 }
 
-/** 会话消息，按创建时间正序 */
+/** 会话消息，按会话内序号正序 */
 export async function listMessages(
     db: LemmaDb,
     conversationId: string,
 ): Promise<MessageRow[]> {
     return db.messages
-        .where("[conversationId+createdAtMs]")
+        .where("[conversationId+seq]")
         .between([conversationId, 0], [conversationId, Infinity])
         .toArray();
 }

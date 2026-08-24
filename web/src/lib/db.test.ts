@@ -50,6 +50,7 @@ function msg(
         model: "",
         status: 4,
         createdAtMs: 1000,
+        seq: 0,
         syncSeq: "1",
         ...over,
     };
@@ -82,11 +83,20 @@ describe("db", () => {
         expect(row?.title).toBe("新");
     });
 
-    it("消息按会话 + 创建时间正序", async () => {
+    it("消息按会话 + seq 正序", async () => {
         await upsertMessages(db, [
-            msg("m2", "c1", { createdAtMs: 2000 }),
-            msg("m1", "c1", { createdAtMs: 1000 }),
-            msg("m3", "c2", { createdAtMs: 500 }),
+            msg("m2", "c1", { seq: 2 }),
+            msg("m1", "c1", { seq: 1 }),
+            msg("m3", "c2", { seq: 1 }),
+        ]);
+        const rows = await listMessages(db, "c1");
+        expect(rows.map((r) => r.id)).toEqual(["m1", "m2"]);
+    });
+
+    it("seq 优先于 createdAtMs（回归：同事务插入顺序颠倒）", async () => {
+        await upsertMessages(db, [
+            msg("m1", "c1", { seq: 1, createdAtMs: 2000 }),
+            msg("m2", "c1", { seq: 2, createdAtMs: 1000 }),
         ]);
         const rows = await listMessages(db, "c1");
         expect(rows.map((r) => r.id)).toEqual(["m1", "m2"]);
