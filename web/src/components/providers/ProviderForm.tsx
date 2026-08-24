@@ -160,7 +160,10 @@ export function ProviderForm({
                             onValueChange={setKindValue}
                             disabled={!isNew}
                         >
-                            <SelectTrigger id="provider-type" className="w-full">
+                            <SelectTrigger
+                                id="provider-type"
+                                className="w-full"
+                            >
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>

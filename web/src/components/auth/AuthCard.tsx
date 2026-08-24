@@ -98,7 +98,9 @@ export function AuthCard() {
                                     onChange={(e) =>
                                         setIdentifier(e.target.value)
                                     }
-                                    placeholder={t("auth.identifierPlaceholder")}
+                                    placeholder={t(
+                                        "auth.identifierPlaceholder",
+                                    )}
                                     required
                                 />
                             </div>
