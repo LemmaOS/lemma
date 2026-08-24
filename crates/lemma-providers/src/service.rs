@@ -29,7 +29,8 @@ impl ProviderService {
     }
 }
 
-fn kind_to_proto(kind: &str) -> ProviderKind {
+/// DB 存的 kind 字符串 → proto 枚举（未知值宽松兜底为 openai）
+pub fn kind_to_proto(kind: &str) -> ProviderKind {
     match kind {
         "anthropic" => ProviderKind::Anthropic,
         "gemini" => ProviderKind::Gemini,

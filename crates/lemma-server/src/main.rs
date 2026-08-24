@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use lemma_auth::AuthService;
 use lemma_chat::ChatService;
-use lemma_chat::adapter::{LlmAdapter, OpenAiCompatible};
+use lemma_chat::adapter::{DispatchAdapter, LlmAdapter};
 use lemma_conversations::ConversationService;
 use lemma_providers::ProviderService;
 use lemma_sync::SyncService;
@@ -19,7 +19,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     lemma_db::migrate(&pool).await?;
 
     // 适配器以 trait object 注入，测试可换假实现
-    let adapter: Arc<dyn LlmAdapter> = Arc::new(OpenAiCompatible::new());
+    let adapter: Arc<dyn LlmAdapter> = Arc::new(DispatchAdapter::new());
     let auth = Arc::new(AuthService::new(pool.clone(), config.jwt_secret.clone()));
     let provider = Arc::new(ProviderService::new(
         pool.clone(),

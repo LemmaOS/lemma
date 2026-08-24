@@ -205,6 +205,7 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
             })
             .collect();
         let chat_req = ChatRequest {
+            kind: lemma_providers::kind_to_proto(&provider.kind),
             base_url: provider.base_url.clone(),
             api_path: provider.api_path.clone(),
             api_key,
