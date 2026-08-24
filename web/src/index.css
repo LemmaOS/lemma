@@ -2,5 +2,4 @@
 @import "tw-animate-css";
 @import "./styles/theme.css";
 
-/* 暗色走 data-theme 属性（ThemeToggle 控制），不用 prefers-color-scheme */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

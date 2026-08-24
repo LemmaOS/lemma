@@ -1,103 +1,120 @@
-import { Check, Copy } from "lucide-react";
-import { lazy, Suspense, useState } from "react";
+import { useState } from "react";
+import {
+    Check,
+    Copy,
+    RefreshCw,
+    Sparkles,
+    ThumbsDown,
+    ThumbsUp,
+} from "lucide-react";
 import { useTranslation } from "react-i18next";
-
+import type { ChatMessage } from "@/mocks";
 import { Button } from "@/components/ui/button";
-import type { ChatItem } from "@/stores/chat";
-
-// react-markdown + highlight.js 是最大的依赖块，单独拆包按需加载
-const MessageContent = lazy(() =>
-    import("@/components/chat/MessageContent").then((m) => ({
-        default: m.MessageContent,
-    })),
-);
+import {
+    MessageBlocks,
+    blocksToPlainText,
+} from "@/components/chat/MessageBlocks";
+import { cn } from "@/lib/utils";
 
 interface MessageItemProps {
-    message: ChatItem;
-    /** 形如 "OpenAI · gpt-4o" 的来源标注，仅 assistant 有 */
-    source?: string;
+    message: ChatMessage;
+    onRegenerate?: (id: string) => void;
 }
 
-/** 消息行（设计稿 §3.2）：user 为色块，assistant 为纯排版流 */
-export function MessageItem({ message, source }: MessageItemProps) {
+/** User messages are right-aligned bubbles; assistant messages have an avatar and always-visible actions. */
+export function MessageItem({ message, onRegenerate }: MessageItemProps) {
     const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
+    const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
 
     if (message.role === "user") {
         return (
-            <div className="rounded-lg bg-secondary/60 px-4 py-3">
-                <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.content}
+            <div className="flex justify-end">
+                <div className="max-w-[75%] rounded-2xl bg-muted px-4 py-2.5 text-sm">
+                    <MessageBlocks blocks={message.blocks} />
                 </div>
             </div>
         );
     }
 
-    const providerInitial = (source?.trim().charAt(0) || "A").toUpperCase();
-
     const handleCopy = async () => {
         try {
-            await navigator.clipboard.writeText(message.content);
+            await navigator.clipboard.writeText(
+                blocksToPlainText(message.blocks),
+            );
         } catch {
-            // 剪贴板不可用（非安全上下文）时静默
+            /* clipboard unavailable in demo */
         }
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);
     };
 
     return (
-        <div className="group">
-            <div className="flex items-start gap-3">
-                <div className="mt-1 grid size-4 shrink-0 place-items-center rounded-full bg-primary text-[10px] leading-none font-semibold text-primary-foreground">
-                    {providerInitial}
-                </div>
-                <div className="min-w-0 flex-1">
-                    {message.content && (
-                        <Suspense
-                            fallback={
-                                <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                                    {message.content}
-                                </div>
-                            }
-                        >
-                            <MessageContent content={message.content} />
-                        </Suspense>
-                    )}
-                    {message.status === "streaming" && (
-                        <span className="mt-1 inline-block h-4 w-[7px] rounded-[1px] bg-foreground/70 align-text-bottom animate-pulse" />
-                    )}
-                    {message.status === "error" && (
-                        <p className="mt-2 text-xs text-destructive">
-                            {message.error}
-                        </p>
-                    )}
-                    {message.status === "aborted" && (
-                        <p className="mt-2 text-xs text-muted-foreground">
-                            {t("chat.abortedNotice")}
-                        </p>
-                    )}
-                    {source && (
-                        <p className="mt-3 text-xs text-muted-foreground">
-                            {source}
-                        </p>
-                    )}
-                    <div className="mt-2 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
-                        <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            className="size-7 text-muted-foreground"
-                            onClick={handleCopy}
-                            aria-label={
-                                copied ? t("chat.copied") : t("chat.copy")
-                            }
-                        >
-                            {copied ? (
-                                <Check className="size-3.5" />
-                            ) : (
-                                <Copy className="size-3.5" />
-                            )}
-                        </Button>
-                    </div>
+        <div className="flex gap-3">
+            <div className="size-7 shrink-0 rounded-full bg-foreground text-background grid place-items-center">
+                <Sparkles className="size-3.5" />
+            </div>
+            <div className="min-w-0 flex-1">
+                <MessageBlocks blocks={message.blocks} />
+                {message.streaming && (
+                    <span className="inline-block h-4 w-[7px] rounded-[1px] bg-foreground/70 animate-pulse align-text-bottom mt-1" />
+                )}
+                {message.source && (
+                    <p className="text-xs text-muted-foreground mt-3">
+                        {message.source}
+                    </p>
+                )}
+                <div className="flex gap-1 mt-2">
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7 text-muted-foreground"
+                        onClick={handleCopy}
+                        aria-label={copied ? t("chat.copied") : t("chat.copy")}
+                    >
+                        {copied ? (
+                            <Check className="size-3.5" />
+                        ) : (
+                            <Copy className="size-3.5" />
+                        )}
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className={cn(
+                            "size-7 text-muted-foreground",
+                            feedback === "up" && "text-foreground",
+                        )}
+                        onClick={() =>
+                            setFeedback(feedback === "up" ? null : "up")
+                        }
+                        aria-label={t("chat.like")}
+                    >
+                        <ThumbsUp className="size-3.5" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className={cn(
+                            "size-7 text-muted-foreground",
+                            feedback === "down" && "text-foreground",
+                        )}
+                        onClick={() =>
+                            setFeedback(feedback === "down" ? null : "down")
+                        }
+                        aria-label={t("chat.dislike")}
+                    >
+                        <ThumbsDown className="size-3.5" />
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        className="size-7 text-muted-foreground"
+                        onClick={() => onRegenerate?.(message.id)}
+                        aria-label={t("chat.regenerate")}
+                    >
+                        <RefreshCw className="size-3.5" />
+                    </Button>
                 </div>
             </div>
         </div>

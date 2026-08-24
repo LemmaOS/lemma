@@ -1,18 +1,13 @@
 import { MessageSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
-
-const SUGGESTION_KEYS = [
-    "chat.suggestion1",
-    "chat.suggestion2",
-    "chat.suggestion3",
-] as const;
+import { emptySuggestions } from "@/mocks";
 
 interface EmptyStateProps {
-    /** 点选建议卡片时把文案填进输入框 */
+    /** Fill the composer with the picked suggestion text. */
     onPickSuggestion: (text: string) => void;
 }
 
-/** 空会话引导（设计稿 §3.4） */
+/** Empty conversation onboarding (design.md §3.4). */
 export function EmptyState({ onPickSuggestion }: EmptyStateProps) {
     const { t } = useTranslation();
 
@@ -27,12 +22,12 @@ export function EmptyState({ onPickSuggestion }: EmptyStateProps) {
                 {t("chat.emptySubtitle")}
             </p>
             <div className="mt-4 grid w-full max-w-2xl gap-3 sm:grid-cols-3">
-                {SUGGESTION_KEYS.map((key) => (
+                {emptySuggestions.map((key) => (
                     <button
                         key={key}
                         type="button"
                         onClick={() => onPickSuggestion(t(key))}
-                        className="cursor-pointer rounded-lg border p-3 text-left text-sm transition-colors hover:bg-accent"
+                        className="rounded-lg border p-3 text-sm text-left hover:bg-accent cursor-pointer transition-colors"
                     >
                         {t(key)}
                     </button>

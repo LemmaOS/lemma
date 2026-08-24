@@ -1,7 +1,5 @@
-import { Bot } from "lucide-react";
-import { type FormEvent, useState } from "react";
 import { useTranslation } from "react-i18next";
-
+import { Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Card,
@@ -13,56 +11,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/stores/auth";
 
 export function AuthCard() {
     const { t } = useTranslation();
-    const login = useAuth((s) => s.login);
-    const signup = useAuth((s) => s.signup);
-
-    const [identifier, setIdentifier] = useState("");
-    const [loginPassword, setLoginPassword] = useState("");
-    const [username, setUsername] = useState("");
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [confirm, setConfirm] = useState("");
-    const [pending, setPending] = useState(false);
-    const [error, setError] = useState<string | null>(null);
-
-    const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        setPending(true);
-        setError(null);
-        try {
-            await login(identifier.trim(), loginPassword);
-        } catch {
-            setError(t("auth.loginFailed"));
-        } finally {
-            setPending(false);
-        }
-    };
-
-    const handleSignup = async (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (password !== confirm) {
-            setError(t("auth.passwordMismatch"));
-            return;
-        }
-        setPending(true);
-        setError(null);
-        try {
-            await signup(username.trim(), email.trim(), password);
-        } catch {
-            setError(t("auth.signupFailed"));
-        } finally {
-            setPending(false);
-        }
-    };
 
     return (
         <Card className="w-full max-w-[380px]">
             <CardHeader className="flex flex-col items-center gap-2 text-center">
-                <div className="grid size-9 place-items-center rounded-lg bg-primary text-primary-foreground">
+                <div className="size-9 rounded-lg bg-primary text-primary-foreground grid place-items-center">
                     <Bot className="size-5" />
                 </div>
                 <CardTitle className="text-lg">
@@ -71,7 +27,7 @@ export function AuthCard() {
                 <CardDescription>{t("auth.subtitle")}</CardDescription>
             </CardHeader>
             <CardContent>
-                <Tabs defaultValue="login" onValueChange={() => setError(null)}>
+                <Tabs defaultValue="login">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="login">
                             {t("auth.loginTab")}
@@ -84,24 +40,17 @@ export function AuthCard() {
                     <TabsContent value="login">
                         <form
                             className="flex flex-col gap-4 pt-4"
-                            onSubmit={handleLogin}
+                            onSubmit={(event) => event.preventDefault()}
                         >
                             <div className="grid gap-2">
-                                <Label htmlFor="login-identifier">
-                                    {t("auth.identifier")}
+                                <Label htmlFor="login-email">
+                                    {t("auth.email")}
                                 </Label>
                                 <Input
-                                    id="login-identifier"
-                                    type="text"
-                                    autoComplete="username"
-                                    value={identifier}
-                                    onChange={(e) =>
-                                        setIdentifier(e.target.value)
-                                    }
-                                    placeholder={t(
-                                        "auth.identifierPlaceholder",
-                                    )}
-                                    required
+                                    id="login-email"
+                                    type="email"
+                                    autoComplete="email"
+                                    placeholder={t("auth.emailPlaceholder")}
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -112,24 +61,16 @@ export function AuthCard() {
                                     id="login-password"
                                     type="password"
                                     autoComplete="current-password"
-                                    value={loginPassword}
-                                    onChange={(e) =>
-                                        setLoginPassword(e.target.value)
-                                    }
                                     placeholder={t("auth.passwordPlaceholder")}
-                                    required
                                 />
                             </div>
-                            {error && (
-                                <p className="text-xs text-destructive">
-                                    {error}
-                                </p>
-                            )}
-                            <Button
-                                type="submit"
-                                className="w-full"
-                                disabled={pending}
+                            <button
+                                type="button"
+                                className="self-start text-xs text-muted-foreground transition-colors hover:text-foreground"
                             >
+                                {t("auth.forgotPassword")}
+                            </button>
+                            <Button type="submit" className="w-full">
                                 {t("auth.signIn")}
                             </Button>
                         </form>
@@ -138,7 +79,7 @@ export function AuthCard() {
                     <TabsContent value="register">
                         <form
                             className="flex flex-col gap-4 pt-4"
-                            onSubmit={handleSignup}
+                            onSubmit={(event) => event.preventDefault()}
                         >
                             <div className="grid gap-2">
                                 <Label htmlFor="register-username">
@@ -148,12 +89,7 @@ export function AuthCard() {
                                     id="register-username"
                                     type="text"
                                     autoComplete="username"
-                                    value={username}
-                                    onChange={(e) =>
-                                        setUsername(e.target.value)
-                                    }
                                     placeholder={t("auth.usernamePlaceholder")}
-                                    required
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -164,10 +100,7 @@ export function AuthCard() {
                                     id="register-email"
                                     type="email"
                                     autoComplete="email"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
                                     placeholder={t("auth.emailPlaceholder")}
-                                    required
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -178,12 +111,7 @@ export function AuthCard() {
                                     id="register-password"
                                     type="password"
                                     autoComplete="new-password"
-                                    value={password}
-                                    onChange={(e) =>
-                                        setPassword(e.target.value)
-                                    }
                                     placeholder={t("auth.passwordPlaceholder")}
-                                    required
                                 />
                             </div>
                             <div className="grid gap-2">
@@ -194,24 +122,12 @@ export function AuthCard() {
                                     id="register-confirm"
                                     type="password"
                                     autoComplete="new-password"
-                                    value={confirm}
-                                    onChange={(e) => setConfirm(e.target.value)}
                                     placeholder={t(
                                         "auth.confirmPasswordPlaceholder",
                                     )}
-                                    required
                                 />
                             </div>
-                            {error && (
-                                <p className="text-xs text-destructive">
-                                    {error}
-                                </p>
-                            )}
-                            <Button
-                                type="submit"
-                                className="w-full"
-                                disabled={pending}
-                            >
+                            <Button type="submit" className="w-full">
                                 {t("auth.createAccount")}
                             </Button>
                         </form>

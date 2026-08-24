@@ -1,161 +1,113 @@
-import { ArrowLeft, Plus } from "lucide-react";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
-
-import { LanguageToggle } from "@/components/LanguageToggle";
+import type { Provider, ProviderModel } from "@/mocks";
+import { mockProviderModels, mockProviders } from "@/mocks";
 import {
-    ProviderForm,
-    type ProviderFormValues,
-} from "@/components/providers/ProviderForm";
-import { ProviderListItem } from "@/components/providers/ProviderListItem";
-import { SyncIndicator } from "@/components/SyncIndicator";
-import { ThemeToggle } from "@/components/ThemeToggle";
-import { Button } from "@/components/ui/button";
-import type { Provider } from "@/gen/lemma/v1/provider_pb";
-import { useProviders } from "@/hooks/useProviders";
+    SettingsNav,
+    type SettingsSection,
+} from "@/components/providers/SettingsNav";
+import { AppearancePanel } from "@/components/providers/AppearancePanel";
+import { ProviderListPane } from "@/components/providers/ProviderListPane";
+import { ProviderDetail } from "@/components/providers/ProviderDetail";
+import {
+    NewProviderForm,
+    type NewProviderData,
+} from "@/components/providers/NewProviderForm";
 
 export default function ProvidersPage() {
-    const { t } = useTranslation();
-    const store = useProviders();
-    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [section, setSection] = useState<SettingsSection>("providers");
+    const [providers, setProviders] = useState<Provider[]>(mockProviders);
+    const [selectedId, setSelectedId] = useState<string | null>(
+        mockProviders[0]?.id ?? null,
+    );
     const [creating, setCreating] = useState(false);
+    const [modelsByProvider, setModelsByProvider] =
+        useState<Record<string, ProviderModel[]>>(mockProviderModels);
 
-    // 未显式选中时默认第一个（渲染期派生，不用 effect 写回 state）
-    const effectiveSelectedId =
-        selectedId ?? (store.loaded ? (store.list[0]?.id ?? null) : null);
-    const selected = store.list.find((p) => p.id === effectiveSelectedId);
+    const selected = providers.find((p) => p.id === selectedId) ?? null;
 
-    const handleSave = async (values: ProviderFormValues) => {
-        if (creating) {
-            const created = await store.create({
-                kind: values.kind,
-                name: values.name,
-                baseUrl: values.baseUrl,
-                apiKey: values.apiKey,
-                models: values.models,
-            });
-            setSelectedId(created.id);
-            setCreating(false);
-            return;
-        }
-        if (!selected) return;
-        // 只提交变化过的字段；apiKey 留空 = 不变更
-        await store.update(selected.id, {
-            name: values.name !== selected.name ? values.name : undefined,
-            baseUrl:
-                values.baseUrl !== selected.baseUrl
-                    ? values.baseUrl
-                    : undefined,
-            apiKey: values.apiKey !== "" ? values.apiKey : undefined,
-            models: values.models,
-        });
+    const handleSelect = (id: string) => {
+        setCreating(false);
+        setSelectedId(id);
     };
 
-    // 已存供应商且密钥/地址没动 → 走 id（用服务端存的密钥）；否则用表单临时凭证
-    const handleFetchModels = (provider?: Provider) => {
-        return (values: {
-            kind: Provider["kind"];
-            baseUrl: string;
-            apiKey: string;
-        }) => {
-            if (
-                provider &&
-                values.apiKey === "" &&
-                values.baseUrl === provider.baseUrl
-            ) {
-                return store.fetchModels({ id: provider.id });
-            }
-            return store.fetchModels({
-                kind: values.kind,
-                baseUrl: values.baseUrl,
-                apiKey: values.apiKey,
-            });
+    const handleCreate = () => {
+        setCreating(true);
+    };
+
+    const handleSaveNew = (data: NewProviderData) => {
+        const provider: Provider = {
+            id: `p-${Date.now()}`,
+            name: data.name,
+            type: data.type,
+            baseUrl: data.baseUrl,
+            apiKeyMasked: data.apiKey,
+            models: [],
+            configured: Boolean(data.apiKey),
+            enabled: false,
         };
+        setProviders((current) => [...current, provider]);
+        setSelectedId(provider.id);
+        setCreating(false);
+    };
+
+    const handleToggleEnabled = (id: string, enabled: boolean) => {
+        setProviders((current) =>
+            current.map((p) => (p.id === id ? { ...p, enabled } : p)),
+        );
+    };
+
+    const handleModelsChange = (
+        providerId: string,
+        models: ProviderModel[],
+    ) => {
+        setModelsByProvider((current) => ({
+            ...current,
+            [providerId]: models,
+        }));
     };
 
     return (
-        <div className="min-h-dvh bg-background">
-            <header className="border-b border-border">
-                <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-6">
-                    <div className="flex items-center gap-3">
-                        <Link
-                            to="/"
-                            className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                        >
-                            <ArrowLeft className="size-4" />
-                            {t("common.back")}
-                        </Link>
-                        <h1 className="text-sm font-semibold">
-                            {t("providers.title")}
-                        </h1>
-                    </div>
-                    <div className="flex items-center gap-1">
-                        <SyncIndicator />
-                        <LanguageToggle />
-                        <ThemeToggle />
-                    </div>
-                </div>
-            </header>
-
-            <main className="mx-auto flex max-w-5xl items-start gap-8 px-6 py-8">
-                <aside className="w-[240px] shrink-0">
-                    <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setCreating(true)}
-                    >
-                        <Plus className="size-4" />
-                        {t("providers.newProvider")}
-                    </Button>
-                    <nav className="mt-4 flex flex-col gap-1">
-                        {store.list.map((provider) => (
-                            <ProviderListItem
-                                key={provider.id}
-                                provider={provider}
-                                selected={
-                                    !creating &&
-                                    provider.id === effectiveSelectedId
-                                }
-                                onSelect={() => {
-                                    setCreating(false);
-                                    setSelectedId(provider.id);
-                                }}
+        <div className="flex h-dvh gap-2 bg-sidebar p-2 text-foreground">
+            <SettingsNav section={section} onSelect={setSection} />
+            {section === "appearance" ? (
+                <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border bg-background">
+                    <AppearancePanel />
+                </main>
+            ) : (
+                <>
+                    <ProviderListPane
+                        providers={providers}
+                        selectedId={creating ? null : selectedId}
+                        onSelect={handleSelect}
+                        onCreate={handleCreate}
+                    />
+                    <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border bg-background">
+                        {creating ? (
+                            <NewProviderForm
+                                onSave={handleSaveNew}
+                                onCancel={() => setCreating(false)}
                             />
-                        ))}
-                        {store.loaded && store.list.length === 0 && (
-                            <p className="px-3 py-2 text-xs text-muted-foreground">
-                                {t("providers.emptyList")}
-                            </p>
+                        ) : (
+                            selected && (
+                                <ProviderDetail
+                                    key={selected.id}
+                                    provider={selected}
+                                    models={modelsByProvider[selected.id] ?? []}
+                                    onToggleEnabled={(enabled) =>
+                                        handleToggleEnabled(
+                                            selected.id,
+                                            enabled,
+                                        )
+                                    }
+                                    onModelsChange={(models) =>
+                                        handleModelsChange(selected.id, models)
+                                    }
+                                />
+                            )
                         )}
-                    </nav>
-                </aside>
-
-                <section className="min-w-0 flex-1">
-                    {creating ? (
-                        <ProviderForm
-                            key="new"
-                            onSave={handleSave}
-                            onCancel={() => setCreating(false)}
-                            onFetchModels={handleFetchModels()}
-                        />
-                    ) : (
-                        selected && (
-                            <ProviderForm
-                                key={selected.id}
-                                provider={selected}
-                                onSave={handleSave}
-                                onDelete={async () => {
-                                    await store.remove(selected.id);
-                                    setSelectedId(null);
-                                }}
-                                onFetchModels={handleFetchModels(selected)}
-                            />
-                        )
-                    )}
-                </section>
-            </main>
+                    </main>
+                </>
+            )}
         </div>
     );
 }
