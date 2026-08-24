@@ -7,6 +7,7 @@ import {
     getDb,
     type LemmaDb,
     messageToRow,
+    pruneActiveExcept,
     replaceArchived,
     setCursor,
     upsertConversations,
@@ -46,6 +47,13 @@ export async function applyPull(db: LemmaDb, res: PullResponse): Promise<void> {
     const archivedRows = res.archived.map((c) => conversationToRow(c, 0n));
     await upsertConversations(db, convRows);
     await upsertMessages(db, msgRows);
+    // 活跃全量对账：名单之外的 active 行是僵尸（跨账号污染/DB 重建残留），连消息一起清。
+    // 放在 replaceArchived 之前：万一某会话在拉取间隙被归档，会被随后的归档全量刷新补回来
+    const zombieIds = await pruneActiveExcept(
+        db,
+        new Set(res.active.map((c) => c.id)),
+    );
+    for (const id of zombieIds) await deleteConversationCascade(db, id);
     const removed = await replaceArchived(db, archivedRows);
     for (const id of removed) await deleteConversationCascade(db, id);
 }

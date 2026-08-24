@@ -70,6 +70,7 @@ it("归档后从活跃列表消失并触发补拉", async () => {
         conversations: [],
         messages: [],
         archived: [],
+        active: [],
         nextAfter: 0n,
         hasMore: false,
     } as never);

@@ -50,6 +50,8 @@ message PullResponse {
   int64 next_after = 4;
   // 仍有未拉取的变更，客户端应继续循环 Pull
   bool has_more = 5;
+  // 活跃会话全量名单（客户端据此清理本地僵尸行：跨账号污染、DB 重建残留等）
+  repeated Conversation active = 6;
 }
 
 message WatchRequest {}

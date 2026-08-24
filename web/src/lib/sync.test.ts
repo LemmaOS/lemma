@@ -50,6 +50,7 @@ function pullRes(over: Partial<PullResponse>): PullResponse {
         conversations: [],
         messages: [],
         archived: [],
+        active: [],
         nextAfter: 0n,
         hasMore: false,
         ...over,
@@ -115,6 +116,7 @@ describe("sync", () => {
                     conversations: [convEntry("c1", 1n)],
                     nextAfter: 1n,
                     hasMore: true,
+                    active: [convProto("c1", 1), convProto("c2", 1)],
                 }),
             )
             .mockResolvedValueOnce(
@@ -122,6 +124,7 @@ describe("sync", () => {
                     conversations: [convEntry("c2", 2n)],
                     nextAfter: 2n,
                     hasMore: false,
+                    active: [convProto("c1", 1), convProto("c2", 1)],
                 }),
             );
 
@@ -151,6 +154,7 @@ describe("sync", () => {
                     content: "x",
                     providerId: "",
                     model: "",
+                    seq: 1n,
                     status: 4,
                     createdAt: undefined,
                     updatedAt: undefined,
@@ -176,6 +180,7 @@ describe("sync", () => {
                 pullRes({
                     conversations: [convEntry("c9", 5n)],
                     nextAfter: 5n,
+                    active: [convProto("c9", 1)],
                 }),
             );
         });
@@ -203,5 +208,39 @@ describe("sync", () => {
         await waitFor(() => useSyncStatus.getState().online === true);
 
         expect(watchCalls).toBe(2);
+    });
+
+    it("applyPull 按活跃名单清理僵尸会话及其消息", async () => {
+        const db = openDb("sync-test");
+        await db.delete();
+        await db.open();
+        await upsertConversations(db, [
+            conversationToRow(convProto("zombie", 1), 5n),
+            conversationToRow(convProto("live", 1), 5n),
+        ]);
+        await upsertMessages(db, [
+            messageToRow(
+                {
+                    $typeName: "lemma.v1.Message",
+                    id: "z1",
+                    conversationId: "zombie",
+                    role: "user",
+                    content: "x",
+                    providerId: "",
+                    model: "",
+                    status: 2,
+                    seq: 1n,
+                    createdAt: undefined,
+                } as never,
+                5n,
+            ),
+        ]);
+
+        await applyPull(db, pullRes({ active: [convProto("live", 1)] }));
+
+        expect(await db.conversations.get("zombie")).toBeUndefined();
+        expect(await db.messages.get("z1")).toBeUndefined();
+        expect(await db.conversations.get("live")).toBeDefined();
+        closeDb();
     });
 });

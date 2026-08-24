@@ -98,6 +98,11 @@ impl lemma_proto::lemma::v1::SyncService for SyncService {
             .await
             .map_err(map_db)?;
 
+        // 活跃会话全量名单（客户端据此对账清理）
+        let active = lemma_conversations::store::list_active_by_user(&self.pool, user_id)
+            .await
+            .map_err(map_db)?;
+
         Response::ok(PullResponse {
             conversations: convs
                 .iter()
@@ -116,6 +121,7 @@ impl lemma_proto::lemma::v1::SyncService for SyncService {
                 })
                 .collect(),
             archived: archived.iter().map(conversation_to_proto).collect(),
+            active: active.iter().map(conversation_to_proto).collect(),
             next_after,
             has_more,
             ..Default::default()

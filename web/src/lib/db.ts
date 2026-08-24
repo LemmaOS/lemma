@@ -106,7 +106,7 @@ export function messageToRow(m: Message, syncSeq: bigint): MessageRow {
         providerId: m.providerId,
         model: m.model,
         status: m.status,
-        seq: Number(m.seq),
+        seq: Number(m.seq ?? 0n),
         createdAtMs: ms(m.createdAt),
         syncSeq: syncSeq.toString(),
     };
@@ -199,6 +199,20 @@ export async function replaceArchived(
                 continue;
             await db.conversations.put(row);
         }
+        return stale.map((r) => r.id);
+    });
+}
+
+/** 活跃会话对账：删掉服务端活跃名单之外的 active 行，返回被删 id（调用方级联清消息） */
+export async function pruneActiveExcept(
+    db: LemmaDb,
+    keepIds: Set<string>,
+): Promise<string[]> {
+    return db.transaction("rw", db.conversations, async () => {
+        const stale = await db.conversations
+            .filter((r) => r.status !== 2 && !keepIds.has(r.id))
+            .toArray();
+        await db.conversations.bulkDelete(stale.map((r) => r.id));
         return stale.map((r) => r.id);
     });
 }
