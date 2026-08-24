@@ -1,0 +1,18 @@
+[package]
+name = "lemma-archive"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+lemma-db.workspace = true
+aws-sdk-s3.workspace = true
+aws-credential-types.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+uuid.workspace = true
+chrono.workspace = true
+tokio.workspace = true
+sqlx.workspace = true
+
+[lints]
+workspace = true
