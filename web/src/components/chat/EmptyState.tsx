@@ -1,6 +1,11 @@
 import { MessageSquare } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { emptySuggestions } from "@/mocks";
+
+const SUGGESTION_KEYS = [
+    "chat.suggestion1",
+    "chat.suggestion2",
+    "chat.suggestion3",
+] as const;
 
 interface EmptyStateProps {
     /** Fill the composer with the picked suggestion text. */
@@ -22,7 +27,7 @@ export function EmptyState({ onPickSuggestion }: EmptyStateProps) {
                 {t("chat.emptySubtitle")}
             </p>
             <div className="mt-4 grid w-full max-w-2xl gap-3 sm:grid-cols-3">
-                {emptySuggestions.map((key) => (
+                {SUGGESTION_KEYS.map((key) => (
                     <button
                         key={key}
                         type="button"

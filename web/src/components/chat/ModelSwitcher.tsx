@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "react-i18next";
-import { mockProviders } from "@/mocks";
+
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -8,20 +8,26 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useProviders } from "@/hooks/useProviders";
+import { cn } from "@/lib/utils";
 
-interface ModelSwitcherProps {
-    /** Currently selected model id. */
+export interface ModelSelection {
+    providerId: string;
     model: string;
-    /** Called when the user picks a different model. */
-    onModelChange: (model: string) => void;
 }
 
-/** Composer tool-row model picker: lists models of all configured providers. */
-export function ModelSwitcher({ model, onModelChange }: ModelSwitcherProps) {
+interface ModelSwitcherProps {
+    selection: ModelSelection | null;
+    onSelect: (selection: ModelSelection) => void;
+}
+
+/** 输入区模型选择：列出所有已启用供应商的模型 */
+export function ModelSwitcher({ selection, onSelect }: ModelSwitcherProps) {
     const { t } = useTranslation();
-    const models = mockProviders
-        .filter((p) => p.configured)
-        .flatMap((p) => p.models);
+    const providers = useProviders();
+    const enabled = providers.list.filter(
+        (p) => p.enabled && p.models.length > 0,
+    );
 
     return (
         <DropdownMenu>
@@ -31,21 +37,33 @@ export function ModelSwitcher({ model, onModelChange }: ModelSwitcherProps) {
                     className="h-7 px-2 text-xs text-muted-foreground"
                     aria-label={t("chat.selectModel")}
                     title={t("chat.selectModel")}
+                    disabled={enabled.length === 0}
                 >
-                    <span className="font-mono">{model}</span>
+                    <span className="font-mono truncate max-w-56">
+                        {selection ? selection.model : t("chat.noProvider")}
+                    </span>
                     <ChevronDown className="size-3" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
-                {models.map((m) => (
-                    <DropdownMenuItem
-                        key={m}
-                        onClick={() => onModelChange(m)}
-                        className="font-mono text-xs"
-                    >
-                        {m}
-                    </DropdownMenuItem>
-                ))}
+                {enabled.flatMap((p) =>
+                    p.models.map((m) => (
+                        <DropdownMenuItem
+                            key={`${p.id}/${m}`}
+                            onClick={() =>
+                                onSelect({ providerId: p.id, model: m })
+                            }
+                            className={cn(
+                                "font-mono text-xs",
+                                selection?.providerId === p.id &&
+                                    selection.model === m &&
+                                    "bg-accent",
+                            )}
+                        >
+                            {p.name} · {m}
+                        </DropdownMenuItem>
+                    )),
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
     );

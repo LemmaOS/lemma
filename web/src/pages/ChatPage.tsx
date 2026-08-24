@@ -1,188 +1,164 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { PanelLeft } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { mockMessages, mockProviders, mockSessions } from "@/mocks";
-import type { ChatMessage, Session } from "@/mocks";
+
 import { AppSidebar } from "@/components/chat/AppSidebar";
 import { ChatComposer } from "@/components/chat/ChatComposer";
 import { EmptyState } from "@/components/chat/EmptyState";
 import { HomeView } from "@/components/chat/HomeView";
 import { MessageItem } from "@/components/chat/MessageItem";
+import { type ModelSelection } from "@/components/chat/ModelSwitcher";
 import { Button } from "@/components/ui/button";
+import type { Conversation } from "@/gen/lemma/v1/conversation_pb";
+import { useChat } from "@/hooks/useChat";
+import { useConversations } from "@/hooks/useConversations";
+import { useProviders } from "@/hooks/useProviders";
+import type { SessionSummary } from "@/lib/sessionGrouping";
 import { cn } from "@/lib/utils";
+import type { ChatItem } from "@/stores/chat";
 
-const STREAM_DURATION_MS = 2500;
-const TITLE_MAX_LENGTH = 40;
 const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
+const MODEL_KEY = "lemma.model";
 
-/** Streaming sample blocks reused for demo replies. */
-const streamingSample = mockMessages.find((m) => m.streaming)?.blocks ?? [];
+function toSummary(c: Conversation): SessionSummary {
+    return {
+        id: c.id,
+        title: c.title,
+        updatedAtMs: c.updatedAt ? timestampDate(c.updatedAt).getTime() : 0,
+        messageCount: c.messageCount,
+    };
+}
 
 export default function ChatPage() {
     const { t } = useTranslation();
-    const [sessions, setSessions] = useState<Session[]>(mockSessions);
+    const conversations = useConversations();
+    const chat = useChat();
+    const providersStore = useProviders();
+
     const [activeId, setActiveId] = useState<string | null>(null);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(
         () => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1",
     );
+    const [draft, setDraft] = useState("");
+
+    const scrollRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLTextAreaElement>(null);
 
     const toggleSidebar = (collapsed: boolean) => {
         setSidebarCollapsed(collapsed);
         localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? "1" : "0");
     };
 
-    const [messagesById, setMessagesById] = useState<
-        Record<string, ChatMessage[]>
-    >(() =>
-        Object.fromEntries(
-            mockSessions
-                .filter((s) => !s.archived)
-                .slice(0, 3)
-                .map((s) => [s.id, mockMessages]),
-        ),
-    );
-    const [draft, setDraft] = useState("");
-    const [model, setModel] = useState(mockProviders[0].models[0]);
+    // ---------- 模型选择（持久化 + 失效回退） ----------
 
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const inputRef = useRef<HTMLTextAreaElement>(null);
-    const streamTimer = useRef<number | null>(null);
-
-    const messages = useMemo(
-        () => (activeId ? (messagesById[activeId] ?? []) : []),
-        [messagesById, activeId],
+    const enabledProviders = useMemo(
+        () =>
+            providersStore.list.filter((p) => p.enabled && p.models.length > 0),
+        [providersStore.list],
     );
-    const streaming = messages.some((m) => m.streaming);
+
+    const [stored, setStored] = useState<ModelSelection | null>(() => {
+        try {
+            const raw = localStorage.getItem(MODEL_KEY);
+            const parsed = raw ? (JSON.parse(raw) as ModelSelection) : null;
+            return parsed?.providerId && parsed?.model ? parsed : null;
+        } catch {
+            return null;
+        }
+    });
+
+    const model = useMemo(() => {
+        if (
+            stored &&
+            enabledProviders.some(
+                (p) =>
+                    p.id === stored.providerId &&
+                    p.models.includes(stored.model),
+            )
+        ) {
+            return stored;
+        }
+        const first = enabledProviders[0];
+        return first ? { providerId: first.id, model: first.models[0] } : null;
+    }, [stored, enabledProviders]);
+
+    const selectModel = (selection: ModelSelection) => {
+        localStorage.setItem(MODEL_KEY, JSON.stringify(selection));
+        setStored(selection);
+    };
+
+    // ---------- 会话与消息 ----------
+
+    // 打开会话：chat store 缓存优先，离线也能开
+    useEffect(() => {
+        if (activeId) void chat.open(activeId);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeId]);
 
     useEffect(() => {
         const el = scrollRef.current;
         if (el) el.scrollTop = el.scrollHeight;
-    }, [messages, activeId]);
+    }, [chat.items, activeId]);
 
-    useEffect(
-        () => () => {
-            if (streamTimer.current !== null)
-                window.clearTimeout(streamTimer.current);
-        },
-        [],
-    );
-
-    const patchMessages = (
-        sessionId: string,
-        updater: (list: ChatMessage[]) => ChatMessage[],
-    ) => {
-        setMessagesById((prev) => ({
-            ...prev,
-            [sessionId]: updater(prev[sessionId] ?? []),
-        }));
-    };
-
-    const finishStreaming = (sessionId: string, messageId: string) => {
-        patchMessages(sessionId, (list) =>
-            list.map((m) =>
-                m.id === messageId ? { ...m, streaming: false } : m,
-            ),
-        );
-        streamTimer.current = null;
-    };
-
-    const scheduleFinish = (sessionId: string, messageId: string) => {
-        if (streamTimer.current !== null)
-            window.clearTimeout(streamTimer.current);
-        streamTimer.current = window.setTimeout(
-            () => finishStreaming(sessionId, messageId),
-            STREAM_DURATION_MS,
-        );
-    };
-
-    const sourceForModel = (modelId: string) => {
-        const provider = mockProviders.find(
-            (p) => p.configured && p.models.includes(modelId),
-        );
-        return provider ? `${provider.type} · ${modelId}` : modelId;
-    };
-
-    /** Append a user message + a streaming demo reply to a session. */
-    const sendToSession = (sessionId: string, text: string) => {
-        const now = Date.now();
-        const userMessage: ChatMessage = {
-            id: `m-${now}-u`,
-            role: "user",
-            blocks: [{ type: "paragraph", segments: [{ type: "text", text }] }],
-        };
-        const aiMessage: ChatMessage = {
-            id: `m-${now}-a`,
-            role: "assistant",
-            source: sourceForModel(model),
-            streaming: true,
-            blocks: streamingSample,
-        };
-        patchMessages(sessionId, (list) => [...list, userMessage, aiMessage]);
-        setSessions((prev) =>
-            prev.map((s) =>
-                s.id === sessionId
-                    ? {
-                          ...s,
-                          updatedAt: new Date(now).toISOString(),
-                          messageCount: s.messageCount + 2,
-                      }
-                    : s,
-            ),
-        );
-        scheduleFinish(sessionId, aiMessage.id);
+    const sendText = async (text: string) => {
+        if (!model || chat.streaming) return;
+        try {
+            let cid = activeId;
+            if (!cid) {
+                cid = await conversations.create();
+                setActiveId(cid);
+                await chat.open(cid);
+            }
+            await chat.send(model.providerId, model.model, text);
+        } catch {
+            // create/open 的网络错误静默；流内错误由 store 转 error 项
+        }
     };
 
     const handleSend = () => {
         const text = draft.trim();
-        if (!text || streaming || !activeId) return;
-        sendToSession(activeId, text);
+        if (!text) return;
         setDraft("");
+        void sendText(text);
     };
 
     const handleStop = () => {
-        if (streamTimer.current !== null) {
-            window.clearTimeout(streamTimer.current);
-            streamTimer.current = null;
-        }
-        if (!activeId) return;
-        patchMessages(activeId, (list) =>
-            list.map((m) => (m.streaming ? { ...m, streaming: false } : m)),
-        );
+        void chat.abort();
     };
 
+    // 重新生成 = 用当前模型重发该回复前面最近一条用户消息
     const handleRegenerate = (messageId: string) => {
-        if (!activeId) return;
-        patchMessages(activeId, (list) =>
-            list.map((m) =>
-                m.id === messageId ? { ...m, streaming: true } : m,
-            ),
-        );
-        scheduleFinish(activeId, messageId);
+        if (chat.streaming || !model) return;
+        const idx = chat.items.findIndex((m) => m.id === messageId);
+        if (idx < 0) return;
+        for (let i = idx - 1; i >= 0; i--) {
+            const prev = chat.items[i];
+            if (prev.role === "user") {
+                void chat.send(model.providerId, model.model, prev.content);
+                return;
+            }
+        }
     };
 
-    /** Home input submit: create a new session with the first exchange. */
-    const handleHomeSubmit = (text: string) => {
-        const id = `s-${Date.now()}`;
-        const session: Session = {
-            id,
-            title:
-                text.length > TITLE_MAX_LENGTH
-                    ? `${text.slice(0, TITLE_MAX_LENGTH)}…`
-                    : text,
-            updatedAt: new Date().toISOString(),
-            messageCount: 0,
-        };
-        setSessions((prev) => [session, ...prev]);
-        setActiveId(id);
-        sendToSession(id, text);
+    const handleArchive = async (id: string) => {
+        await conversations.archive(id);
+        if (id === activeId) setActiveId(null);
     };
 
-    /** Sidebar hover action: archive a session (front-end state only). */
-    const handleArchiveSession = (id: string) => {
-        setSessions((prev) =>
-            prev.map((s) => (s.id === id ? { ...s, archived: true } : s)),
-        );
-        if (activeId === id) setActiveId(null);
+    const handleRename = async (id: string, title: string) => {
+        await conversations.rename(id, title);
+    };
+
+    const handleRestore = async (id: string) => {
+        await conversations.restore(id);
+    };
+
+    // 彻底删除，二次确认
+    const handleDelete = async (id: string) => {
+        if (window.confirm(t("sessions.deleteConfirm"))) {
+            await conversations.deleteArchived(id);
+        }
     };
 
     const handlePickSuggestion = (text: string) => {
@@ -190,9 +166,39 @@ export default function ChatPage() {
         inputRef.current?.focus();
     };
 
+    // ---------- 派生 ----------
+
+    const summaries = useMemo(
+        () => conversations.list.map(toSummary),
+        [conversations.list],
+    );
+    const archivedSummaries = useMemo(
+        () => conversations.archived.map(toSummary),
+        [conversations.archived],
+    );
+
+    const providerNameById = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const p of providersStore.list) map.set(p.id, p.name);
+        return map;
+    }, [providersStore.list]);
+
+    const sourceOf = (m: ChatItem) => {
+        if (!m.model) return undefined;
+        const name = providerNameById.get(m.providerId);
+        return name ? `${name} · ${m.model}` : m.model;
+    };
+
+    const lastAssistantId = useMemo(() => {
+        for (let i = chat.items.length - 1; i >= 0; i--) {
+            if (chat.items[i].role === "assistant") return chat.items[i].id;
+        }
+        return null;
+    }, [chat.items]);
+
     return (
         <div className="flex h-dvh bg-sidebar text-foreground">
-            {/* Sidebar wrapper: animated width/opacity for smooth collapse */}
+            {/* 侧边栏：折叠时宽度/透明度动画 */}
             <div
                 aria-hidden={sidebarCollapsed}
                 className={cn(
@@ -203,11 +209,17 @@ export default function ChatPage() {
                 )}
             >
                 <AppSidebar
-                    sessions={sessions.filter((s) => !s.archived)}
+                    sessions={summaries}
+                    archived={archivedSummaries}
                     activeSessionId={activeId}
                     onGoHome={() => setActiveId(null)}
                     onOpenSession={setActiveId}
-                    onArchiveSession={handleArchiveSession}
+                    onArchiveSession={(id) => void handleArchive(id)}
+                    onRenameSession={(id, title) =>
+                        void handleRename(id, title)
+                    }
+                    onRestoreSession={(id) => void handleRestore(id)}
+                    onDeleteSession={(id) => void handleDelete(id)}
                     onCollapse={() => toggleSidebar(true)}
                 />
             </div>
@@ -235,9 +247,9 @@ export default function ChatPage() {
                     )}
                     {activeId === null ? (
                         <HomeView
-                            onSubmit={handleHomeSubmit}
+                            onSubmit={(text) => void sendText(text)}
                             model={model}
-                            onModelChange={setModel}
+                            onModelChange={selectModel}
                         />
                     ) : (
                         <>
@@ -245,16 +257,20 @@ export default function ChatPage() {
                                 ref={scrollRef}
                                 className="flex-1 overflow-y-auto"
                             >
-                                {messages.length === 0 ? (
+                                {chat.items.length === 0 ? (
                                     <EmptyState
                                         onPickSuggestion={handlePickSuggestion}
                                     />
                                 ) : (
                                     <div className="max-w-3xl mx-auto w-full px-6 pt-10 pb-6 space-y-8">
-                                        {messages.map((message) => (
+                                        {chat.items.map((m) => (
                                             <MessageItem
-                                                key={message.id}
-                                                message={message}
+                                                key={m.id}
+                                                message={m}
+                                                source={sourceOf(m)}
+                                                canRegenerate={
+                                                    m.id === lastAssistantId
+                                                }
                                                 onRegenerate={handleRegenerate}
                                             />
                                         ))}
@@ -266,9 +282,9 @@ export default function ChatPage() {
                                 onChange={setDraft}
                                 onSend={handleSend}
                                 onStop={handleStop}
-                                streaming={streaming}
+                                streaming={chat.streaming}
                                 model={model}
-                                onModelChange={setModel}
+                                onModelChange={selectModel}
                                 inputRef={inputRef}
                             />
                         </>

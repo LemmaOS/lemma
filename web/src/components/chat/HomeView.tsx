@@ -1,17 +1,18 @@
-import { useEffect, useRef, useState } from "react";
 import { ArrowUp } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+
+import {
+    ModelSwitcher,
+    type ModelSelection,
+} from "@/components/chat/ModelSwitcher";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ModelSwitcher } from "@/components/chat/ModelSwitcher";
 
 interface HomeViewProps {
-    /** Create a new session from the home input and enter the chat view. */
     onSubmit: (text: string) => void;
-    /** Currently selected model id. */
-    model: string;
-    /** Called when the user picks a different model. */
-    onModelChange: (model: string) => void;
+    model: ModelSelection | null;
+    onModelChange: (selection: ModelSelection) => void;
 }
 
 function autosize(el: HTMLTextAreaElement | null) {
@@ -20,7 +21,7 @@ function autosize(el: HTMLTextAreaElement | null) {
     el.style.height = `${el.scrollHeight}px`;
 }
 
-/** Home view: a single input card centered in the main area. */
+/** 主区首页：居中的新会话输入卡 */
 export function HomeView({ onSubmit, model, onModelChange }: HomeViewProps) {
     const { t } = useTranslation();
     const [value, setValue] = useState("");
@@ -38,11 +39,9 @@ export function HomeView({ onSubmit, model, onModelChange }: HomeViewProps) {
     return (
         <div className="flex-1 grid place-items-center px-6">
             <div className="w-full max-w-2xl">
-                {/* Brand */}
                 <p className="text-center text-2xl font-semibold tracking-tight mb-8">
                     {t("common.appName")}
                 </p>
-                {/* Large input card */}
                 <div className="rounded-2xl border border-input bg-card p-4 shadow-xs">
                     <Textarea
                         ref={textareaRef}
@@ -51,7 +50,11 @@ export function HomeView({ onSubmit, model, onModelChange }: HomeViewProps) {
                         onChange={(e) => setValue(e.target.value)}
                         onInput={(e) => autosize(e.currentTarget)}
                         onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
+                            if (
+                                e.key === "Enter" &&
+                                !e.shiftKey &&
+                                !e.nativeEvent.isComposing
+                            ) {
                                 e.preventDefault();
                                 submit();
                             }
@@ -62,8 +65,8 @@ export function HomeView({ onSubmit, model, onModelChange }: HomeViewProps) {
                     />
                     <div className="mt-2 flex items-center justify-between">
                         <ModelSwitcher
-                            model={model}
-                            onModelChange={onModelChange}
+                            selection={model}
+                            onSelect={onModelChange}
                         />
                         <Button
                             size="icon"

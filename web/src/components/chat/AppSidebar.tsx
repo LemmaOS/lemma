@@ -1,5 +1,27 @@
+import {
+    Archive,
+    ChevronDown,
+    ChevronRight,
+    LogOut,
+    PanelLeft,
+    Pencil,
+    Plus,
+    RotateCcw,
+    Settings,
+    Trash2,
+} from "lucide-react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Link } from "react-router";
+
+import { SyncIndicator } from "@/components/SyncIndicator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -7,105 +29,180 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { groupSessions, type SessionSummary } from "@/lib/sessionGrouping";
 import { cn } from "@/lib/utils";
-import { mockUser, type Session } from "@/mocks";
 import { useAuth } from "@/stores/auth";
-import {
-    Archive,
-    ChevronDown,
-    LogOut,
-    PanelLeft,
-    Plus,
-    Settings,
-} from "lucide-react";
-import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { Link } from "react-router";
 
 interface AppSidebarProps {
-    /** Non-archived sessions shown in the sidebar list. */
-    sessions: Session[];
-    /** Currently open session (null = home view). */
+    sessions: SessionSummary[];
+    archived: SessionSummary[];
     activeSessionId: string | null;
-    /** Navigate to the home view (also used by "New chat"). */
     onGoHome: () => void;
-    /** Open an existing session. */
     onOpenSession: (id: string) => void;
-    /** Archive a session (removes it from the list). */
     onArchiveSession: (id: string) => void;
-    /** Collapse the sidebar. */
+    onRenameSession: (id: string, title: string) => void;
+    onRestoreSession: (id: string) => void;
+    onDeleteSession: (id: string) => void;
     onCollapse: () => void;
 }
 
-type GroupKey = "today" | "yesterday" | "last7Days" | "earlier";
+/** 会话行：悬停出现 重命名/归档；重命名为非受控输入（defaultValue + 提交时取值） */
+function SessionRow({
+    session,
+    active,
+    onOpen,
+    onArchive,
+    onRename,
+}: {
+    session: SessionSummary;
+    active: boolean;
+    onOpen: (id: string) => void;
+    onArchive: (id: string) => void;
+    onRename: (id: string, title: string) => void;
+}) {
+    const { t } = useTranslation();
+    const [editing, setEditing] = useState(false);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const focusRef = useCallback((el: HTMLInputElement | null) => {
+        inputRef.current = el;
+        el?.select();
+    }, []);
 
-const GROUP_ORDER: GroupKey[] = ["today", "yesterday", "last7Days", "earlier"];
-const DAY_MS = 24 * 60 * 60 * 1000;
+    const commit = () => {
+        const title = inputRef.current?.value.trim() ?? "";
+        setEditing(false);
+        if (title && title !== session.title) onRename(session.id, title);
+    };
 
-function startOfDay(date: Date) {
-    return new Date(
-        date.getFullYear(),
-        date.getMonth(),
-        date.getDate(),
-    ).getTime();
+    if (editing) {
+        return (
+            <Input
+                ref={focusRef}
+                defaultValue={session.title}
+                onBlur={commit}
+                onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                        e.preventDefault();
+                        commit();
+                    } else if (e.key === "Escape") {
+                        setEditing(false);
+                    }
+                }}
+                className="h-7 rounded-md px-3 text-sm"
+            />
+        );
+    }
+
+    return (
+        <div
+            role="button"
+            tabIndex={0}
+            onClick={() => onOpen(session.id)}
+            onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onOpen(session.id);
+                }
+            }}
+            className={cn(
+                "group flex w-full cursor-pointer items-center rounded-md px-3 py-1.5 text-sm truncate hover:bg-accent/60 transition-colors",
+                active && "bg-sidebar-accent font-medium",
+            )}
+        >
+            <span className="flex-1 truncate text-left">{session.title}</span>
+            <span className="flex shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                    type="button"
+                    aria-label={t("sessions.rename")}
+                    title={t("sessions.rename")}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        setEditing(true);
+                    }}
+                    className="grid size-5 place-items-center rounded text-muted-foreground hover:text-foreground"
+                >
+                    <Pencil className="size-3" />
+                </button>
+                <button
+                    type="button"
+                    aria-label={t("sessions.archive")}
+                    title={t("sessions.archive")}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onArchive(session.id);
+                    }}
+                    className="grid size-5 place-items-center rounded text-muted-foreground hover:text-foreground"
+                >
+                    <Archive className="size-3.5" />
+                </button>
+            </span>
+        </div>
+    );
 }
 
-/** Application sidebar: product name, new chat, grouped sessions, user footer. */
+/** 归档行：悬停出现 恢复/彻底删除 */
+function ArchivedRow({
+    session,
+    onRestore,
+    onDelete,
+}: {
+    session: SessionSummary;
+    onRestore: (id: string) => void;
+    onDelete: (id: string) => void;
+}) {
+    const { t } = useTranslation();
+    return (
+        <div className="group flex w-full items-center rounded-md px-3 py-1.5 text-sm truncate hover:bg-accent/60 transition-colors">
+            <span className="flex-1 truncate text-left text-muted-foreground">
+                {session.title}
+            </span>
+            <span className="flex shrink-0 opacity-0 transition-opacity group-hover:opacity-100">
+                <button
+                    type="button"
+                    aria-label={t("sessions.restore")}
+                    title={t("sessions.restore")}
+                    onClick={() => onRestore(session.id)}
+                    className="grid size-5 place-items-center rounded text-muted-foreground hover:text-foreground"
+                >
+                    <RotateCcw className="size-3" />
+                </button>
+                <button
+                    type="button"
+                    aria-label={t("sessions.delete")}
+                    title={t("sessions.delete")}
+                    onClick={() => onDelete(session.id)}
+                    className="grid size-5 place-items-center rounded text-muted-foreground hover:text-destructive"
+                >
+                    <Trash2 className="size-3.5" />
+                </button>
+            </span>
+        </div>
+    );
+}
+
+/** 应用侧边栏：产品名、新会话、分组会话列表、归档区、用户区 */
 export function AppSidebar({
     sessions,
+    archived,
     activeSessionId,
     onGoHome,
     onOpenSession,
     onArchiveSession,
+    onRenameSession,
+    onRestoreSession,
+    onDeleteSession,
     onCollapse,
 }: AppSidebarProps) {
     const { t } = useTranslation();
     const username = useAuth((s) => s.user?.username ?? "");
     const logout = useAuth((s) => s.logout);
 
-    const sorted = useMemo(
-        () =>
-            [...sessions].sort(
-                (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt),
-            ),
-        [sessions],
-    );
-
-    // The mock data uses static dates, so "today" is anchored to the newest
-    // updatedAt in the session list (not the wall clock); each group is a day
-    // offset from that anchor: 0 = today, 1 = yesterday, 2–6 = last 7 days.
-    const groups = useMemo(() => {
-        if (sessions.length === 0)
-            return [] as { key: GroupKey; items: Session[] }[];
-        const anchor = startOfDay(
-            new Date(Math.max(...sessions.map((s) => Date.parse(s.updatedAt)))),
-        );
-        const byGroup = new Map<GroupKey, Session[]>();
-        for (const session of sorted) {
-            const diff = Math.round(
-                (anchor - startOfDay(new Date(session.updatedAt))) / DAY_MS,
-            );
-            const key: GroupKey =
-                diff <= 0
-                    ? "today"
-                    : diff === 1
-                      ? "yesterday"
-                      : diff <= 6
-                        ? "last7Days"
-                        : "earlier";
-            const items = byGroup.get(key) ?? [];
-            items.push(session);
-            byGroup.set(key, items);
-        }
-        return GROUP_ORDER.filter((key) => byGroup.has(key)).map((key) => ({
-            key,
-            items: byGroup.get(key)!,
-        }));
-    }, [sessions, sorted]);
+    const groups = useMemo(() => groupSessions(sessions), [sessions]);
 
     return (
         <aside className="h-full w-[260px] shrink-0 bg-transparent text-sidebar-foreground flex flex-col">
-            {/* Product name + collapse */}
+            {/* 产品名 + 收起 */}
             <div className="flex items-center justify-between px-3 pt-4">
                 <p className="text-sm font-semibold">{t("common.appName")}</p>
                 <Button
@@ -120,7 +217,7 @@ export function AppSidebar({
                 </Button>
             </div>
 
-            {/* New chat */}
+            {/* 新会话 */}
             <div className="px-3 pt-3">
                 <button
                     type="button"
@@ -132,7 +229,7 @@ export function AppSidebar({
                 </button>
             </div>
 
-            {/* Sessions grouped by recency */}
+            {/* 会话列表 */}
             <div className="flex-1 overflow-y-auto pb-3">
                 {groups.map((group) => (
                     <div key={group.key}>
@@ -141,49 +238,42 @@ export function AppSidebar({
                         </p>
                         <div className="space-y-0.5">
                             {group.items.map((session) => (
-                                <div
+                                <SessionRow
                                     key={session.id}
-                                    role="button"
-                                    tabIndex={0}
-                                    onClick={() => onOpenSession(session.id)}
-                                    onKeyDown={(e) => {
-                                        if (
-                                            e.key === "Enter" ||
-                                            e.key === " "
-                                        ) {
-                                            e.preventDefault();
-                                            onOpenSession(session.id);
-                                        }
-                                    }}
-                                    className={cn(
-                                        "group flex w-full cursor-pointer items-center rounded-md px-3 py-1.5 text-sm truncate hover:bg-accent/60 transition-colors",
-                                        session.id === activeSessionId &&
-                                            "bg-sidebar-accent font-medium",
-                                    )}
-                                >
-                                    <span className="flex-1 truncate text-left">
-                                        {session.title}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        aria-label={t("sessions.archive")}
-                                        title={t("sessions.archive")}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onArchiveSession(session.id);
-                                        }}
-                                        className="grid size-5 shrink-0 place-items-center rounded text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
-                                    >
-                                        <Archive className="size-3.5" />
-                                    </button>
-                                </div>
+                                    session={session}
+                                    active={session.id === activeSessionId}
+                                    onOpen={onOpenSession}
+                                    onArchive={onArchiveSession}
+                                    onRename={onRenameSession}
+                                />
                             ))}
                         </div>
                     </div>
                 ))}
+
+                {archived.length > 0 && (
+                    <Collapsible>
+                        <CollapsibleTrigger className="group flex w-full items-center gap-1 px-3 pt-4 pb-1 text-xs text-muted-foreground">
+                            <ChevronRight className="size-3 transition-transform group-data-[state=open]:rotate-90" />
+                            {t("sessions.archived")} ({archived.length})
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <div className="space-y-0.5">
+                                {archived.map((session) => (
+                                    <ArchivedRow
+                                        key={session.id}
+                                        session={session}
+                                        onRestore={onRestoreSession}
+                                        onDelete={onDeleteSession}
+                                    />
+                                ))}
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
+                )}
             </div>
 
-            {/* User area */}
+            {/* 用户区 */}
             <div className="border-t border-sidebar-border p-3 flex items-center gap-2">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -192,10 +282,10 @@ export function AppSidebar({
                             className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1 py-1 hover:bg-sidebar-accent transition-colors"
                         >
                             <span className="size-7 shrink-0 rounded-full bg-muted grid place-items-center text-xs">
-                                {mockUser.name.charAt(0)}
+                                {username.charAt(0)}
                             </span>
                             <span className="flex-1 truncate text-left text-sm">
-                                {mockUser.name}
+                                {username}
                             </span>
                             <ChevronDown className="size-3.5 shrink-0 text-muted-foreground" />
                         </button>
@@ -203,17 +293,10 @@ export function AppSidebar({
                     <DropdownMenuContent
                         align="start"
                         side="top"
-                        className="w-64"
+                        className="w-56"
                     >
                         <div className="px-2 py-2">
-                            <p className="text-sm font-medium">
-                                {mockUser.name}
-                            </p>
-                            <div className="px-2 py-2">
-                                <p className="text-sm font-medium">
-                                    {username}
-                                </p>
-                            </div>
+                            <p className="text-sm font-medium">{username}</p>
                         </div>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
@@ -232,6 +315,7 @@ export function AppSidebar({
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
+                <SyncIndicator />
                 <ThemeToggle />
             </div>
         </aside>

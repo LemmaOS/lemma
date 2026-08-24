@@ -50,6 +50,7 @@ export default {
         suggestion1: "Explain a concept step by step",
         suggestion2: "Help me debug an issue",
         suggestion3: "Draft and refine some text",
+        abortedNotice: "Generation stopped.",
     },
     sessions: {
         today: "Today",
@@ -57,6 +58,12 @@ export default {
         last7Days: "Last 7 days",
         earlier: "Earlier",
         archive: "Archive",
+        rename: "Rename",
+        restore: "Restore",
+        delete: "Delete permanently",
+        deleteConfirm:
+            "Permanently delete this conversation? This cannot be undone.",
+        archived: "Archived",
     },
     sidebar: {
         newChat: "New chat",
@@ -145,5 +152,8 @@ export default {
         light: "Light",
         dark: "Dark",
         system: "System",
+    },
+    sync: {
+        offline: "Offline — showing cached data",
     },
 };

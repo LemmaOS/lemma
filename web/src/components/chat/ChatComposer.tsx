@@ -1,9 +1,13 @@
-import { useEffect, useRef } from "react";
 import { ArrowUp, Square } from "lucide-react";
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+
+import {
+    ModelSwitcher,
+    type ModelSelection,
+} from "@/components/chat/ModelSwitcher";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { ModelSwitcher } from "@/components/chat/ModelSwitcher";
 
 interface ChatComposerProps {
     value: string;
@@ -11,8 +15,8 @@ interface ChatComposerProps {
     onSend: () => void;
     onStop: () => void;
     streaming: boolean;
-    model: string;
-    onModelChange: (model: string) => void;
+    model: ModelSelection | null;
+    onModelChange: (selection: ModelSelection) => void;
     inputRef?: React.RefObject<HTMLTextAreaElement | null>;
 }
 
@@ -22,7 +26,7 @@ function autosize(el: HTMLTextAreaElement | null) {
     el.style.height = `${el.scrollHeight}px`;
 }
 
-/** Bottom composer: rounded card container, autosizing textarea, toolbar, send/stop. */
+/** 底部输入区：自适应高度、工具行、发送/停止 */
 export function ChatComposer({
     value,
     onChange,
@@ -53,7 +57,12 @@ export function ChatComposer({
                     onChange={(e) => onChange(e.target.value)}
                     onInput={(e) => autosize(e.currentTarget)}
                     onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
+                        if (
+                            e.key === "Enter" &&
+                            !e.shiftKey &&
+                            // 输入法组词中的回车不是发送
+                            !e.nativeEvent.isComposing
+                        ) {
                             e.preventDefault();
                             if (canSend && !streaming) onSend();
                         }
@@ -63,10 +72,7 @@ export function ChatComposer({
                     className="min-h-[52px] max-h-40 resize-none border-0 bg-transparent focus-visible:ring-0 px-4 pt-3.5 shadow-none"
                 />
                 <div className="flex items-center justify-between px-3 pb-2.5">
-                    <ModelSwitcher
-                        model={model}
-                        onModelChange={onModelChange}
-                    />
+                    <ModelSwitcher selection={model} onSelect={onModelChange} />
                     <div className="flex items-center gap-1">
                         {streaming ? (
                             <Button
@@ -93,7 +99,8 @@ export function ChatComposer({
                 </div>
             </div>
             <p className="max-w-3xl mx-auto text-center text-xs text-muted-foreground pt-2">
-                {model} · {t("chat.disclaimer")}
+                {model ? model.model : t("chat.noProvider")} ·{" "}
+                {t("chat.disclaimer")}
             </p>
         </div>
     );

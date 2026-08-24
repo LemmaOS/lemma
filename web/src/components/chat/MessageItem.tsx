@@ -1,37 +1,37 @@
+import { Check, Copy, RefreshCw, Sparkles } from "lucide-react";
 import { useState } from "react";
-import {
-    Check,
-    Copy,
-    RefreshCw,
-    Sparkles,
-    ThumbsDown,
-    ThumbsUp,
-} from "lucide-react";
 import { useTranslation } from "react-i18next";
-import type { ChatMessage } from "@/mocks";
+
+import { MessageContent } from "@/components/chat/MessageContent";
 import { Button } from "@/components/ui/button";
-import {
-    MessageBlocks,
-    blocksToPlainText,
-} from "@/components/chat/MessageBlocks";
-import { cn } from "@/lib/utils";
+import type { ChatItem } from "@/stores/chat";
 
 interface MessageItemProps {
-    message: ChatMessage;
+    message: ChatItem;
+    /** 展示来源的标签，如 "DeepSeek · deepseek-v4-flash" */
+    source?: string;
+    /** 仅最后一条 assistant 消息显示重新生成 */
+    canRegenerate?: boolean;
     onRegenerate?: (id: string) => void;
 }
 
-/** User messages are right-aligned bubbles; assistant messages have an avatar and always-visible actions. */
-export function MessageItem({ message, onRegenerate }: MessageItemProps) {
+/** 用户消息右对齐气泡；assistant 消息带头像、Markdown 渲染和操作按钮 */
+export function MessageItem({
+    message,
+    source,
+    canRegenerate,
+    onRegenerate,
+}: MessageItemProps) {
     const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
-    const [feedback, setFeedback] = useState<"up" | "down" | null>(null);
+
+    const streaming = message.status === "streaming";
 
     if (message.role === "user") {
         return (
             <div className="flex justify-end">
-                <div className="max-w-[75%] rounded-2xl bg-muted px-4 py-2.5 text-sm">
-                    <MessageBlocks blocks={message.blocks} />
+                <div className="max-w-[75%] rounded-2xl bg-muted px-4 py-2.5 text-sm whitespace-pre-wrap break-words">
+                    {message.content}
                 </div>
             </div>
         );
@@ -39,11 +39,9 @@ export function MessageItem({ message, onRegenerate }: MessageItemProps) {
 
     const handleCopy = async () => {
         try {
-            await navigator.clipboard.writeText(
-                blocksToPlainText(message.blocks),
-            );
+            await navigator.clipboard.writeText(message.content);
         } catch {
-            /* clipboard unavailable in demo */
+            // 剪贴板不可用（非安全上下文）时静默
         }
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);
@@ -55,67 +53,55 @@ export function MessageItem({ message, onRegenerate }: MessageItemProps) {
                 <Sparkles className="size-3.5" />
             </div>
             <div className="min-w-0 flex-1">
-                <MessageBlocks blocks={message.blocks} />
-                {message.streaming && (
-                    <span className="inline-block h-4 w-[7px] rounded-[1px] bg-foreground/70 animate-pulse align-text-bottom mt-1" />
+                <MessageContent content={message.content} />
+                {streaming && (
+                    <span className="mt-1 inline-block h-4 w-[7px] animate-pulse rounded-[1px] bg-foreground/70 align-text-bottom" />
                 )}
-                {message.source && (
-                    <p className="text-xs text-muted-foreground mt-3">
-                        {message.source}
+                {message.status === "error" && message.error && (
+                    <p className="mt-2 text-sm text-destructive">
+                        {message.error}
                     </p>
                 )}
-                <div className="flex gap-1 mt-2">
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="size-7 text-muted-foreground"
-                        onClick={handleCopy}
-                        aria-label={copied ? t("chat.copied") : t("chat.copy")}
-                    >
-                        {copied ? (
-                            <Check className="size-3.5" />
-                        ) : (
-                            <Copy className="size-3.5" />
+                {message.status === "aborted" && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                        {t("chat.abortedNotice")}
+                    </p>
+                )}
+                {!streaming && source && (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                        {source}
+                    </p>
+                )}
+                {!streaming && (
+                    <div className="mt-2 flex gap-1">
+                        <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            className="size-7 text-muted-foreground"
+                            onClick={handleCopy}
+                            aria-label={
+                                copied ? t("chat.copied") : t("chat.copy")
+                            }
+                        >
+                            {copied ? (
+                                <Check className="size-3.5" />
+                            ) : (
+                                <Copy className="size-3.5" />
+                            )}
+                        </Button>
+                        {canRegenerate && onRegenerate && (
+                            <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                className="size-7 text-muted-foreground"
+                                onClick={() => onRegenerate(message.id)}
+                                aria-label={t("chat.regenerate")}
+                            >
+                                <RefreshCw className="size-3.5" />
+                            </Button>
                         )}
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className={cn(
-                            "size-7 text-muted-foreground",
-                            feedback === "up" && "text-foreground",
-                        )}
-                        onClick={() =>
-                            setFeedback(feedback === "up" ? null : "up")
-                        }
-                        aria-label={t("chat.like")}
-                    >
-                        <ThumbsUp className="size-3.5" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className={cn(
-                            "size-7 text-muted-foreground",
-                            feedback === "down" && "text-foreground",
-                        )}
-                        onClick={() =>
-                            setFeedback(feedback === "down" ? null : "down")
-                        }
-                        aria-label={t("chat.dislike")}
-                    >
-                        <ThumbsDown className="size-3.5" />
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="size-7 text-muted-foreground"
-                        onClick={() => onRegenerate?.(message.id)}
-                        aria-label={t("chat.regenerate")}
-                    >
-                        <RefreshCw className="size-3.5" />
-                    </Button>
-                </div>
+                    </div>
+                )}
             </div>
         </div>
     );

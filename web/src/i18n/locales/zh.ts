@@ -49,6 +49,7 @@ export default {
         suggestion1: "逐步解释一个概念",
         suggestion2: "帮我排查一个问题",
         suggestion3: "起草并润色一段文字",
+        abortedNotice: "生成已停止。",
     },
     sessions: {
         today: "今天",
@@ -56,6 +57,11 @@ export default {
         last7Days: "近 7 天",
         earlier: "更早",
         archive: "归档",
+        rename: "重命名",
+        restore: "恢复",
+        delete: "彻底删除",
+        deleteConfirm: "彻底删除该会话？此操作不可恢复。",
+        archived: "已归档",
     },
     sidebar: {
         newChat: "新会话",
@@ -142,5 +148,8 @@ export default {
         light: "浅色",
         dark: "深色",
         system: "跟随系统",
+    },
+    sync: {
+        offline: "离线 — 展示本地缓存",
     },
 };
