@@ -3,11 +3,13 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import { LanguageToggle } from "@/components/LanguageToggle";
 import {
     ProviderForm,
     type ProviderFormValues,
 } from "@/components/providers/ProviderForm";
 import { ProviderListItem } from "@/components/providers/ProviderListItem";
+import { SyncIndicator } from "@/components/SyncIndicator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import type { Provider } from "@/gen/lemma/v1/provider_pb";
@@ -88,7 +90,11 @@ export default function ProvidersPage() {
                             {t("providers.title")}
                         </h1>
                     </div>
-                    <ThemeToggle />
+                    <div className="flex items-center gap-1">
+                        <SyncIndicator />
+                        <LanguageToggle />
+                        <ThemeToggle />
+                    </div>
                 </div>
             </header>
 

@@ -93,4 +93,10 @@ export default {
         dark: "深色",
         system: "跟随系统",
     },
+    sync: {
+        offline: "离线 — 展示本地缓存",
+    },
+    language: {
+        toggle: "语言",
+    },
 };

@@ -95,4 +95,10 @@ export default {
         dark: "Dark",
         system: "System",
     },
+    sync: {
+        offline: "Offline — showing cached data",
+    },
+    language: {
+        toggle: "Language",
+    },
 };

@@ -7,6 +7,8 @@ import { ChatComposer, type ModelOption } from "@/components/chat/ChatComposer";
 import { EmptyState } from "@/components/chat/EmptyState";
 import { MessageItem } from "@/components/chat/MessageItem";
 import { SessionList } from "@/components/chat/SessionList";
+import { LanguageToggle } from "@/components/LanguageToggle";
+import { SyncIndicator } from "@/components/SyncIndicator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -134,7 +136,11 @@ export default function ChatPage() {
                     <span className="truncate text-sm font-semibold">
                         {t("auth.productName")}
                     </span>
-                    <ThemeToggle />
+                    <div className="flex items-center gap-1">
+                        <SyncIndicator />
+                        <LanguageToggle />
+                        <ThemeToggle />
+                    </div>
                 </div>
                 <div className="px-3 pb-2">
                     <Button className="w-full" onClick={handleNewChat}>
