@@ -14,6 +14,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
+import { LanguageToggle } from "@/components/LanguageToggle";
 import { SyncIndicator } from "@/components/SyncIndicator";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
@@ -316,6 +317,7 @@ export function AppSidebar({
                     </DropdownMenuContent>
                 </DropdownMenu>
                 <SyncIndicator />
+                <LanguageToggle />
                 <ThemeToggle />
             </div>
         </aside>
