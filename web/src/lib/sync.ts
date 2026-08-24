@@ -21,6 +21,17 @@ let running = false;
 let watchAbort: AbortController | null = null;
 let pulling: Promise<void> | null = null;
 
+// "一次补拉完成"监听器：stores 借此从缓存回灌，避免引擎反向 import stores 造成循环依赖
+type SyncListener = () => void;
+const listeners = new Set<SyncListener>();
+
+export function onSynced(cb: SyncListener): () => void {
+    listeners.add(cb);
+    return () => {
+        listeners.delete(cb);
+    };
+}
+
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** 应用一页 Pull：LWW 落库 + 归档全量刷新（顺带清理彻底删除的残留） */
@@ -55,6 +66,7 @@ export async function pullAll(): Promise<void> {
             }
             await setCursor(db, after);
             useSyncStatus.getState().setOnline(true);
+            for (const cb of listeners) cb();
         } finally {
             useSyncStatus.getState().setSyncing(false);
         }

@@ -1,3 +1,4 @@
+import "fake-indexeddb/auto";
 import { beforeEach, expect, it, vi } from "vitest";
 
 // mock 掉整个客户端层：测试目标是状态机，不是网络
@@ -19,6 +20,7 @@ import type {
 } from "@/gen/lemma/v1/chat_pb";
 import { MessageStatus } from "@/gen/lemma/v1/conversation_pb";
 import { chatClient, conversationClient } from "@/lib/clients";
+import { closeDb, openDb, upsertMessages } from "@/lib/db";
 import { useChat } from "./chat";
 
 const sendMessage = vi.mocked(chatClient.sendMessage);
@@ -153,4 +155,32 @@ it("open 加载历史并转正序", async () => {
         status: "done",
         model: "gpt-x",
     });
+});
+
+it("open 优先读本地缓存", async () => {
+    const db = openDb("chat-cache-test");
+    await db.delete();
+    await db.open();
+    await upsertMessages(db, [
+        {
+            id: "m1",
+            conversationId: "conv-1",
+            role: "user",
+            content: "hi",
+            providerId: "",
+            model: "",
+            status: MessageStatus.DONE,
+            createdAtMs: 1,
+            syncSeq: "1",
+        },
+    ]);
+
+    await useChat.getState().open("conv-1");
+
+    const { items, hasMore } = useChat.getState();
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({ id: "m1", content: "hi", status: "done" });
+    expect(hasMore).toBe(false);
+    expect(listMessages).not.toHaveBeenCalled();
+    closeDb();
 });

@@ -3,6 +3,8 @@ import { create } from "zustand";
 import type { ChatEvent } from "@/gen/lemma/v1/chat_pb";
 import { type Message, MessageStatus } from "@/gen/lemma/v1/conversation_pb";
 import { chatClient, conversationClient } from "@/lib/clients";
+import { getDb, listMessages, type MessageRow } from "@/lib/db";
+import { pullAll } from "@/lib/sync";
 
 export interface ChatItem {
     id: string; // assistant 占位期是 `${clientMsgId}:ai`
@@ -20,6 +22,7 @@ interface ChatState {
     streaming: boolean;
     hasMore: boolean;
     open: (conversationId: string) => Promise<void>;
+    syncFromCache: () => Promise<void>;
     loadMore: () => Promise<void>;
     send: (providerId: string, model: string, content: string) => Promise<void>;
     abort: () => Promise<void>;
@@ -60,6 +63,17 @@ function protoToItem(m: Message): ChatItem {
     };
 }
 
+function rowToItem(m: MessageRow): ChatItem {
+    return {
+        id: m.id,
+        role: m.role === "user" ? "user" : "assistant",
+        content: m.content,
+        status: statusFromProto(m.status as MessageStatus),
+        providerId: m.providerId,
+        model: m.model,
+    };
+}
+
 export const useChat = create<ChatState>()((set, get) => ({
     conversationId: null,
     items: [],
@@ -67,6 +81,17 @@ export const useChat = create<ChatState>()((set, get) => ({
     hasMore: false,
 
     open: async (conversationId) => {
+        const db = getDb();
+        if (db) {
+            // 缓存副本是全量历史（Pull 覆盖 messages 表），无需分页
+            const rows = await listMessages(db, conversationId);
+            set({
+                conversationId,
+                items: rows.map(rowToItem),
+                hasMore: false,
+            });
+            return;
+        }
         const res = await conversationClient.listMessages({
             conversationId,
             limit: PAGE_SIZE,
@@ -77,6 +102,15 @@ export const useChat = create<ChatState>()((set, get) => ({
             items: res.messages.map(protoToItem).reverse(),
             hasMore: res.hasMore,
         });
+    },
+
+    // 同步引擎补拉完成后回调：用缓存刷新当前会话；流式期间不动（本地流是权威）
+    syncFromCache: async () => {
+        const { conversationId, streaming } = get();
+        const db = getDb();
+        if (!db || !conversationId || streaming) return;
+        const rows = await listMessages(db, conversationId);
+        set({ items: rows.map(rowToItem), hasMore: false });
     },
 
     loadMore: async () => {
@@ -213,6 +247,8 @@ export const useChat = create<ChatState>()((set, get) => ({
             controller = null;
             activeMessageId = null;
             set({ streaming: false });
+            // 发送落库后主动补拉，缓存即时收敛
+            void pullAll().catch(() => {});
         }
     },
 
