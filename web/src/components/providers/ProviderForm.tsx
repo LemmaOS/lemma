@@ -22,6 +22,13 @@ const KIND_OPTIONS = [
     { value: "gemini", kind: ProviderKind.GEMINI },
 ] as const;
 
+// 新建时切 kind 预填官方端点；用户改过就不动
+const DEFAULT_BASE_URLS: Record<string, string> = {
+    openai: "https://api.openai.com/v1",
+    anthropic: "https://api.anthropic.com/v1",
+    gemini: "https://generativelanguage.googleapis.com/v1beta",
+};
+
 function kindToValue(kind: ProviderKind): string {
     return KIND_OPTIONS.find((o) => o.kind === kind)?.value ?? "openai";
 }
@@ -75,6 +82,17 @@ export function ProviderForm({
     const [saving, setSaving] = useState(false);
     const [saveFailed, setSaveFailed] = useState(false);
     const [confirmingDelete, setConfirmingDelete] = useState(false);
+
+    const handleKindChange = (value: string) => {
+        setKindValue(value);
+        // 只在 baseUrl 为空或仍是某个默认值时跟随切换，不覆盖用户输入
+        setBaseUrl((current) => {
+            const untouched =
+                current === "" ||
+                Object.values(DEFAULT_BASE_URLS).includes(current);
+            return untouched ? (DEFAULT_BASE_URLS[value] ?? current) : current;
+        });
+    };
 
     const handleFetch = async () => {
         setFetching(true);
@@ -157,7 +175,7 @@ export function ProviderForm({
                         </Label>
                         <Select
                             value={kindValue}
-                            onValueChange={setKindValue}
+                            onValueChange={handleKindChange}
                             disabled={!isNew}
                         >
                             <SelectTrigger
