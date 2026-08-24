@@ -44,17 +44,15 @@ export default function ChatPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // 加载完成后默认选中最新会话；一个都没有就停在空状态，首发消息时再建
-    useEffect(() => {
-        if (conversations.loaded && !activeId && conversations.list.length > 0) {
-            setActiveId(conversations.list[0].id);
-        }
-    }, [conversations.loaded, conversations.list, activeId]);
+    // 未显式选中时默认最新会话（渲染期派生，不用 effect 写回 state）
+    const effectiveActiveId =
+        activeId ??
+        (conversations.loaded ? (conversations.list[0]?.id ?? null) : null);
 
     useEffect(() => {
-        if (activeId) void chat.open(activeId);
+        if (effectiveActiveId) void chat.open(effectiveActiveId);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeId]);
+    }, [effectiveActiveId]);
 
     // 消息变化：翻页 prepend 恢复视口；其余情况（新消息/流式）滚到底
     useEffect(() => {
@@ -66,7 +64,7 @@ export default function ChatPage() {
             return;
         }
         el.scrollTop = el.scrollHeight;
-    }, [chat.items, activeId]);
+    }, [chat.items, effectiveActiveId]);
 
     const modelOptions = useMemo<ModelOption[]>(
         () =>
@@ -95,7 +93,8 @@ export default function ChatPage() {
 
     const handleScroll = () => {
         const el = scrollRef.current;
-        if (!el || el.scrollTop > 0 || !chat.hasMore || !activeId) return;
+        if (!el || el.scrollTop > 0 || !chat.hasMore || !effectiveActiveId)
+            return;
         prependHeightRef.current = el.scrollHeight;
         void chat.loadMore();
     };
@@ -103,7 +102,7 @@ export default function ChatPage() {
     const handleSend = async () => {
         const text = draft.trim();
         if (!text || chat.streaming || !selectedModel) return;
-        let cid = activeId;
+        let cid = effectiveActiveId;
         if (!cid) {
             // 空状态首发：先建会话再发
             cid = await conversations.create();
@@ -146,7 +145,7 @@ export default function ChatPage() {
                 <SessionList
                     conversations={conversations.list}
                     archived={conversations.archived}
-                    activeId={activeId}
+                    activeId={effectiveActiveId}
                     editingId={editingId}
                     onSelect={setActiveId}
                     onStartRename={setEditingId}
@@ -193,7 +192,7 @@ export default function ChatPage() {
                     onScroll={handleScroll}
                     className="flex-1 overflow-y-auto"
                 >
-                    {!activeId || chat.items.length === 0 ? (
+                    {!effectiveActiveId || chat.items.length === 0 ? (
                         <EmptyState
                             onPickSuggestion={(text) => {
                                 setDraft(text);

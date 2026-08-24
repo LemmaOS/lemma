@@ -1,20 +1,8 @@
 import { useTranslation } from "react-i18next";
 
-import { ProviderKind, type Provider } from "@/gen/lemma/v1/provider_pb";
+import type { Provider } from "@/gen/lemma/v1/provider_pb";
+import { kindLabel } from "@/lib/providerKind";
 import { cn } from "@/lib/utils";
-
-export function kindLabel(kind: ProviderKind): string {
-    switch (kind) {
-        case ProviderKind.OPENAI:
-            return "openai";
-        case ProviderKind.ANTHROPIC:
-            return "anthropic";
-        case ProviderKind.GEMINI:
-            return "gemini";
-        default:
-            return "unknown";
-    }
-}
 
 interface ProviderListItemProps {
     provider: Provider;
@@ -38,7 +26,9 @@ export function ProviderListItem({
             aria-current={selected ? "true" : undefined}
             className={cn(
                 "flex w-full items-center gap-2 rounded-md px-3 py-2 text-left transition-colors",
-                selected ? "bg-accent text-accent-foreground" : "hover:bg-accent/60",
+                selected
+                    ? "bg-accent text-accent-foreground"
+                    : "hover:bg-accent/60",
             )}
         >
             <span className="min-w-0 flex-1">

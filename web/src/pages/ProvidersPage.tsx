@@ -1,5 +1,5 @@
 import { ArrowLeft, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link } from "react-router";
 
@@ -19,14 +19,10 @@ export default function ProvidersPage() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
 
-    // 加载完成后默认选中第一个
-    useEffect(() => {
-        if (store.loaded && !selectedId && store.list.length > 0) {
-            setSelectedId(store.list[0].id);
-        }
-    }, [store.loaded, store.list, selectedId]);
-
-    const selected = store.list.find((p) => p.id === selectedId);
+    // 未显式选中时默认第一个（渲染期派生，不用 effect 写回 state）
+    const effectiveSelectedId =
+        selectedId ?? (store.loaded ? (store.list[0]?.id ?? null) : null);
+    const selected = store.list.find((p) => p.id === effectiveSelectedId);
 
     const handleSave = async (values: ProviderFormValues) => {
         if (creating) {
@@ -113,7 +109,8 @@ export default function ProvidersPage() {
                                 key={provider.id}
                                 provider={provider}
                                 selected={
-                                    !creating && provider.id === selectedId
+                                    !creating &&
+                                    provider.id === effectiveSelectedId
                                 }
                                 onSelect={() => {
                                     setCreating(false);

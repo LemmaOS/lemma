@@ -8,7 +8,9 @@
         "build": "tsc -b && vite build",
         "lint": "eslint .",
         "preview": "vite preview",
-        "test": "vitest run"
+        "test": "vitest run",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
     },
     "dependencies": {
         "@bufbuild/protobuf": "^2.14.0",
@@ -49,6 +51,7 @@
         "eslint-plugin-react-hooks": "^7.1.1",
         "eslint-plugin-react-refresh": "^0.5.3",
         "globals": "^17.7.0",
+        "prettier": "^3.9.6",
         "tailwindcss": "^4.3.3",
         "typescript": "~6.0.3",
         "typescript-eslint": "^8.65.0",

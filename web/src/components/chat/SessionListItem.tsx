@@ -1,5 +1,5 @@
 import { Archive, Pencil, RotateCcw, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Button } from "@/components/ui/button";
@@ -41,19 +41,16 @@ export function SessionListItem({
     onDelete,
 }: SessionListItemProps) {
     const { t } = useTranslation();
-    const [draft, setDraft] = useState(session.title);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
-        if (editing) {
-            setDraft(session.title);
-            inputRef.current?.focus();
-            inputRef.current?.select();
-        }
-    }, [editing, session.title]);
+    // 挂载时聚焦并全选标题；useCallback 保持引用稳定，只跑挂载这一次
+    const focusRef = useCallback((el: HTMLInputElement | null) => {
+        inputRef.current = el;
+        el?.select();
+    }, []);
 
     const commit = () => {
-        const title = draft.trim();
+        const title = (inputRef.current?.value ?? "").trim();
         if (title) onCommitRename(title);
         else onCancelRename();
     };
@@ -62,9 +59,8 @@ export function SessionListItem({
         return (
             <div className="px-2 py-1">
                 <input
-                    ref={inputRef}
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
+                    ref={focusRef}
+                    defaultValue={session.title}
                     onKeyDown={(e) => {
                         if (e.key === "Enter") commit();
                         if (e.key === "Escape") onCancelRename();
@@ -115,11 +111,7 @@ export function SessionListItem({
                             className="size-6"
                             onClick={(e) => {
                                 e.stopPropagation();
-                                if (
-                                    window.confirm(
-                                        t("sessions.deleteConfirm"),
-                                    )
-                                )
+                                if (window.confirm(t("sessions.deleteConfirm")))
                                     onDelete();
                             }}
                             aria-label={t("sessions.delete")}

@@ -25,8 +25,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
 
     let language = "";
     if (isValidElement(children)) {
-        const className = (children.props as { className?: string })
-            .className;
+        const className = (children.props as { className?: string }).className;
         language = /language-(\w+)/.exec(className ?? "")?.[1] ?? "";
     }
 
@@ -104,7 +103,6 @@ const components: Components = {
         />
     ),
     a: ({ node: _node, ...props }) => (
-        // eslint-disable-next-line jsx-a11y/anchor-has-content
         <a
             className="text-primary underline underline-offset-2"
             target="_blank"
