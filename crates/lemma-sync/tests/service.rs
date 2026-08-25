@@ -1,7 +1,9 @@
 #![allow(clippy::unwrap_used)]
 
 use buffa::Message;
-use connectrpc::{HasMessageView, RequestContext, ServiceRequest, ServiceResult};
+use connectrpc::{
+    CodecFormat, Encodable, HasMessageView, JsonSerialize, RequestContext, ServiceRequest,
+};
 use futures::StreamExt;
 use http::HeaderMap;
 use lemma_auth::{sign_access_token, users};
@@ -32,15 +34,34 @@ fn bearer_ctx(token: &str) -> RequestContext {
     RequestContext::new(headers)
 }
 
-async fn pull(svc: &SyncService, token: &str, after: i64) -> ServiceResult<PullResponse> {
+// 经 wire 编解码还原具体消息：rustc 走 M: Encodable<M> 自反实现，rust-analyzer 走
+// 不透明类型的 Encodable<M> 参数化，两侧推导一致，绕开 RA 对 RPITIT 精化的误报
+fn owned_body<M>(body: &impl Encodable<M>) -> M
+where
+    M: Message + JsonSerialize,
+{
+    let bytes = body.encode(CodecFormat::Proto).unwrap();
+    M::decode(&mut &bytes[..]).unwrap()
+}
+
+async fn pull(
+    svc: &SyncService,
+    token: &str,
+    after: i64,
+) -> Result<PullResponse, connectrpc::ConnectError> {
     let msg = PullRequest {
         after,
         ..Default::default()
     };
     let bytes = msg.encode_to_bytes();
     let view = PullRequest::decode_view(&bytes).unwrap();
-    svc.pull(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
+    match svc
+        .pull(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
         .await
+    {
+        Ok(resp) => Ok(owned_body(&resp.body)),
+        Err(e) => Err(e),
+    }
 }
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
@@ -61,7 +82,7 @@ async fn pull_assembles_changes_and_archived(pool: PgPool) {
         .await
         .unwrap();
 
-    let r = pull(&svc, &token, 0).await.unwrap().body;
+    let r = pull(&svc, &token, 0).await.unwrap();
     assert_eq!(r.conversations.len(), 2); // active 创建 + 归档变更各产生一行
     assert_eq!(r.messages.len(), 1);
     assert_eq!(r.archived.len(), 1); // 归档元数据全量
@@ -69,7 +90,7 @@ async fn pull_assembles_changes_and_archived(pool: PgPool) {
     assert!(r.next_after > 0);
 
     // 游标推进后再拉：空页，has_more=false
-    let r2 = pull(&svc, &token, r.next_after).await.unwrap().body;
+    let r2 = pull(&svc, &token, r.next_after).await.unwrap();
     assert_eq!(r2.conversations.len(), 0);
     assert_eq!(r2.messages.len(), 0);
     assert!(!r2.has_more);
@@ -90,7 +111,7 @@ async fn pull_paginates_without_loss(pool: PgPool) {
     let mut seen: Vec<String> = Vec::new();
     let mut after = 0;
     loop {
-        let r = pull(&svc, &token, after).await.unwrap().body;
+        let r = pull(&svc, &token, after).await.unwrap();
         seen.extend(
             r.conversations
                 .iter()

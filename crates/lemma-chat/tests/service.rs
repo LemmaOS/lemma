@@ -5,7 +5,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use buffa::Message;
 use connectrpc::{
-    ErrorCode, HasMessageView, RequestContext, ServiceRequest, ServiceResult, ServiceStream,
+    CodecFormat, ConnectError, Encodable, ErrorCode, HasMessageView, JsonSerialize, RequestContext,
+    ServiceRequest, ServiceStream,
 };
 use futures::{StreamExt, stream};
 use http::HeaderMap;
@@ -143,6 +144,16 @@ fn bearer_ctx(token: &str) -> RequestContext {
     RequestContext::new(headers)
 }
 
+// 经 wire 编解码还原具体消息：rustc 走 M: Encodable<M> 自反实现，rust-analyzer 走
+// 不透明类型的 Encodable<M> 参数化，两侧推导一致，绕开 RA 对 RPITIT 精化的误报
+fn owned_body<M>(body: &impl Encodable<M>) -> M
+where
+    M: Message + JsonSerialize,
+{
+    let bytes = body.encode(CodecFormat::Proto).unwrap();
+    M::decode(&mut &bytes[..]).unwrap()
+}
+
 async fn send(
     svc: &ChatService,
     token: &str,
@@ -150,7 +161,7 @@ async fn send(
     provider_id: Uuid,
     content: &str,
     client_msg_id: &str,
-) -> ServiceResult<ServiceStream<SendMessageResponse>> {
+) -> Result<ServiceStream<SendMessageResponse>, ConnectError> {
     let msg = SendMessageRequest {
         conversation_id: conversation_id.to_string(),
         content: content.into(),
@@ -161,8 +172,14 @@ async fn send(
     };
     let bytes = msg.encode_to_bytes();
     let view = SendMessageRequest::decode_view(&bytes).unwrap();
-    svc.send_message(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
+    match svc
+        .send_message(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
         .await
+    {
+        // 流元素在 RA 眼里也是不透明类型，逐个过 owned_body 再重新装箱
+        Ok(resp) => Ok(resp.body.map(|item| item.map(|m| owned_body(&m))).boxed()),
+        Err(e) => Err(e),
+    }
 }
 
 async fn resume(
@@ -170,7 +187,7 @@ async fn resume(
     token: &str,
     message_id: &str,
     offset: i64,
-) -> ServiceResult<ServiceStream<ResumeStreamResponse>> {
+) -> Result<ServiceStream<ResumeStreamResponse>, ConnectError> {
     let msg = ResumeStreamRequest {
         message_id: message_id.into(),
         offset,
@@ -178,23 +195,33 @@ async fn resume(
     };
     let bytes = msg.encode_to_bytes();
     let view = ResumeStreamRequest::decode_view(&bytes).unwrap();
-    svc.resume_stream(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
+    match svc
+        .resume_stream(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
         .await
+    {
+        Ok(resp) => Ok(resp.body.map(|item| item.map(|m| owned_body(&m))).boxed()),
+        Err(e) => Err(e),
+    }
 }
 
 async fn abort(
     svc: &ChatService,
     token: &str,
     message_id: &str,
-) -> ServiceResult<AbortMessageResponse> {
+) -> Result<AbortMessageResponse, ConnectError> {
     let msg = AbortMessageRequest {
         message_id: message_id.into(),
         ..Default::default()
     };
     let bytes = msg.encode_to_bytes();
     let view = AbortMessageRequest::decode_view(&bytes).unwrap();
-    svc.abort_message(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
+    match svc
+        .abort_message(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
         .await
+    {
+        Ok(resp) => Ok(owned_body(&resp.body)),
+        Err(e) => Err(e),
+    }
 }
 
 async fn collect_send(stream: ServiceStream<SendMessageResponse>) -> Vec<SendMessageResponse> {
@@ -236,8 +263,7 @@ async fn send_streams_deltas_and_finalizes(pool: PgPool) {
         "c1",
     )
     .await
-    .unwrap()
-    .body;
+    .unwrap();
     let events = collect_send(stream).await;
 
     assert_eq!(events.len(), 4);
@@ -282,8 +308,7 @@ async fn send_idempotent_replay_skips_upstream(pool: PgPool) {
             "dup",
         )
         .await
-        .unwrap()
-        .body,
+        .unwrap(),
     )
     .await;
     let first_id = match kind_of(event_of(&first[0])) {
@@ -302,8 +327,7 @@ async fn send_idempotent_replay_skips_upstream(pool: PgPool) {
             "dup",
         )
         .await
-        .unwrap()
-        .body,
+        .unwrap(),
     )
     .await;
     assert_eq!(adapter.calls.load(Ordering::SeqCst), 1);
@@ -336,8 +360,7 @@ async fn abort_mid_stream_keeps_partial(pool: PgPool) {
     );
     let mut stream = send(&svc, &f.token, f.conversation_id, f.provider_id, "你好", "")
         .await
-        .unwrap()
-        .body;
+        .unwrap();
 
     let started = stream.next().await.unwrap().unwrap();
     let message_id = match kind_of(event_of(&started)) {
@@ -378,8 +401,7 @@ async fn resume_replays_from_char_offset(pool: PgPool) {
     let first = collect_send(
         send(&svc, &f.token, f.conversation_id, f.provider_id, "hi", "")
             .await
-            .unwrap()
-            .body,
+            .unwrap(),
     )
     .await;
     let message_id = match kind_of(event_of(&first[0])) {
@@ -391,7 +413,6 @@ async fn resume_replays_from_char_offset(pool: PgPool) {
     let events: Vec<ResumeStreamResponse> = resume(&svc, &f.token, &message_id, 1)
         .await
         .unwrap()
-        .body
         .map(|r| r.unwrap())
         .collect()
         .await;
@@ -412,8 +433,7 @@ async fn send_adapter_failure_marks_error(pool: PgPool) {
     let events = collect_send(
         send(&svc, &f.token, f.conversation_id, f.provider_id, "hi", "")
             .await
-            .unwrap()
-            .body,
+            .unwrap(),
     )
     .await;
     assert_eq!(events.len(), 2);

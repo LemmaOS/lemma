@@ -1,7 +1,10 @@
 #![allow(clippy::unwrap_used)]
 
 use buffa::Message;
-use connectrpc::{ErrorCode, HasMessageView, RequestContext, ServiceRequest};
+use connectrpc::{
+    CodecFormat, Encodable, ErrorCode, HasMessageView, JsonSerialize, RequestContext,
+    ServiceRequest,
+};
 use http::HeaderMap;
 use lemma_auth::AuthService;
 use lemma_proto::lemma::v1::AuthService as AuthServiceRpc;
@@ -14,12 +17,22 @@ use sqlx::PgPool;
 const SECRET: &str = "test-secret";
 const PASSWORD: &str = "password123";
 
+// 经 wire 编解码还原具体消息：rustc 走 M: Encodable<M> 自反实现，rust-analyzer 走
+// 不透明类型的 Encodable<M> 参数化，两侧推导一致，绕开 RA 对 RPITIT 精化的误报
+fn owned_body<M>(body: &impl Encodable<M>) -> M
+where
+    M: Message + JsonSerialize,
+{
+    let bytes = body.encode(CodecFormat::Proto).unwrap();
+    M::decode(&mut &bytes[..]).unwrap()
+}
+
 async fn signup(
     svc: &AuthService,
     username: &str,
     email: &str,
     password: &str,
-) -> connectrpc::ServiceResult<SignUpResponse> {
+) -> Result<SignUpResponse, connectrpc::ConnectError> {
     let msg = SignUpRequest {
         username: username.into(),
         email: email.into(),
@@ -28,11 +41,16 @@ async fn signup(
     };
     let bytes = msg.encode_to_bytes();
     let view = SignUpRequest::decode_view(&bytes).unwrap();
-    svc.sign_up(
-        RequestContext::new(HeaderMap::new()),
-        ServiceRequest::from_parts(&view, &bytes),
-    )
-    .await
+    match svc
+        .sign_up(
+            RequestContext::new(HeaderMap::new()),
+            ServiceRequest::from_parts(&view, &bytes),
+        )
+        .await
+    {
+        Ok(resp) => Ok(owned_body(&resp.body)),
+        Err(e) => Err(e),
+    }
 }
 
 async fn login(
@@ -40,7 +58,7 @@ async fn login(
     username: &str,
     email: &str,
     password: &str,
-) -> connectrpc::ServiceResult<LoginResponse> {
+) -> Result<LoginResponse, connectrpc::ConnectError> {
     let msg = LoginRequest {
         username: username.into(),
         email: email.into(),
@@ -49,39 +67,60 @@ async fn login(
     };
     let bytes = msg.encode_to_bytes();
     let view = LoginRequest::decode_view(&bytes).unwrap();
-    svc.login(
-        RequestContext::new(HeaderMap::new()),
-        ServiceRequest::from_parts(&view, &bytes),
-    )
-    .await
+    match svc
+        .login(
+            RequestContext::new(HeaderMap::new()),
+            ServiceRequest::from_parts(&view, &bytes),
+        )
+        .await
+    {
+        Ok(resp) => Ok(owned_body(&resp.body)),
+        Err(e) => Err(e),
+    }
 }
 
-async fn refresh(svc: &AuthService, token: &str) -> connectrpc::ServiceResult<RefreshResponse> {
+async fn refresh(
+    svc: &AuthService,
+    token: &str,
+) -> Result<RefreshResponse, connectrpc::ConnectError> {
     let msg = RefreshRequest {
         refresh_token: token.into(),
         ..Default::default()
     };
     let bytes = msg.encode_to_bytes();
     let view = RefreshRequest::decode_view(&bytes).unwrap();
-    svc.refresh(
-        RequestContext::new(HeaderMap::new()),
-        ServiceRequest::from_parts(&view, &bytes),
-    )
-    .await
+    match svc
+        .refresh(
+            RequestContext::new(HeaderMap::new()),
+            ServiceRequest::from_parts(&view, &bytes),
+        )
+        .await
+    {
+        Ok(resp) => Ok(owned_body(&resp.body)),
+        Err(e) => Err(e),
+    }
 }
 
-async fn logout(svc: &AuthService, token: &str) -> connectrpc::ServiceResult<LogoutResponse> {
+async fn logout(
+    svc: &AuthService,
+    token: &str,
+) -> Result<LogoutResponse, connectrpc::ConnectError> {
     let msg = LogoutRequest {
         refresh_token: token.into(),
         ..Default::default()
     };
     let bytes = msg.encode_to_bytes();
     let view = LogoutRequest::decode_view(&bytes).unwrap();
-    svc.logout(
-        RequestContext::new(HeaderMap::new()),
-        ServiceRequest::from_parts(&view, &bytes),
-    )
-    .await
+    match svc
+        .logout(
+            RequestContext::new(HeaderMap::new()),
+            ServiceRequest::from_parts(&view, &bytes),
+        )
+        .await
+    {
+        Ok(resp) => Ok(owned_body(&resp.body)),
+        Err(e) => Err(e),
+    }
 }
 
 fn bearer_ctx(token: &str) -> RequestContext {
@@ -93,7 +132,10 @@ fn bearer_ctx(token: &str) -> RequestContext {
     RequestContext::new(headers)
 }
 
-async fn me(svc: &AuthService, token: Option<&str>) -> connectrpc::ServiceResult<MeResponse> {
+async fn me(
+    svc: &AuthService,
+    token: Option<&str>,
+) -> Result<MeResponse, connectrpc::ConnectError> {
     let ctx = match token {
         Some(t) => bearer_ctx(t),
         None => RequestContext::new(HeaderMap::new()),
@@ -101,7 +143,10 @@ async fn me(svc: &AuthService, token: Option<&str>) -> connectrpc::ServiceResult
     let msg = MeRequest::default();
     let bytes = msg.encode_to_bytes();
     let view = MeRequest::decode_view(&bytes).unwrap();
-    svc.me(ctx, ServiceRequest::from_parts(&view, &bytes)).await
+    match svc.me(ctx, ServiceRequest::from_parts(&view, &bytes)).await {
+        Ok(resp) => Ok(owned_body(&resp.body)),
+        Err(e) => Err(e),
+    }
 }
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
@@ -110,11 +155,11 @@ async fn signup_first_owner_second_normal(pool: PgPool) {
     let r1 = signup(&svc, "alice", "alice@example.com", PASSWORD)
         .await
         .unwrap();
-    assert_eq!(r1.body.user.role, Role::Owner);
+    assert_eq!(r1.user.role, Role::Owner);
     let r2 = signup(&svc, "bob", "bob@example.com", PASSWORD)
         .await
         .unwrap();
-    assert_eq!(r2.body.user.role, Role::Normal);
+    assert_eq!(r2.user.role, Role::Normal);
 }
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
@@ -137,7 +182,7 @@ async fn login_ok_and_wrong_password(pool: PgPool) {
         .await
         .unwrap();
     let r = login(&svc, "alice", "", PASSWORD).await.unwrap();
-    assert_eq!(r.body.user.username, "alice");
+    assert_eq!(r.user.username, "alice");
     let err = login(&svc, "alice", "", "wrongpass1").await.err().unwrap();
     assert_eq!(err.code, ErrorCode::Unauthenticated);
 }
@@ -159,7 +204,6 @@ async fn refresh_replay_revokes_whole_chain(pool: PgPool) {
     let tokens = signup(&svc, "alice", "alice@example.com", PASSWORD)
         .await
         .unwrap()
-        .body
         .tokens
         .refresh_token
         .clone();
@@ -167,7 +211,6 @@ async fn refresh_replay_revokes_whole_chain(pool: PgPool) {
     let rotated = refresh(&svc, &tokens)
         .await
         .unwrap()
-        .body
         .tokens
         .refresh_token
         .clone();
@@ -185,7 +228,6 @@ async fn logout_is_idempotent(pool: PgPool) {
     let tokens = signup(&svc, "alice", "alice@example.com", PASSWORD)
         .await
         .unwrap()
-        .body
         .tokens
         .refresh_token
         .clone();
@@ -199,13 +241,12 @@ async fn me_requires_valid_bearer(pool: PgPool) {
     let access = signup(&svc, "alice", "alice@example.com", PASSWORD)
         .await
         .unwrap()
-        .body
         .tokens
         .access_token
         .clone();
 
     let r = me(&svc, Some(&access)).await.unwrap();
-    assert_eq!(r.body.user.username, "alice");
+    assert_eq!(r.user.username, "alice");
 
     let err = me(&svc, None).await.err().unwrap();
     assert_eq!(err.code, ErrorCode::Unauthenticated);
