@@ -1,0 +1,10 @@
+target
+data
+node_modules
+web/node_modules
+web/dist
+web/src/gen
+.git
+tmp
+docs
+.zcode

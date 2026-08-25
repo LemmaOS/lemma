@@ -53,3 +53,15 @@ web-lint:
 # [web] 网页前端代码格式化
 web-fmt:
     cd web && npm run format
+
+# [docker] 构建镜像
+docker-build:
+    docker build -t lemma:latest .
+
+# [docker] 启动完整栈
+docker-up:
+    docker compose --profile full up -d
+
+# [docker] 停掉完整栈
+docker-down:
+    docker compose --profile full down
