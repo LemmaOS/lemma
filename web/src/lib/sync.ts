@@ -3,6 +3,7 @@ import { syncClient } from "@/lib/clients";
 import {
     conversationToRow,
     deleteConversationCascade,
+    deleteMessagesOf,
     getCursor,
     getDb,
     type LemmaDb,
@@ -56,6 +57,11 @@ export async function applyPull(db: LemmaDb, res: PullResponse): Promise<void> {
     for (const id of zombieIds) await deleteConversationCascade(db, id);
     const removed = await replaceArchived(db, archivedRows);
     for (const id of removed) await deleteConversationCascade(db, id);
+    // 归档会话的消息只在服务端对象存储里：本地缓存清空，恢复时重插的消息带新 sync_seq 会拉回
+    await deleteMessagesOf(
+        db,
+        res.archived.map((c) => c.id),
+    );
 }
 
 /** 游标循环补拉直到追上服务端；并发触发合并成同一次 */

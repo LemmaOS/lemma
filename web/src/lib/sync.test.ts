@@ -170,6 +170,45 @@ describe("sync", () => {
         expect(await db.conversations.get("a2")).toBeDefined();
     });
 
+    it("applyPull：归档会话的缓存消息被清空，活跃会话不受影响", async () => {
+        await upsertConversations(db, [
+            conversationToRow(convProto("a1", 1), 3n),
+            conversationToRow(convProto("live", 1), 3n),
+        ]);
+        const msg = (id: string, cid: string) =>
+            messageToRow(
+                {
+                    $typeName: "lemma.v1.Message",
+                    id,
+                    conversationId: cid,
+                    role: "user",
+                    content: "x",
+                    providerId: "",
+                    model: "",
+                    seq: 1n,
+                    status: 4,
+                    createdAt: undefined,
+                    updatedAt: undefined,
+                } as never,
+                3n,
+            );
+        await upsertMessages(db, [msg("m1", "a1"), msg("m2", "live")]);
+
+        // 服务端归档 a1（消息已搬走）：增量条目带真实 sync_seq，archived 是全量名单
+        await applyPull(
+            db,
+            pullRes({
+                conversations: [convEntry("a1", 6n, 2)],
+                archived: [convProto("a1", 2)],
+                active: [convProto("live", 1)],
+            }),
+        );
+
+        expect((await db.conversations.get("a1"))?.status).toBe(2);
+        expect(await db.messages.get("m1")).toBeUndefined();
+        expect(await db.messages.get("m2")).toBeDefined();
+    });
+
     it("watch 连接后先补拉，hint 落后时再拉", async () => {
         let calls = 0;
         pullMock.mockImplementation(() => {

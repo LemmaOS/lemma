@@ -227,3 +227,12 @@ export async function deleteConversationCascade(
         await db.messages.where("conversationId").equals(id).delete();
     });
 }
+
+/** 归档会话的消息只存服务端：按会话 id 批量清空本地缓存（恢复时增量重拉） */
+export async function deleteMessagesOf(
+    db: LemmaDb,
+    conversationIds: string[],
+): Promise<void> {
+    if (conversationIds.length === 0) return;
+    await db.messages.where("conversationId").anyOf(conversationIds).delete();
+}
