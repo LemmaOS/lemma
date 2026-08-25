@@ -11,6 +11,7 @@ lemma-providers.workspace = true
 lemma-conversations.workspace = true
 lemma-chat.workspace = true
 lemma-sync.workspace = true
+lemma-archive.workspace = true
 dotenvy.workspace = true
 connectrpc.workspace = true
 axum.workspace = true

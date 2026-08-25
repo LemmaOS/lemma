@@ -26,9 +26,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.jwt_secret.clone(),
         config.secret_key.clone(),
     ));
+    // 配置了 S3 才做归档内容迁移，否则服务端就地归档
+    let archive = config
+        .s3
+        .as_ref()
+        .map(|cfg| Arc::new(lemma_archive::S3ArchiveStore::new(cfg)));
     let conversations = Arc::new(ConversationService::new(
         pool.clone(),
         config.jwt_secret.clone(),
+        archive,
     ));
     let chat = Arc::new(ChatService::new(
         pool.clone(),

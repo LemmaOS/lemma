@@ -6,6 +6,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use crate::{ArchiveError, ArchiveStore};
 
 /// S3 连接参数（服务端从环境变量读出后传入）
+#[derive(Clone)]
 pub struct S3Config {
     pub endpoint: String,
     pub region: String,

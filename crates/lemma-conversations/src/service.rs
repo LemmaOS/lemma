@@ -1,6 +1,11 @@
 use buffa::MessageField;
 use buffa_types::google::protobuf::Timestamp;
+use chrono::Utc;
 use connectrpc::{ConnectError, RequestContext, Response, ServiceRequest, ServiceResult};
+use lemma_archive::{
+    ArchiveError, ArchiveStore, deserialize_envelope, envelope_from_messages,
+    messages_from_envelope, object_key, serialize_envelope,
+};
 use lemma_auth::require_user;
 use lemma_db::entity::{Conversation as DbConversation, Message as DbMessage};
 use lemma_proto::lemma::v1::{
@@ -9,6 +14,7 @@ use lemma_proto::lemma::v1::{
     Message, MessageStatus, RenameConversationResponse, RestoreConversationResponse,
 };
 use sqlx::PgPool;
+use std::sync::Arc;
 use uuid::Uuid;
 
 use crate::store;
@@ -16,16 +22,19 @@ use crate::store;
 const DEFAULT_PAGE_LIMIT: i32 = 50;
 const MAX_PAGE_LIMIT: i32 = 100;
 
-pub struct ConversationService {
+pub struct ConversationService<A: ArchiveStore> {
     pool: PgPool,
     jwt_secret: String,
+    // 配置了才做内容迁移；None = 就地归档（行为同旧版）
+    archive: Option<Arc<A>>,
 }
 
-impl ConversationService {
-    pub fn new(pool: PgPool, jwt_secret: impl Into<String>) -> Self {
+impl<A: ArchiveStore> ConversationService<A> {
+    pub fn new(pool: PgPool, jwt_secret: impl Into<String>, archive: Option<Arc<A>>) -> Self {
         Self {
             pool,
             jwt_secret: jwt_secret.into(),
+            archive,
         }
     }
 }
@@ -76,12 +85,16 @@ fn parse_id(id: &str) -> Result<Uuid, ConnectError> {
     Uuid::parse_str(id).map_err(|_| ConnectError::invalid_argument("invalid id"))
 }
 
+fn map_archive(e: ArchiveError) -> ConnectError {
+    ConnectError::internal(format!("{e}"))
+}
+
 fn map_db(e: sqlx::Error) -> ConnectError {
     ConnectError::internal(format!("db: {e}"))
 }
 
 #[allow(refining_impl_trait)]
-impl lemma_proto::lemma::v1::ConversationService for ConversationService {
+impl<A: ArchiveStore> lemma_proto::lemma::v1::ConversationService for ConversationService<A> {
     async fn list_conversations(
         &self,
         ctx: RequestContext,
@@ -172,13 +185,47 @@ impl lemma_proto::lemma::v1::ConversationService for ConversationService {
     ) -> ServiceResult<ArchiveConversationResponse> {
         let user_id = require_user(&self.jwt_secret, &ctx)?;
         let id = parse_id(request.id)?;
-        // 0 行 = 不存在或已归档
-        let c = store::archive(&self.pool, id, user_id)
+
+        let mut tx = self.pool.begin().await.map_err(map_db)?;
+        if store::lock_active(&mut tx, id, user_id)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::not_found("conversation not found or already archived"))?;
+            .is_none()
+        {
+            return Err(ConnectError::not_found(
+                "conversation not found or already archived",
+            ));
+        }
+
+        let conversation = if let Some(archive) = self.archive.as_ref() {
+            // 内容迁移：快照 → 写对象（幂等）→ 归档落位 → 清 PG 消息
+            let messages = store::list_all_messages(&mut tx, id)
+                .await
+                .map_err(map_db)?;
+            let envelope = envelope_from_messages(id, Utc::now(), &messages);
+            let bytes = serialize_envelope(&envelope).map_err(map_archive)?;
+            let key = object_key(id);
+            archive.put(&key, &bytes).await.map_err(map_archive)?;
+            let c = store::mark_archived_with_key(&mut tx, id, &key)
+                .await
+                .map_err(map_db)?;
+            store::delete_all_messages(&mut tx, id)
+                .await
+                .map_err(map_db)?;
+            c
+        } else {
+            // 未配置对象存储：就地归档
+            store::archive(&mut *tx, id, user_id)
+                .await
+                .map_err(map_db)?
+                .ok_or_else(|| {
+                    ConnectError::not_found("conversation not found or already archived")
+                })?
+        };
+        tx.commit().await.map_err(map_db)?;
+
         Response::ok(ArchiveConversationResponse {
-            conversation: conversation_to_proto(&c).into(),
+            conversation: conversation_to_proto(&conversation).into(),
             ..Default::default()
         })
     }
@@ -190,12 +237,42 @@ impl lemma_proto::lemma::v1::ConversationService for ConversationService {
     ) -> ServiceResult<RestoreConversationResponse> {
         let user_id = require_user(&self.jwt_secret, &ctx)?;
         let id = parse_id(request.id)?;
-        let c = store::restore(&self.pool, id, user_id)
+
+        let mut tx = self.pool.begin().await.map_err(map_db)?;
+        let locked = store::lock_archived(&mut tx, id, user_id)
+            .await
+            .map_err(map_db)?;
+        let key = locked
+            .ok_or_else(|| ConnectError::not_found("conversation not found or not archived"))?
+            .archive_key;
+
+        // 有对象键 = 内容迁移模式：拉对象回灌（原 seq/时间戳）
+        if let (Some(archive), Some(key)) = (self.archive.as_ref(), key.as_deref()) {
+            let bytes = archive
+                .get(key)
+                .await
+                .map_err(map_archive)?
+                .ok_or_else(|| ConnectError::internal("archive object missing"))?;
+            let envelope = deserialize_envelope(&bytes).map_err(map_archive)?;
+            let messages = messages_from_envelope(&envelope).map_err(map_archive)?;
+            store::insert_restored(&mut tx, &messages)
+                .await
+                .map_err(map_db)?;
+        }
+        // 键为空（历史就地归档）只翻状态
+        let conversation = store::restore(&mut *tx, id, user_id)
             .await
             .map_err(map_db)?
             .ok_or_else(|| ConnectError::not_found("conversation not found or not archived"))?;
+        tx.commit().await.map_err(map_db)?;
+
+        // 内容已回灌 PG，对象尽力清理（失败留孤儿，无害）
+        if let (Some(archive), Some(key)) = (self.archive.as_ref(), key.as_deref()) {
+            let _ = archive.delete(key).await;
+        }
+
         Response::ok(RestoreConversationResponse {
-            conversation: conversation_to_proto(&c).into(),
+            conversation: conversation_to_proto(&conversation).into(),
             ..Default::default()
         })
     }
@@ -216,6 +293,7 @@ impl lemma_proto::lemma::v1::ConversationService for ConversationService {
     }
 
     // 彻底删除，不可恢复
+    // 彻底删除，不可恢复
     async fn delete_archived(
         &self,
         ctx: RequestContext,
@@ -223,11 +301,23 @@ impl lemma_proto::lemma::v1::ConversationService for ConversationService {
     ) -> ServiceResult<DeleteArchivedResponse> {
         let user_id = require_user(&self.jwt_secret, &ctx)?;
         let id = parse_id(request.id)?;
+
+        // 先取对象键（行删掉就没了）
+        let key = store::find_archive_key(&self.pool, id, user_id)
+            .await
+            .map_err(map_db)?;
+        if key.is_none() {
+            return Err(ConnectError::not_found("archived conversation not found"));
+        }
         let deleted = store::delete_archived(&self.pool, id, user_id)
             .await
             .map_err(map_db)?;
         if !deleted {
             return Err(ConnectError::not_found("archived conversation not found"));
+        }
+        // 对象尽力清理（失败留孤儿，无害）
+        if let (Some(archive), Some(key)) = (self.archive.as_ref(), key.flatten().as_deref()) {
+            let _ = archive.delete(key).await;
         }
         Response::ok(DeleteArchivedResponse::default())
     }

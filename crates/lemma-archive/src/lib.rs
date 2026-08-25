@@ -24,9 +24,13 @@ impl std::error::Error for ArchiveError {}
 
 /// 对象存储最小抽象：put 同键覆盖（幂等）；get 不存在返回 None；delete 幂等
 pub trait ArchiveStore: Send + Sync + 'static {
-    fn put(&self, key: &str, content: &[u8]) -> impl Future<Output = Result<(), ArchiveError>>;
-    fn get(&self, key: &str) -> impl Future<Output = Result<Option<Vec<u8>>, ArchiveError>>;
-    fn delete(&self, key: &str) -> impl Future<Output = Result<(), ArchiveError>>;
+    fn put(
+        &self,
+        key: &str,
+        content: &[u8],
+    ) -> impl Future<Output = Result<(), ArchiveError>> + Send;
+    fn get(&self, key: &str) -> impl Future<Output = Result<Option<Vec<u8>>, ArchiveError>> + Send;
+    fn delete(&self, key: &str) -> impl Future<Output = Result<(), ArchiveError>> + Send;
 }
 
 /// 对象键：会话 UUID 全局唯一，直接作键
