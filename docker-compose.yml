@@ -22,7 +22,7 @@ services:
   rustfs:
     image: rustfs/rustfs:latest
     restart: unless-stopped
-    command: ["/data"]
+    command: [ "/data" ]
     environment:
       RUSTFS_ACCESS_KEY: ${LEMMA_S3_ACCESS_KEY_ID:-lemma}
       RUSTFS_SECRET_KEY: ${LEMMA_S3_SECRET_ACCESS_KEY:-lemma-secret}
@@ -40,7 +40,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # 一次性建桶（RustFS 无自动建桶；桶已存在时报错被 || true 吞掉，幂等）
+  # 幂等建桶：桶已存在时报错被 || true 吞掉
   rustfs-init:
     image: amazon/aws-cli:latest
     restart: "no"
