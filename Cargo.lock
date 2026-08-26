@@ -2163,18 +2163,22 @@ name = "lemma-providers"
 version = "0.1.0"
 dependencies = [
  "aes-gcm",
+ "axum",
  "base64 0.23.1",
  "buffa",
  "buffa-types",
  "chrono",
  "connectrpc",
+ "http 1.5.0",
  "lemma-auth",
  "lemma-db",
  "lemma-proto",
  "reqwest",
  "serde",
+ "serde_json",
  "sha2 0.11.0",
  "sqlx",
+ "tokio",
  "uuid",
 ]
 
