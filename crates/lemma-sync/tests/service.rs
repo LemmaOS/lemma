@@ -156,3 +156,98 @@ async fn watch_emits_initial_hint(pool: PgPool) {
         Some(Kind::Hint(h)) if h.sync_seq > 0
     ));
 }
+
+// 双表都截断：边界取两表较小者，边界外的行丢弃等下轮（跨表不丢变更）
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn pull_truncation_boundary_uses_min_across_tables(pool: PgPool) {
+    let (uid, token) = new_user_token(&pool, "alice").await;
+    let svc = SyncService::new(pool.clone(), JWT_SECRET);
+    // 锚点会话先建，随后 501 条消息（sync_seq 靠前）、501 条会话（sync_seq 靠后）：
+    // 首页双表截断，边界被消息侧压低，靠后的会话全部越界
+    let anchor = lemma_conversations::store::insert(&pool, uid)
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO messages (id, conversation_id, role, content, seq)
+         SELECT gen_random_uuid(), $1, 'user', 'bulk', g FROM generate_series(1, 501) AS g",
+    )
+    .bind(anchor.id)
+    .execute(&pool)
+    .await
+    .unwrap();
+    sqlx::query("INSERT INTO conversations (user_id) SELECT $1 FROM generate_series(1, 501)")
+        .bind(uid)
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    // 首页：会话只剩锚点（其余越界丢弃），消息截到 500
+    let first = pull(&svc, &token, 0).await.unwrap();
+    assert_eq!(first.conversations.len(), 1);
+    assert_eq!(first.messages.len(), 500);
+    assert!(first.has_more);
+
+    // 拉完整轮：502 会话 + 501 消息一条不少、一条不重
+    let mut conv_ids: Vec<String> = first
+        .conversations
+        .iter()
+        .map(|c| c.conversation.as_option().unwrap().id.clone())
+        .collect();
+    let mut msg_ids: Vec<String> = first
+        .messages
+        .iter()
+        .map(|m| m.message.as_option().unwrap().id.clone())
+        .collect();
+    let mut after = first.next_after;
+    loop {
+        let r = pull(&svc, &token, after).await.unwrap();
+        conv_ids.extend(
+            r.conversations
+                .iter()
+                .map(|c| c.conversation.as_option().unwrap().id.clone()),
+        );
+        msg_ids.extend(
+            r.messages
+                .iter()
+                .map(|m| m.message.as_option().unwrap().id.clone()),
+        );
+        after = r.next_after;
+        if !r.has_more {
+            break;
+        }
+    }
+    conv_ids.sort();
+    conv_ids.dedup();
+    msg_ids.sort();
+    msg_ids.dedup();
+    assert_eq!(conv_ids.len(), 502);
+    assert_eq!(msg_ids.len(), 501);
+}
+
+// 只有消息侧超页限：边界取消息末行，会话原样带回
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn pull_msg_only_truncation_paginates(pool: PgPool) {
+    let (uid, token) = new_user_token(&pool, "alice").await;
+    let svc = SyncService::new(pool.clone(), JWT_SECRET);
+    let c = lemma_conversations::store::insert(&pool, uid)
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO messages (id, conversation_id, role, content, seq)
+         SELECT gen_random_uuid(), $1, 'user', 'bulk', g FROM generate_series(1, 502) AS g",
+    )
+    .bind(c.id)
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let first = pull(&svc, &token, 0).await.unwrap();
+    assert_eq!(first.conversations.len(), 1); // 会话不截断
+    assert_eq!(first.messages.len(), 500); // 消息截断 + 丢弃探测行
+    assert!(first.has_more);
+
+    let rest = pull(&svc, &token, first.next_after).await.unwrap();
+    assert_eq!(rest.conversations.len(), 0);
+    assert_eq!(rest.messages.len(), 2);
+    assert!(!rest.has_more);
+}
