@@ -34,6 +34,14 @@ rust-test:
 rust-fmt:
     cargo fmt --all
 
+# [rust] 服务端代码覆盖率（终端汇总）
+rust-cov:
+    cargo llvm-cov --workspace --summary-only
+
+# [rust] 服务端代码覆盖率（HTML 报告）
+rust-cov-html:
+    cargo llvm-cov --workspace --html --open
+
 # [web] 网页前端构建
 web-build:
     cd web && npm run build
