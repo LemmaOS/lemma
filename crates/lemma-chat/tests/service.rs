@@ -240,6 +240,23 @@ fn revent_of(r: &ResumeStreamResponse) -> &ChatEvent {
     r.event.as_option().unwrap()
 }
 
+// 直插 streaming 状态的孤儿 assistant 消息（不经 registry，测服务重启场景）
+async fn insert_orphan_streaming(pool: &PgPool, conv: Uuid, content: &str) -> Uuid {
+    let id = Uuid::new_v4();
+    sqlx::query(
+        "INSERT INTO messages (id, conversation_id, role, content, status, seq)
+         SELECT $1, $2, 'assistant', $3, 'streaming', coalesce(max(seq), 0) + 1
+         FROM messages WHERE conversation_id = $2",
+    )
+    .bind(id)
+    .bind(conv)
+    .bind(content)
+    .execute(pool)
+    .await
+    .unwrap();
+    id
+}
+
 // ---------- 测试 ----------
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
@@ -477,4 +494,164 @@ async fn send_rejects_foreign_conversation(pool: PgPool) {
     .err()
     .unwrap();
     assert_eq!(err.code, ErrorCode::NotFound);
+}
+
+// 断线重连：活流先补快照差额，再挂广播续播（abort 一声，两条流都收到）
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn resume_live_stream_replays_snapshot_then_follows(pool: PgPool) {
+    let f = fixture(&pool, "alice").await;
+    let svc = ChatService::new(
+        pool.clone(),
+        JWT_SECRET,
+        SECRET_KEY,
+        Arc::new(FakeAdapter::new(Script::Hang("半".into()))),
+    );
+    let mut stream = send(&svc, &f.token, f.conversation_id, f.provider_id, "hi", "")
+        .await
+        .unwrap();
+    let started = stream.next().await.unwrap().unwrap();
+    let message_id = match kind_of(event_of(&started)) {
+        Kind::Started(s) => s.message_id.clone(),
+        other => panic!("expected started, got {other:?}"),
+    };
+    let delta = stream.next().await.unwrap().unwrap();
+    assert!(matches!(kind_of(event_of(&delta)), Kind::Delta(d) if d.content == "半"));
+
+    // 断线重连：offset 0 → 快照重放 Delta("半")，随后进入广播
+    let mut resumed = resume(&svc, &f.token, &message_id, 0).await.unwrap();
+    let replay = tokio::time::timeout(std::time::Duration::from_secs(5), resumed.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert!(matches!(kind_of(revent_of(&replay)), Kind::Delta(d) if d.content == "半"));
+
+    // 中止：广播把 Aborted 送到重连流
+    abort(&svc, &f.token, &message_id).await.unwrap();
+    let aborted = tokio::time::timeout(std::time::Duration::from_secs(5), resumed.next())
+        .await
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert!(matches!(kind_of(revent_of(&aborted)), Kind::Aborted(_)));
+}
+
+// 已中止的消息重连：registry 句柄已终态 → 重读库回放，Delta + Aborted
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn resume_after_abort_replays_from_db(pool: PgPool) {
+    let f = fixture(&pool, "alice").await;
+    let svc = ChatService::new(
+        pool.clone(),
+        JWT_SECRET,
+        SECRET_KEY,
+        Arc::new(FakeAdapter::new(Script::Hang("半".into()))),
+    );
+    let mut stream = send(&svc, &f.token, f.conversation_id, f.provider_id, "hi", "")
+        .await
+        .unwrap();
+    let started = stream.next().await.unwrap().unwrap();
+    let message_id = match kind_of(event_of(&started)) {
+        Kind::Started(s) => s.message_id.clone(),
+        other => panic!("expected started, got {other:?}"),
+    };
+    stream.next().await.unwrap().unwrap(); // delta
+    abort(&svc, &f.token, &message_id).await.unwrap();
+
+    let events: Vec<ResumeStreamResponse> = resume(&svc, &f.token, &message_id, 0)
+        .await
+        .unwrap()
+        .map(|r| r.unwrap())
+        .collect()
+        .await;
+    assert_eq!(events.len(), 2);
+    assert!(matches!(kind_of(revent_of(&events[0])), Kind::Delta(d) if d.content == "半"));
+    assert!(matches!(kind_of(revent_of(&events[1])), Kind::Aborted(_)));
+}
+
+// 孤儿 streaming（服务重启丢 registry）：按中断收尾，不炸不挂
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn resume_orphan_streaming_marks_aborted(pool: PgPool) {
+    let f = fixture(&pool, "alice").await;
+    let svc = ChatService::new(
+        pool.clone(),
+        JWT_SECRET,
+        SECRET_KEY,
+        Arc::new(FakeAdapter::new(Script::Done(vec![]))),
+    );
+    let orphan = insert_orphan_streaming(&pool, f.conversation_id, "遗").await;
+
+    let events: Vec<ResumeStreamResponse> = resume(&svc, &f.token, &orphan.to_string(), 0)
+        .await
+        .unwrap()
+        .map(|r| r.unwrap())
+        .collect()
+        .await;
+    assert_eq!(events.len(), 2);
+    assert!(matches!(kind_of(revent_of(&events[0])), Kind::Delta(d) if d.content == "遗"));
+    assert!(matches!(kind_of(revent_of(&events[1])), Kind::Aborted(_)));
+
+    let status: String = sqlx::query_scalar("SELECT status FROM messages WHERE id = $1")
+        .bind(orphan)
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(status, "aborted");
+}
+
+// 三条参数校验：空 content / 空 model / provider 被禁用
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn send_rejects_bad_requests(pool: PgPool) {
+    let f = fixture(&pool, "alice").await;
+    let svc = ChatService::new(
+        pool.clone(),
+        JWT_SECRET,
+        SECRET_KEY,
+        Arc::new(FakeAdapter::new(Script::Done(vec![]))),
+    );
+
+    // send helper 写死了 model，这里内联构造请求（同 conversations 测试惯例）
+    async fn raw_send(
+        svc: &ChatService,
+        token: &str,
+        f: &Fixture,
+        content: &str,
+        model: &str,
+    ) -> Result<ServiceStream<SendMessageResponse>, ConnectError> {
+        let msg = SendMessageRequest {
+            conversation_id: f.conversation_id.to_string(),
+            content: content.into(),
+            provider_id: f.provider_id.to_string(),
+            model: model.into(),
+            ..Default::default()
+        };
+        let bytes = msg.encode_to_bytes();
+        let view = SendMessageRequest::decode_view(&bytes).unwrap();
+        match svc
+            .send_message(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
+            .await
+        {
+            Ok(resp) => Ok(resp.body.map(|item| item.map(|m| owned_body(&m))).boxed()),
+            Err(e) => Err(e),
+        }
+    }
+
+    let err = raw_send(&svc, &f.token, &f, "  ", "gpt-x")
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(err.code, ErrorCode::InvalidArgument);
+
+    let err = raw_send(&svc, &f.token, &f, "hi", "").await.err().unwrap();
+    assert_eq!(err.code, ErrorCode::InvalidArgument);
+
+    sqlx::query("UPDATE providers SET enabled = false WHERE id = $1")
+        .bind(f.provider_id)
+        .execute(&pool)
+        .await
+        .unwrap();
+    let err = raw_send(&svc, &f.token, &f, "hi", "gpt-x")
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(err.code, ErrorCode::InvalidArgument);
 }
