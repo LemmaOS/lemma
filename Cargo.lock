@@ -2097,6 +2097,7 @@ dependencies = [
 name = "lemma-chat"
 version = "0.1.0"
 dependencies = [
+ "axum",
  "buffa",
  "buffa-types",
  "chrono",
