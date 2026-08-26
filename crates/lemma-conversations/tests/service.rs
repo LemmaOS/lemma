@@ -5,10 +5,11 @@ use connectrpc::{CodecFormat, Encodable, JsonSerialize};
 use connectrpc::{ErrorCode, HasMessageView, RequestContext, ServiceRequest};
 use http::HeaderMap;
 use lemma_archive::MemoryArchiveStore;
-use lemma_archive::{ArchiveStore, object_key};
+use lemma_archive::{ArchiveError, ArchiveStore, object_key};
 use lemma_auth::{sign_access_token, users};
 use lemma_conversations::ConversationService;
 use lemma_proto::lemma::v1::ConversationService as ConversationServiceRpc;
+use lemma_proto::lemma::v1::MessageStatus;
 use sqlx::PgPool;
 use std::sync::Arc;
 use uuid::Uuid;
@@ -187,6 +188,44 @@ async fn rename(
         Ok(resp) => Ok(owned_body(&resp.body)),
         Err(e) => Err(e),
     }
+}
+
+async fn list_messages(
+    svc: &Svc,
+    token: &str,
+    conv: &str,
+) -> Result<lemma_proto::lemma::v1::ListMessagesResponse, connectrpc::ConnectError> {
+    let msg = lemma_proto::lemma::v1::ListMessagesRequest {
+        conversation_id: conv.into(),
+        ..Default::default()
+    };
+    let bytes = msg.encode_to_bytes();
+    let view = lemma_proto::lemma::v1::ListMessagesRequest::decode_view(&bytes).unwrap();
+    match svc
+        .list_messages(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
+        .await
+    {
+        Ok(resp) => Ok(owned_body(&resp.body)),
+        Err(e) => Err(e),
+    }
+}
+
+// 全字段直插一条消息，绕过 chat 链路
+#[allow(clippy::too_many_arguments)]
+async fn insert_msg(pool: &PgPool, conv: Uuid, seq: i64, status: &str, model: Option<&str>) {
+    sqlx::query(
+        "INSERT INTO messages (id, conversation_id, role, content, status, model, seq)
+         VALUES ($1, $2, 'assistant', $3, $4, $5, $6)",
+    )
+    .bind(Uuid::new_v4())
+    .bind(conv)
+    .bind(format!("c{seq}"))
+    .bind(status)
+    .bind(model)
+    .bind(seq)
+    .execute(pool)
+    .await
+    .unwrap();
 }
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
@@ -379,4 +418,114 @@ async fn degrade_mode_keeps_content_in_pg(pool: PgPool) {
     archive(&svc, &token, &id).await.unwrap();
 
     assert_eq!(message_contents(&pool, &id).await, ["留"]);
+}
+
+// 读回消息：四种状态映射、model 空值回退、倒序分页（最新在前）
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn list_messages_maps_statuses_and_fields(pool: PgPool) {
+    let svc = ConversationService::new(pool.clone(), SECRET, None::<Arc<MemoryArchiveStore>>);
+    let (_, token) = new_user(&pool).await;
+    let id = create(&svc, &token).await.conversation.id.clone();
+    let conv = Uuid::parse_str(&id).unwrap();
+    insert_msg(&pool, conv, 1, "done", None).await;
+    insert_msg(&pool, conv, 2, "streaming", Some("gpt-x")).await;
+    insert_msg(&pool, conv, 3, "aborted", None).await;
+    insert_msg(&pool, conv, 4, "error", None).await;
+
+    let r = list_messages(&svc, &token, &id).await.unwrap();
+    // 最新在前
+    assert_eq!(r.messages[0].status, MessageStatus::Error);
+    assert_eq!(r.messages[1].status, MessageStatus::Aborted);
+    assert_eq!(r.messages[2].status, MessageStatus::Streaming);
+    assert_eq!(r.messages[3].status, MessageStatus::Done);
+    assert_eq!(r.messages[2].model, "gpt-x");
+    assert_eq!(r.messages[0].model, "");
+    assert_eq!(r.messages[0].content, "c4");
+    assert_eq!(r.messages[3].seq, 1);
+    assert!(!r.has_more);
+
+    // 非法 before_id → InvalidArgument
+    let msg = lemma_proto::lemma::v1::ListMessagesRequest {
+        conversation_id: id.clone(),
+        before_id: "not-a-uuid".into(),
+        ..Default::default()
+    };
+    let bytes = msg.encode_to_bytes();
+    let view = lemma_proto::lemma::v1::ListMessagesRequest::decode_view(&bytes).unwrap();
+    let err = svc
+        .list_messages(
+            bearer_ctx(&token),
+            ServiceRequest::from_parts(&view, &bytes),
+        )
+        .await
+        .err()
+        .unwrap();
+    assert_eq!(err.code, ErrorCode::InvalidArgument);
+}
+
+// 对象存储故障：归档映射 internal，且事务回滚——会话保持 active 不丢数据
+struct FailingStore;
+
+impl ArchiveStore for FailingStore {
+    async fn put(&self, _key: &str, _content: &[u8]) -> Result<(), ArchiveError> {
+        Err(ArchiveError("s3 down".into()))
+    }
+    async fn get(&self, _key: &str) -> Result<Option<Vec<u8>>, ArchiveError> {
+        Err(ArchiveError("s3 down".into()))
+    }
+    async fn delete(&self, _key: &str) -> Result<(), ArchiveError> {
+        Err(ArchiveError("s3 down".into()))
+    }
+}
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn archive_store_failure_maps_internal_and_rolls_back(pool: PgPool) {
+    let svc = ConversationService::new(pool.clone(), SECRET, Some(Arc::new(FailingStore)));
+    let (_, token) = new_user(&pool).await;
+    // FailingStore 与 helper 的类型别名不同，这里走内联调用（同 archive_restore_flow 惯例）
+    let msg = lemma_proto::lemma::v1::CreateConversationRequest::default();
+    let bytes = msg.encode_to_bytes();
+    let view = lemma_proto::lemma::v1::CreateConversationRequest::decode_view(&bytes).unwrap();
+    let created = svc
+        .create_conversation(
+            bearer_ctx(&token),
+            ServiceRequest::from_parts(&view, &bytes),
+        )
+        .await
+        .unwrap();
+    let id = owned_body(&created.body).conversation.id.clone();
+    seed_messages(&pool, &id, &["一"]).await;
+
+    let err = archive_generic(&svc, &token, &id).await.err().unwrap();
+    assert_eq!(err.code, ErrorCode::Internal);
+
+    // 回滚验证：状态还是 active，消息一条不少
+    let status: String = sqlx::query_scalar("SELECT status FROM conversations WHERE id = $1")
+        .bind(Uuid::parse_str(&id).unwrap())
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    assert_eq!(status, "active");
+    assert_eq!(message_contents(&pool, &id).await, ["一"]);
+}
+
+// 归档请求的内联泛型版：svc 的 ArchiveStore 类型参数任意
+async fn archive_generic<A: ArchiveStore>(
+    svc: &ConversationService<A>,
+    token: &str,
+    id: &str,
+) -> Result<lemma_proto::lemma::v1::ArchiveConversationResponse, connectrpc::ConnectError> {
+    let msg = lemma_proto::lemma::v1::ArchiveConversationRequest {
+        id: id.into(),
+        ..Default::default()
+    };
+    let bytes = msg.encode_to_bytes();
+    let view = lemma_proto::lemma::v1::ArchiveConversationRequest::decode_view(&bytes).unwrap();
+    match svc
+        .archive_conversation(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
+        .await
+    {
+        Ok(resp) => Ok(owned_body(&resp.body)),
+        Err(e) => Err(e),
+    }
 }
