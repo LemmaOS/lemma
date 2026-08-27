@@ -8,6 +8,7 @@ export default {
         copy: "Copy",
         copied: "Copied",
         settings: "Settings",
+        retry: "Retry",
     },
     auth: {
         productName: "Self-hosted AI Chat",
@@ -122,6 +123,37 @@ export default {
         aiProviders: "AI Providers",
         themeLabel: "Theme",
         themeDesc: "Choose light, dark, or follow the system.",
+        groupData: "Data",
+        storage: "Storage",
+    },
+    storage: {
+        title: "Storage",
+        desc: "S3-compatible object storage for conversation archives.",
+        pendingBanner:
+            "A migration to the new backend is pending. Resume it to finish copying archived conversations.",
+        endpoint: "Endpoint",
+        endpointDesc: "S3 endpoint URL.",
+        region: "Region",
+        bucket: "Bucket",
+        bucketDesc: "Bucket for archived conversations.",
+        accessKey: "Access Key ID",
+        secretKey: "Secret Access Key",
+        secretPlaceholder: "Leave blank to keep current",
+        test: "Test",
+        testOk: "Connected",
+        testFail: "Test failed",
+        bucketNotFound: "Bucket {{bucket}} not found. Create it first",
+        migrating: "Migrating archives…",
+        migrated: "Migration finished",
+        migrateFailed: "Migration failed",
+        resume: "Resume migration",
+        migrateResult:
+            "Copied {{done}} of {{total}} objects ({{skipped}} skipped).",
+        deleteFail: "Delete failed",
+        deleteConfirm:
+            "Remove the storage configuration? Archives already in the bucket are untouched.",
+        deleteBlocked:
+            "Cannot delete: archived conversations still reference this storage. Restore or delete them first.",
     },
     theme: {
         toggle: "Toggle theme",

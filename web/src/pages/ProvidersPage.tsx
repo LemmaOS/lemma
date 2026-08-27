@@ -8,6 +8,7 @@ import {
 } from "@/components/providers/NewProviderForm";
 import { ProviderDetail } from "@/components/providers/ProviderDetail";
 import { ProviderListPane } from "@/components/providers/ProviderListPane";
+import { StoragePanel } from "@/components/providers/StoragePanel";
 import {
     SettingsNav,
     type SettingsSection,
@@ -50,6 +51,10 @@ export default function ProvidersPage() {
             {section === "appearance" ? (
                 <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border bg-background">
                     <AppearancePanel />
+                </main>
+            ) : section === "storage" ? (
+                <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border bg-background">
+                    <StoragePanel />
                 </main>
             ) : (
                 <>

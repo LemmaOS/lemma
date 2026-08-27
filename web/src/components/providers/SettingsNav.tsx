@@ -1,9 +1,9 @@
 import { Link } from "react-router";
 import { useTranslation } from "react-i18next";
-import { ArrowLeft, Bot, Palette } from "lucide-react";
+import { ArrowLeft, Bot, Database, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type SettingsSection = "appearance" | "providers";
+export type SettingsSection = "appearance" | "providers" | "storage";
 
 interface SettingsNavProps {
     section: SettingsSection;
@@ -84,6 +84,14 @@ export function SettingsNav({ section, onSelect }: SettingsNavProps) {
                         label={t("settings.aiProviders")}
                         selected={section === "providers"}
                         onClick={() => onSelect("providers")}
+                    />
+                </NavGroup>
+                <NavGroup label={t("settings.groupData")}>
+                    <NavItem
+                        icon={Database}
+                        label={t("settings.storage")}
+                        selected={section === "storage"}
+                        onClick={() => onSelect("storage")}
                     />
                 </NavGroup>
             </nav>
