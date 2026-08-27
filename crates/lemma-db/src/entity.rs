@@ -42,6 +42,21 @@ pub struct Provider {
 }
 
 #[derive(Debug, Clone, sqlx::FromRow)]
+pub struct S3Config {
+    pub id: Uuid,
+    pub user_id: Uuid,
+    pub endpoint: String,
+    pub region: String,
+    pub bucket: String,
+    pub access_key: String,
+    pub secret_key: String,
+    pub migration_from: Option<Json<serde_json::Value>>,
+    pub migrated_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
 pub struct Conversation {
     pub id: Uuid,
     pub user_id: Uuid,

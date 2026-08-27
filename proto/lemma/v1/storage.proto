@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package lemma.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// S3 兼容对象存储配置（每用户单套；密钥返回时脱敏）
+message StorageConfig {
+  string endpoint = 1;
+  string region = 2;
+  string bucket = 3;
+  string access_key = 4; // 返回时脱敏
+  string secret_key = 5; // 返回时脱敏
+  bool pending_migration = 6; // 存在待迁移的旧后端快照
+  google.protobuf.Timestamp migrated_at = 7; // 最近一次迁移完成时间，未迁移不设置
+}
+
+message GetStorageConfigRequest {}
+
+message GetStorageConfigResponse {
+  // 未配置时 config 不设置
+  StorageConfig config = 1;
+}
+
+message UpdateStorageConfigRequest {
+  // 未设置或空串的字段不变更（密钥 write-only，留空即保持）
+  optional string endpoint = 1;
+  optional string region = 2;
+  optional string bucket = 3;
+  optional string access_key = 4;
+  optional string secret_key = 5;
+}
+
+message UpdateStorageConfigResponse {
+  StorageConfig config = 1;
+  // >0 表示后端已变更，需迁移的归档对象数
+  uint32 migration_total = 2;
+}
+
+message DeleteStorageConfigRequest {}
+
+message DeleteStorageConfigResponse {}
+
+message TestStorageConfigRequest {
+  // 空字段回退已存配置（密钥留空即隐式用已存凭证）
+  string endpoint = 1;
+  string region = 2;
+  string bucket = 3;
+  string access_key = 4;
+  string secret_key = 5;
+}
+
+message TestStorageConfigResponse {
+  string message = 1; // 结果说明（桶已连通等）
+}
+
+message MigrateArchivesRequest {}
+
+// 逐对象进度；结束时发一帧 finished=true
+message MigrateArchivesResponse {
+  uint32 done = 1;
+  uint32 total = 2;
+  uint32 skipped = 3; // 旧后端上已不存在的对象
+  bool finished = 4;
+  string error = 5; // 非空表示迁移中断，可重跑（覆盖式，幂等）
+}
+
+service StorageService {
+  rpc GetStorageConfig(GetStorageConfigRequest) returns (GetStorageConfigResponse);
+  rpc UpdateStorageConfig(UpdateStorageConfigRequest) returns (UpdateStorageConfigResponse);
+  rpc DeleteStorageConfig(DeleteStorageConfigRequest) returns (DeleteStorageConfigResponse);
+  // 连通性测试（HeadBucket）
+  rpc TestStorageConfig(TestStorageConfigRequest) returns (TestStorageConfigResponse);
+  // 旧后端归档对象迁移到当前后端（流式进度）
+  rpc MigrateArchives(MigrateArchivesRequest) returns (stream MigrateArchivesResponse);
+}

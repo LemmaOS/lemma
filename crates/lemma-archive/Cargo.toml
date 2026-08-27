@@ -5,6 +5,7 @@ edition.workspace = true
 
 [dependencies]
 lemma-db.workspace = true
+lemma-crypto.workspace = true
 aws-sdk-s3.workspace = true
 aws-credential-types.workspace = true
 serde.workspace = true
@@ -13,6 +14,16 @@ uuid.workspace = true
 chrono.workspace = true
 tokio.workspace = true
 sqlx.workspace = true
+lemma-proto.workspace = true
+lemma-auth.workspace = true
+connectrpc.workspace = true
+buffa.workspace = true
+buffa-types.workspace = true
+tokio-stream.workspace = true
+
+[dev-dependencies]
+lemma-auth.workspace = true
+http.workspace = true
 
 [lints]
 workspace = true

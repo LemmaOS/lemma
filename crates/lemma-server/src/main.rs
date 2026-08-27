@@ -26,15 +26,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.jwt_secret.clone(),
         config.secret_key.clone(),
     ));
-    // 配置了 S3 才做归档内容迁移，否则服务端就地归档
-    let archive = config
-        .s3
-        .as_ref()
-        .map(|cfg| Arc::new(lemma_archive::S3ArchiveStore::new(cfg)));
+    // 归档存储按用户从 DB 解析（设置页维护配置）；未配置就地归档
     let conversations = Arc::new(ConversationService::new(
         pool.clone(),
         config.jwt_secret.clone(),
-        archive,
+        lemma_archive::DbArchiveSource::new(pool.clone(), config.secret_key.clone()),
+    ));
+    let storage = Arc::new(lemma_archive::StorageService::new(
+        pool.clone(),
+        config.jwt_secret.clone(),
+        config.secret_key.clone(),
     ));
     let chat = Arc::new(ChatService::new(
         pool.clone(),
@@ -46,6 +47,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let connect = connectrpc::Router::new()
         .add_service(auth)
         .add_service(provider)
+        .add_service(storage)
         .add_service(conversations)
         .add_service(chat)
         .add_service(sync);
@@ -58,6 +60,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     for svc in [
         "AuthService",
         "ProviderService",
+        "StorageService",
         "ConversationService",
         "ChatService",
         "SyncService",

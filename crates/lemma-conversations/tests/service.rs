@@ -11,10 +11,53 @@ use lemma_conversations::ConversationService;
 use lemma_proto::lemma::v1::ConversationService as ConversationServiceRpc;
 use lemma_proto::lemma::v1::MessageStatus;
 use sqlx::PgPool;
+use std::future::Future;
 use std::sync::Arc;
 use uuid::Uuid;
 
-type Svc = ConversationService<MemoryArchiveStore>;
+type Svc = ConversationService<TestSource>;
+
+// 测试源：enabled 模拟该用户有/无 S3 配置
+struct TestSource {
+    enabled: bool,
+    store: Arc<MemoryArchiveStore>,
+}
+
+impl lemma_archive::ArchiveSource for TestSource {
+    type Store = MemoryArchiveStore;
+
+    fn store_for(
+        &self,
+        _user_id: Uuid,
+    ) -> impl Future<Output = Result<Option<Arc<MemoryArchiveStore>>, lemma_archive::ArchiveError>> + Send
+    {
+        let store = self.store.clone();
+        let enabled = self.enabled;
+        async move { Ok(enabled.then_some(store)) }
+    }
+}
+
+fn svc_no_store(pool: &PgPool) -> Svc {
+    ConversationService::new(
+        pool.clone(),
+        SECRET,
+        TestSource {
+            enabled: false,
+            store: Arc::new(MemoryArchiveStore::new()),
+        },
+    )
+}
+
+fn svc_with_store(pool: &PgPool, store: Arc<MemoryArchiveStore>) -> Svc {
+    ConversationService::new(
+        pool.clone(),
+        SECRET,
+        TestSource {
+            enabled: true,
+            store,
+        },
+    )
+}
 
 const SECRET: &str = "test-secret";
 
@@ -230,7 +273,7 @@ async fn insert_msg(pool: &PgPool, conv: Uuid, seq: i64, status: &str, model: Op
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn create_and_list(pool: PgPool) {
-    let svc = ConversationService::new(pool.clone(), SECRET, None::<Arc<MemoryArchiveStore>>);
+    let svc = svc_no_store(&pool);
     let (_, token) = new_user(&pool).await;
     let created = create(&svc, &token).await;
     assert_eq!(created.conversation.title, "");
@@ -239,7 +282,7 @@ async fn create_and_list(pool: PgPool) {
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn rename_not_found_and_cross_user(pool: PgPool) {
-    let svc = ConversationService::new(pool.clone(), SECRET, None::<Arc<MemoryArchiveStore>>);
+    let svc = svc_no_store(&pool);
     let (_, alice) = new_user(&pool).await;
     let (_, erin) = new_user(&pool).await;
     let id = create(&svc, &alice).await.conversation.id.clone();
@@ -259,7 +302,7 @@ async fn rename_not_found_and_cross_user(pool: PgPool) {
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn archive_restore_flow(pool: PgPool) {
-    let svc = ConversationService::new(pool.clone(), SECRET, None::<Arc<MemoryArchiveStore>>);
+    let svc = svc_no_store(&pool);
     let (_, token) = new_user(&pool).await;
     let id = create(&svc, &token).await.conversation.id.clone();
 
@@ -298,7 +341,7 @@ async fn archive_restore_flow(pool: PgPool) {
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn list_messages_isolated(pool: PgPool) {
-    let svc = ConversationService::new(pool.clone(), SECRET, None::<Arc<MemoryArchiveStore>>);
+    let svc = svc_no_store(&pool);
     let (_, alice) = new_user(&pool).await;
     let (_, erin) = new_user(&pool).await;
     let id = create(&svc, &alice).await.conversation.id.clone();
@@ -332,7 +375,7 @@ async fn list_messages_isolated(pool: PgPool) {
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn archive_moves_content_to_store(pool: PgPool) {
     let store = Arc::new(MemoryArchiveStore::new());
-    let svc = ConversationService::new(pool.clone(), SECRET, Some(store.clone()));
+    let svc = svc_with_store(&pool, store.clone());
     let (_, token) = new_user(&pool).await;
     let id = create(&svc, &token).await.conversation.id.clone();
     seed_messages(&pool, &id, &["一", "二", "三"]).await;
@@ -352,7 +395,7 @@ async fn archive_moves_content_to_store(pool: PgPool) {
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn restore_reinserts_content_in_order(pool: PgPool) {
     let store = Arc::new(MemoryArchiveStore::new());
-    let svc = ConversationService::new(pool.clone(), SECRET, Some(store.clone()));
+    let svc = svc_with_store(&pool, store.clone());
     let (_, token) = new_user(&pool).await;
     let id = create(&svc, &token).await.conversation.id.clone();
     seed_messages(&pool, &id, &["一", "二", "三"]).await;
@@ -371,7 +414,7 @@ async fn restore_reinserts_content_in_order(pool: PgPool) {
 async fn restore_legacy_in_place_archive_keeps_messages(pool: PgPool) {
     // 历史就地归档（archive_key 为空、消息还在 PG）：解档只翻状态，消息原样保留
     let store = Arc::new(MemoryArchiveStore::new());
-    let svc = ConversationService::new(pool.clone(), SECRET, Some(store.clone()));
+    let svc = svc_with_store(&pool, store.clone());
     let (_, token) = new_user(&pool).await;
     let id = create(&svc, &token).await.conversation.id.clone();
     seed_messages(&pool, &id, &["旧"]).await;
@@ -393,7 +436,7 @@ async fn restore_legacy_in_place_archive_keeps_messages(pool: PgPool) {
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn delete_archived_removes_object(pool: PgPool) {
     let store = Arc::new(MemoryArchiveStore::new());
-    let svc = ConversationService::new(pool.clone(), SECRET, Some(store.clone()));
+    let svc = svc_with_store(&pool, store.clone());
     let (_, token) = new_user(&pool).await;
     let id = create(&svc, &token).await.conversation.id.clone();
     seed_messages(&pool, &id, &["x"]).await;
@@ -410,7 +453,7 @@ async fn delete_archived_removes_object(pool: PgPool) {
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn degrade_mode_keeps_content_in_pg(pool: PgPool) {
     // 未配置对象存储：就地归档，消息留在 PG（旧行为）
-    let svc = ConversationService::new(pool.clone(), SECRET, None::<Arc<MemoryArchiveStore>>);
+    let svc = svc_no_store(&pool);
     let (_, token) = new_user(&pool).await;
     let id = create(&svc, &token).await.conversation.id.clone();
     seed_messages(&pool, &id, &["留"]).await;
@@ -423,7 +466,7 @@ async fn degrade_mode_keeps_content_in_pg(pool: PgPool) {
 // 读回消息：四种状态映射、model 空值回退、倒序分页（最新在前）
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn list_messages_maps_statuses_and_fields(pool: PgPool) {
-    let svc = ConversationService::new(pool.clone(), SECRET, None::<Arc<MemoryArchiveStore>>);
+    let svc = svc_no_store(&pool);
     let (_, token) = new_user(&pool).await;
     let id = create(&svc, &token).await.conversation.id.clone();
     let conv = Uuid::parse_str(&id).unwrap();
@@ -478,9 +521,22 @@ impl ArchiveStore for FailingStore {
     }
 }
 
+struct FailingSource;
+
+impl lemma_archive::ArchiveSource for FailingSource {
+    type Store = FailingStore;
+
+    async fn store_for(
+        &self,
+        _user_id: Uuid,
+    ) -> Result<Option<Arc<FailingStore>>, lemma_archive::ArchiveError> {
+        Ok(Some(Arc::new(FailingStore)))
+    }
+}
+
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn archive_store_failure_maps_internal_and_rolls_back(pool: PgPool) {
-    let svc = ConversationService::new(pool.clone(), SECRET, Some(Arc::new(FailingStore)));
+    let svc = ConversationService::new(pool.clone(), SECRET, FailingSource);
     let (_, token) = new_user(&pool).await;
     // FailingStore 与 helper 的类型别名不同，这里走内联调用（同 archive_restore_flow 惯例）
     let msg = lemma_proto::lemma::v1::CreateConversationRequest::default();
@@ -510,8 +566,8 @@ async fn archive_store_failure_maps_internal_and_rolls_back(pool: PgPool) {
 }
 
 // 归档请求的内联泛型版：svc 的 ArchiveStore 类型参数任意
-async fn archive_generic<A: ArchiveStore>(
-    svc: &ConversationService<A>,
+async fn archive_generic<S: lemma_archive::ArchiveSource>(
+    svc: &ConversationService<S>,
     token: &str,
     id: &str,
 ) -> Result<lemma_proto::lemma::v1::ArchiveConversationResponse, connectrpc::ConnectError> {

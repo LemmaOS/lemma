@@ -3,6 +3,9 @@
 mod envelope;
 mod memory;
 mod s3;
+mod service;
+mod source;
+pub mod store;
 
 pub use envelope::{
     ArchiveEnvelope, ArchivedMessage, deserialize_envelope, envelope_from_messages,
@@ -10,6 +13,8 @@ pub use envelope::{
 };
 pub use memory::MemoryArchiveStore;
 pub use s3::{S3ArchiveStore, S3Config};
+pub use service::{StorageService, copy_archive_objects};
+pub use source::{ArchiveSource, DbArchiveSource};
 
 #[derive(Debug)]
 pub struct ArchiveError(pub String);
