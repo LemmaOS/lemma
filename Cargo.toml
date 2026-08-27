@@ -10,6 +10,7 @@ members = [
     "crates/lemma-chat",
     "crates/lemma-sync",
     "crates/lemma-archive",
+    "crates/lemma-crypto",
 ]
 
 [workspace.package]
@@ -26,6 +27,7 @@ lemma-conversations = { path = "crates/lemma-conversations" }
 lemma-chat = { path = "crates/lemma-chat" }
 lemma-sync = { path = "crates/lemma-sync" }
 lemma-archive = { path = "crates/lemma-archive" }
+lemma-crypto = { path = "crates/lemma-crypto" }
 # 远程依赖
 axum = "0.8.9"
 buffa = { version = "0.8.1", features = ["json"] }

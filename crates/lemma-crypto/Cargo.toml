@@ -1,0 +1,12 @@
+[package]
+name = "lemma-crypto"
+version.workspace = true
+edition.workspace = true
+
+[dependencies]
+aes-gcm.workspace = true
+base64.workspace = true
+sha2.workspace = true
+
+[lints]
+workspace = true

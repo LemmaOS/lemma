@@ -1,3 +1,5 @@
+//! 共享密封/解密：DB 中敏感列（api_key、S3 凭证）的 AES-256-GCM 加解密与脱敏
+
 use aes_gcm::Aes256Gcm;
 use aes_gcm::aead::{Aead, Generate, Key, KeyInit, Nonce};
 use base64::prelude::*;

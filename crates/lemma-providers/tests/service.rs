@@ -241,7 +241,7 @@ async fn create_masks_response_and_seals_in_db(pool: PgPool) {
     let row = store::list_by_user(&pool, uid).await.unwrap();
     let sealed = &row[0].api_key;
     assert_ne!(sealed, "sk-abcdef123456");
-    let plain = lemma_providers::open(&lemma_providers::derive_key(KEY_SECRET), sealed).unwrap();
+    let plain = lemma_crypto::open(&lemma_crypto::derive_key(KEY_SECRET), sealed).unwrap();
     assert_eq!(plain, "sk-abcdef123456");
 }
 

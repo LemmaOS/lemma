@@ -143,8 +143,8 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
         }
 
         // 解密 api key
-        let key = lemma_providers::derive_key(&self.secret_key);
-        let api_key = lemma_providers::open(&key, &provider.api_key)
+        let key = lemma_crypto::derive_key(&self.secret_key);
+        let api_key = lemma_crypto::open(&key, &provider.api_key)
             .map_err(|_| ConnectError::internal("decrypt api key"))?;
 
         // 事务：user 消息 + assistant 占位

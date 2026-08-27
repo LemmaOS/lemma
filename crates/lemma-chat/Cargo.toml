@@ -9,6 +9,7 @@ lemma-proto.workspace = true
 lemma-auth.workspace = true
 lemma-providers.workspace = true
 lemma-conversations.workspace = true
+lemma-crypto.workspace = true
 sqlx.workspace = true
 uuid.workspace = true
 chrono.workspace = true

@@ -10,8 +10,8 @@ use lemma_proto::lemma::v1::{
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::crypto::{derive_key, open};
-use crate::{fetch_models, mask};
+use crate::fetch_models;
+use lemma_crypto::{derive_key, mask, open, seal};
 
 pub struct ProviderService {
     pool: PgPool,
@@ -111,7 +111,7 @@ impl lemma_proto::lemma::v1::ProviderService for ProviderService {
         }
         let sealed = {
             let key = derive_key(&self.secret_key);
-            crate::seal(&key, api_key)
+            seal(&key, api_key)
         }
         .map_err(|e| ConnectError::internal(format!("seal key: {e}")))?;
         let provider = providers::insert(
@@ -151,10 +151,7 @@ impl lemma_proto::lemma::v1::ProviderService for ProviderService {
         let api_key = match request.api_key {
             Some(k) if !k.is_empty() => {
                 let key = derive_key(&self.secret_key);
-                Some(
-                    crate::seal(&key, k)
-                        .map_err(|e| ConnectError::internal(format!("seal key: {e}")))?,
-                )
+                Some(seal(&key, k).map_err(|e| ConnectError::internal(format!("seal key: {e}")))?)
             }
             _ => None,
         };
