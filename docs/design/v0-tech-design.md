@@ -92,7 +92,7 @@ lemma/
 - `Pull(after)` → 增量条目（每条带自己的 `syncSeq`）+ 活跃/归档两份全量名单；客户端持游标循环分页直到 `hasMore=false`，游标持久化在本地。
 - `Watch()` 常驻服务端流：数据变更发 `hint{syncSeq}`，另有心跳；客户端发现 hint 的 syncSeq 领先本地游标就发起一次 Pull。
 - 无删除墓碑：归档是状态翻转（出现在增量里）；两份全量名单负责对账——彻底删除通过归档名单 diff 发现（在旧缓存里、不在新列表里 ⇒ 级联清掉），活跃名单之外的 active 行视为僵尸（跨账号污染/重建残留），同样级联清掉。
-- 归档存储：归档时消息搬进 S3 兼容对象存储（MinIO/R2 等），PG 只留会话元数据（`archive_key` 指向对象）。写入两阶段保一致：先 PUT 对象（幂等），再 PG 事务标记归档 + 删消息，中途失败只留下无害孤儿对象。恢复在同一事务里从对象读回消息重插（保留原 seq/时间戳，sync_seq 走新值成为增量），提交后尽力删对象；彻底删除先查 `archive_key`、PG 删完再尽力删对象。对象是带版本的 JSON 信封（`archives/<conversation_id>.json`），由 `lemma-archive` crate 的 `ArchiveStore` trait 抽象（S3 与内存两实现，后者供测试）。未配置 `LEMMA_S3_*`（五项缺一即未启用）时降级为旧行为：消息留在 PG 不外搬。
+- 归档存储：归档时消息搬进 S3 兼容对象存储（MinIO/R2 等），PG 只留会话元数据（`archive_key` 指向对象）。写入两阶段保一致：先 PUT 对象（幂等），再 PG 事务标记归档 + 删消息，中途失败只留下无害孤儿对象。恢复在同一事务里从对象读回消息重插（保留原 seq/时间戳，sync_seq 走新值成为增量），提交后尽力删对象；彻底删除先查 `archive_key`、PG 删完再尽力删对象。对象是带版本的 JSON 信封（`archives/<conversation_id>.json`），由 `lemma-archive` crate 的 `ArchiveStore` trait 抽象（S3 与内存两实现，后者供测试）。存储配置按用户存 `s3_configs` 表（凭证 AES-GCM 密封、设置页维护、运行时生效），未配置时降级为旧行为：消息留在 PG 不外搬；换后端（endpoint/bucket 变更）且有存量归档时，保存旧配置快照并由 MigrateArchives 流式逐对象复制到新后端（幂等可重跑）。
 - 冲突语义是 LWW：同一条目只接受 syncSeq 更大的版本。
 
 **客户端缓存**（web）：IndexedDB（Dexie），每个用户一个库 `lemma-<userId>`，登出不清、切号换库。三张表：conversations、messages（复合索引 `[conversationId+seq]`，seq 为会话内单调序号）、meta（存同步游标）。proto 实体拍平成行：Timestamp 转毫秒、bigint 转字符串（IndexedDB 索引不支持 bigint）。归档会话本地不留消息缓存：每次 Pull 按归档名单清空，恢复后随增量自动拉回。

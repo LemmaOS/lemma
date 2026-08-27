@@ -23,7 +23,7 @@
 
 ## 代码约定
 
-- `lemma-db` 只是存储内核（连接池、迁移、共享实体）；领域查询住在各领域 crate（users/tokens → lemma-auth，providers → lemma-providers，conversations → lemma-conversations）
+- `lemma-db` 只是存储内核（连接池、迁移、共享实体）；领域查询住在各领域 crate（users/tokens → lemma-auth，providers → lemma-providers，conversations → lemma-conversations，s3 配置 → lemma-archive）
 - conversations/messages 表的所有 UPDATE 必须显式 `sync_seq = nextval('sync_seq')`（列默认值只作用于 INSERT）
 - 集成测试用 `#[sqlx::test]`（每测试独立临时库）；跨 crate 测试带 `migrations = "../lemma-db/migrations"`
 - 测试直调 handler（ServiceRequest / RequestContext），不起 HTTP 服务
