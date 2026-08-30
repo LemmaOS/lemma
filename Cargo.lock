@@ -2170,6 +2170,7 @@ dependencies = [
 name = "lemma-proto"
 version = "0.1.0"
 dependencies = [
+ "base64 0.23.1",
  "buffa",
  "buffa-types",
  "connectrpc",

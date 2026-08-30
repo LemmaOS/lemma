@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 
 [dependencies]
+base64.workspace = true
 buffa.workspace = true
 buffa-types.workspace = true
 connectrpc.workspace = true
