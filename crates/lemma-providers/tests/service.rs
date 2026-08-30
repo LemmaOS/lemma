@@ -326,6 +326,10 @@ async fn update_rejects_other_owner_and_bad_id(pool: PgPool) {
     .err()
     .unwrap();
     assert_eq!(err.code, ErrorCode::NotFound);
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::ProviderNotFound)
+    );
 
     let err = update(
         &svc,

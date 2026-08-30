@@ -3,9 +3,10 @@ use buffa::EnumValue;
 use buffa_types::google::protobuf::Timestamp;
 use connectrpc::{ConnectError, RequestContext, Response, ServiceRequest, ServiceResult};
 use lemma_db::entity::Provider as DbProvider;
+use lemma_proto::app_error;
 use lemma_proto::lemma::v1::{
-    CreateProviderResponse, DeleteProviderResponse, FetchModelsResponse, ListProvidersResponse,
-    Provider, ProviderKind, UpdateProviderResponse,
+    CreateProviderResponse, DeleteProviderResponse, ErrorReason, FetchModelsResponse,
+    ListProvidersResponse, Provider, ProviderKind, UpdateProviderResponse,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -43,7 +44,7 @@ fn kind_from_proto(kind: &EnumValue<ProviderKind>) -> Result<&'static str, Conne
         Some(ProviderKind::Anthropic) => Ok("anthropic"),
         Some(ProviderKind::Gemini) => Ok("gemini"),
         Some(ProviderKind::Openai) => Ok("openai"),
-        _ => Err(ConnectError::invalid_argument("invalid provider kind")),
+        _ => Err(app_error(ErrorReason::ProviderKindInvalid)),
     }
 }
 
@@ -70,7 +71,7 @@ fn to_proto(p: &DbProvider, secret_key: &str) -> Provider {
 }
 
 fn parse_id(id: &str) -> Result<Uuid, ConnectError> {
-    Uuid::parse_str(id).map_err(|_| ConnectError::invalid_argument("invalid provider id"))
+    Uuid::parse_str(id).map_err(|_| app_error(ErrorReason::IdInvalid))
 }
 
 fn map_db(e: sqlx::Error) -> ConnectError {
@@ -105,9 +106,7 @@ impl lemma_proto::lemma::v1::ProviderService for ProviderService {
         let base_url = request.base_url.trim().trim_end_matches('/');
         let api_key = request.api_key;
         if name.is_empty() || base_url.is_empty() || api_key.is_empty() {
-            return Err(ConnectError::invalid_argument(
-                "name, base_url and api_key required",
-            ));
+            return Err(app_error(ErrorReason::ProviderFieldsRequired));
         }
         let sealed = {
             let key = derive_key(&self.secret_key);
@@ -172,7 +171,7 @@ impl lemma_proto::lemma::v1::ProviderService for ProviderService {
         let provider = providers::update(&self.pool, id, user_id, patch)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::not_found("provider not found"))?;
+            .ok_or_else(|| app_error(ErrorReason::ProviderNotFound))?;
         Response::ok(UpdateProviderResponse {
             provider: to_proto(&provider, &self.secret_key).into(),
             ..Default::default()
@@ -190,7 +189,7 @@ impl lemma_proto::lemma::v1::ProviderService for ProviderService {
             .await
             .map_err(map_db)?;
         if !deleted {
-            return Err(ConnectError::not_found("provider not found"));
+            return Err(app_error(ErrorReason::ProviderNotFound));
         }
         Response::ok(DeleteProviderResponse::default())
     }
@@ -207,7 +206,7 @@ impl lemma_proto::lemma::v1::ProviderService for ProviderService {
             let p = providers::find_by_id_and_user(&self.pool, id, user_id)
                 .await
                 .map_err(map_db)?
-                .ok_or_else(|| ConnectError::not_found("provider not found"))?;
+                .ok_or_else(|| app_error(ErrorReason::ProviderNotFound))?;
             let key = derive_key(&self.secret_key);
             let plain = open(&key, &p.api_key)
                 .map_err(|e| ConnectError::internal(format!("open key: {e}")))?;
