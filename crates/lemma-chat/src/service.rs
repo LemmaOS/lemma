@@ -8,9 +8,10 @@ use connectrpc::{
 use futures::{StreamExt, stream};
 use lemma_auth::require_user;
 use lemma_db::entity::{Message as DbMessage, TokenUsage as DbTokenUsage};
+use lemma_proto::app_error;
 use lemma_proto::lemma::v1::{
     AbortMessageResponse, ChatAborted, ChatDelta, ChatDone, ChatError, ChatEvent, ChatStarted,
-    ResumeStreamResponse, SendMessageResponse, TokenUsage,
+    ErrorReason, ResumeStreamResponse, SendMessageResponse, TokenUsage,
 };
 use sqlx::PgPool;
 use tokio_stream::wrappers::BroadcastStream;
@@ -102,10 +103,10 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
         let conversation_id = parse_id(request.conversation_id)?;
         let provider_id = parse_id(request.provider_id)?;
         if request.content.trim().is_empty() {
-            return Err(ConnectError::invalid_argument("content required"));
+            return Err(app_error(ErrorReason::ContentRequired));
         }
         if request.model.is_empty() {
-            return Err(ConnectError::invalid_argument("model required"));
+            return Err(app_error(ErrorReason::ModelRequired));
         }
         let client_msg_id = request.client_msg_id;
 
@@ -113,14 +114,14 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
         lemma_conversations::store::find_by_id_and_user(&self.pool, conversation_id, user_id)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::not_found("conversation not found"))?;
+            .ok_or_else(|| app_error(ErrorReason::ConversationNotFound))?;
         let provider =
             lemma_providers::providers::find_by_id_and_user(&self.pool, provider_id, user_id)
                 .await
                 .map_err(map_db)?
-                .ok_or_else(|| ConnectError::not_found("provider not found"))?;
+                .ok_or_else(|| app_error(ErrorReason::ProviderNotFound))?;
         if !provider.enabled {
-            return Err(ConnectError::invalid_argument("provider disabled"));
+            return Err(app_error(ErrorReason::ProviderDisabled));
         }
 
         // 幂等：同一 client_msg_id 重发 → 重放已有 assistant 消息
@@ -263,7 +264,7 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
         let msg = store::find_by_id_and_user(&self.pool, id, user_id)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::not_found("message not found"))?;
+            .ok_or_else(|| app_error(ErrorReason::MessageNotFound))?;
         // 幂等：非 streaming 无需处理
         if msg.status != "streaming" {
             return Response::ok(AbortMessageResponse::default());
@@ -294,9 +295,9 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
         let msg = store::find_by_id_and_user(&self.pool, message_id, user_id)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::not_found("message not found"))?;
+            .ok_or_else(|| app_error(ErrorReason::MessageNotFound))?;
         if msg.role != "assistant" {
-            return Err(ConnectError::invalid_argument("not an assistant message"));
+            return Err(app_error(ErrorReason::NotAssistantMessage));
         }
         let events = self.chat_event_stream(msg, user_id, offset).await?;
         Response::stream_ok(events.map(|r| {
@@ -463,7 +464,7 @@ fn error_event(message: &str) -> ChatEvent {
 }
 
 fn parse_id(id: &str) -> Result<Uuid, ConnectError> {
-    Uuid::parse_str(id).map_err(|_| ConnectError::invalid_argument("invalid id"))
+    Uuid::parse_str(id).map_err(|_| app_error(ErrorReason::IdInvalid))
 }
 
 fn map_db(e: sqlx::Error) -> ConnectError {
