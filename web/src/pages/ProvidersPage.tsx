@@ -49,11 +49,11 @@ export default function ProvidersPage() {
         <div className="flex h-dvh gap-2 bg-sidebar p-2 text-foreground">
             <SettingsNav section={section} onSelect={setSection} />
             {section === "appearance" ? (
-                <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border bg-background">
+                <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border app-canvas">
                     <AppearancePanel />
                 </main>
             ) : section === "storage" ? (
-                <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border bg-background">
+                <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border app-canvas">
                     <StoragePanel />
                 </main>
             ) : (
@@ -67,7 +67,7 @@ export default function ProvidersPage() {
                         }}
                         onCreate={() => setCreating(true)}
                     />
-                    <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border bg-background">
+                    <main className="min-w-0 flex-1 overflow-y-auto rounded-xl border border-border app-canvas">
                         {creating ? (
                             <NewProviderForm
                                 onSave={handleSaveNew}

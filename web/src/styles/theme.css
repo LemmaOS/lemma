@@ -129,8 +129,13 @@
     body {
         @apply bg-background text-foreground font-sans antialiased;
     }
-    /* 暗色主区域纵向渐变：app 满屏不滚动，渐变稳定锚在视口 */
-    [data-theme="dark"] body {
-        background-image: linear-gradient(to top, #0e0d0f, #1c1e1b);
-    }
+}
+
+/* 主区域画布：亮色实色；暗色纵向渐变（fixed 锚视口，面板内部滚动不拉伸） */
+.app-canvas {
+    background-color: var(--background);
+}
+[data-theme="dark"] .app-canvas {
+    background-image: linear-gradient(to top, #0e0d0f, #1c1e1b);
+    background-attachment: fixed;
 }
