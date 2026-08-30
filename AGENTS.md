@@ -29,6 +29,7 @@
 - 入库凭证一律 lemma-crypto 密封、出库脱敏回显；前端密钥框不回填脱敏串（留空=保持）——回填值被保存会当成真密钥重新密封，密钥静默损坏
 - S3 桶必须预先存在，测试连接只探测不建桶——自动建桶是刻意删掉的，别再加回
 - conversations/messages 表的所有 UPDATE 必须显式 `sync_seq = nextval('sync_seq')`（列默认值只作用于 INSERT）
+- 业务错误（非 internal 的 ConnectError）一律走 `lemma_proto::app_error`：错误码进 `errors.proto` 闭集、英文文案兜底，前端按码出 i18n；internal 运维错误保持英文原文、不带码也永不本地化
 - 集成测试用 `#[sqlx::test]`（每测试独立临时库）；跨 crate 测试带 `migrations = "../lemma-db/migrations"`
 - 测试直调 handler（ServiceRequest / RequestContext），不起 HTTP 服务
 

@@ -113,6 +113,8 @@ lemma/
 
 约定：认证走 `Authorization: Bearer` 请求头；所有数据按当前用户做归属校验；响应一律独立命名的 XxxResponse 包裹，不复用实体消息；实体不带协议字段（sync_seq 等只出现在对应协议载荷中）。
 
+错误分两轨：**业务错误**（可预期、面向用户）走 `lemma_proto::app_error`——错误码进 `errors.proto` 的 ErrorReason 闭集，`ErrorInfo`（含 i18n 插值 attrs）随 ConnectError.details 下发，传输码维持既有语义；前端 `lib/errors.ts` 按 reason 查 `errors.*` i18n 文案（Record 穷举，漏译编译期即报）。**运维错误**（db、密封、上游异常）保持 internal + 英文原文，不带码也永不本地化；流内错误（ChatError.message、迁移帧 error）同属此类。
+
 ## 7. 客户端架构
 
 React 19 + Vite + Tailwind v4 + shadcn（Radix 组件），状态用 zustand，国际化 i18next（zh/en，选择持久化在 `lemma.lang`），主题三态 light/dark/system（`data-theme` 属性 + 首帧内联脚本防闪烁，`lemma.theme`）。
