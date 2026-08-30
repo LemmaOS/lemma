@@ -13,6 +13,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { ProviderKind } from "@/gen/lemma/v1/provider_pb";
+import { errorText } from "@/lib/errors";
 
 export interface NewProviderData {
     kind: ProviderKind;
@@ -49,7 +50,7 @@ export function NewProviderForm({ onSave, onCancel }: NewProviderFormProps) {
     const [apiKey, setApiKey] = useState("");
     const [showKey, setShowKey] = useState(false);
     const [busy, setBusy] = useState(false);
-    const [failed, setFailed] = useState(false);
+    const [failed, setFailed] = useState<string | null>(null);
 
     const handleKindChange = (value: string) => {
         const option = KIND_OPTIONS.find((o) => o.value === value);
@@ -67,7 +68,7 @@ export function NewProviderForm({ onSave, onCancel }: NewProviderFormProps) {
 
     const handleSave = async () => {
         setBusy(true);
-        setFailed(false);
+        setFailed(null);
         try {
             const kindLabel =
                 KIND_OPTIONS.find((o) => o.kind === kind)?.value ?? "provider";
@@ -77,8 +78,8 @@ export function NewProviderForm({ onSave, onCancel }: NewProviderFormProps) {
                 baseUrl: baseUrl.trim(),
                 apiKey: apiKey.trim(),
             });
-        } catch {
-            setFailed(true);
+        } catch (e) {
+            setFailed(errorText(e, t));
         } finally {
             setBusy(false);
         }
@@ -156,9 +157,7 @@ export function NewProviderForm({ onSave, onCancel }: NewProviderFormProps) {
                     </div>
                 </div>
                 {failed && (
-                    <p className="text-xs text-destructive">
-                        {t("providers.saveFailed")}
-                    </p>
+                    <p className="text-xs text-destructive">{failed}</p>
                 )}
                 <div className="flex items-center gap-2 pt-2">
                     <Button

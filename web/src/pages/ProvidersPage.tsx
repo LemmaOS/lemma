@@ -92,7 +92,7 @@ export default function ProvidersPage() {
                                 onFetchModels={() =>
                                     store.fetchModels({ id: selected.id })
                                 }
-                                onDelete={() => void handleDelete(selected.id)}
+                                onDelete={() => handleDelete(selected.id)}
                             />
                         ) : (
                             <div className="grid h-full place-items-center text-sm text-muted-foreground">

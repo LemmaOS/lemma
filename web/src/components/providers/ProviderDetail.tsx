@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import type { Provider } from "@/gen/lemma/v1/provider_pb";
+import { errorText } from "@/lib/errors";
 import { cn } from "@/lib/utils";
 
 function FieldRow({
@@ -52,9 +53,9 @@ function ModelList({ models, onChange, onFetch }: ModelListProps) {
     const { t } = useTranslation();
     const [query, setQuery] = useState("");
     const [fetching, setFetching] = useState(false);
-    const [fetchState, setFetchState] = useState<"idle" | "ok" | "fail">(
-        "idle",
-    );
+    const [fetchMsg, setFetchMsg] = useState<
+        { ok: true; text: string } | { ok: false; text: string } | null
+    >(null);
     const [adding, setAdding] = useState(false);
     const [newModel, setNewModel] = useState("");
 
@@ -66,13 +67,13 @@ function ModelList({ models, onChange, onFetch }: ModelListProps) {
     const fetchRemote = async () => {
         if (fetching) return;
         setFetching(true);
-        setFetchState("idle");
+        setFetchMsg(null);
         try {
             const remote = await onFetch();
             onChange(Array.from(new Set([...models, ...remote])));
-            setFetchState("ok");
-        } catch {
-            setFetchState("fail");
+            setFetchMsg({ ok: true, text: t("providers.modelsFetched") });
+        } catch (e) {
+            setFetchMsg({ ok: false, text: errorText(e, t) });
         } finally {
             setFetching(false);
         }
@@ -131,18 +132,16 @@ function ModelList({ models, onChange, onFetch }: ModelListProps) {
                 </div>
             </div>
 
-            {fetchState !== "idle" && (
+            {fetchMsg && (
                 <p
                     className={cn(
                         "pt-2 text-xs",
-                        fetchState === "ok"
+                        fetchMsg.ok
                             ? "text-muted-foreground"
                             : "text-destructive",
                     )}
                 >
-                    {fetchState === "ok"
-                        ? t("providers.modelsFetched")
-                        : t("providers.fetchFailed")}
+                    {fetchMsg.text}
                 </p>
             )}
 
@@ -227,7 +226,7 @@ interface ProviderDetailProps {
     onSaveApiKey: (apiKey: string) => Promise<void>;
     onModelsChange: (models: string[]) => void;
     onFetchModels: () => Promise<string[]>;
-    onDelete: () => void;
+    onDelete: () => void | Promise<void>;
 }
 
 export function ProviderDetail({
@@ -245,7 +244,7 @@ export function ProviderDetail({
     const [baseUrl, setBaseUrl] = useState(provider.baseUrl);
     const [savingKey, setSavingKey] = useState(false);
     const [savingUrl, setSavingUrl] = useState(false);
-    const [saveFailed, setSaveFailed] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const apiKeyDirty = apiKey.trim().length > 0;
     const baseUrlDirty =
@@ -253,12 +252,12 @@ export function ProviderDetail({
 
     const saveApiKey = async () => {
         setSavingKey(true);
-        setSaveFailed(false);
+        setError(null);
         try {
             await onSaveApiKey(apiKey.trim());
             setApiKey("");
-        } catch {
-            setSaveFailed(true);
+        } catch (e) {
+            setError(errorText(e, t));
         } finally {
             setSavingKey(false);
         }
@@ -266,19 +265,25 @@ export function ProviderDetail({
 
     const saveBaseUrl = async () => {
         setSavingUrl(true);
-        setSaveFailed(false);
+        setError(null);
         try {
             await onSaveBaseUrl(baseUrl.trim());
-        } catch {
+        } catch (e) {
             setBaseUrl(provider.baseUrl);
-            setSaveFailed(true);
+            setError(errorText(e, t));
         } finally {
             setSavingUrl(false);
         }
     };
 
-    const handleDelete = () => {
-        if (window.confirm(t("providers.deleteConfirm"))) onDelete();
+    const handleDelete = async () => {
+        if (!window.confirm(t("providers.deleteConfirm"))) return;
+        setError(null);
+        try {
+            await onDelete();
+        } catch (e) {
+            setError(errorText(e, t));
+        }
     };
 
     return (
@@ -295,7 +300,7 @@ export function ProviderDetail({
                         size="icon"
                         className="text-muted-foreground hover:text-destructive"
                         aria-label={t("providers.deleteProvider")}
-                        onClick={handleDelete}
+                        onClick={() => void handleDelete()}
                     >
                         <Trash2 className="size-4" />
                     </Button>
@@ -370,10 +375,8 @@ export function ProviderDetail({
                     </Button>
                 </FieldRow>
 
-                {saveFailed && (
-                    <p className="pt-2 text-xs text-destructive">
-                        {t("providers.saveFailed")}
-                    </p>
+                {error && (
+                    <p className="pt-2 text-xs text-destructive">{error}</p>
                 )}
 
                 <p className="flex items-center gap-1.5 pt-4 text-xs text-muted-foreground">

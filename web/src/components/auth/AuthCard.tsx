@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { errorText } from "@/lib/errors";
 import { useAuth } from "@/stores/auth";
 
 export function AuthCard() {
@@ -34,8 +35,8 @@ export function AuthCard() {
         setError("");
         try {
             await login(identifier.trim(), password);
-        } catch {
-            setError(t("auth.loginFailed"));
+        } catch (e) {
+            setError(errorText(e, t));
         } finally {
             setBusy(false);
         }
@@ -51,8 +52,8 @@ export function AuthCard() {
         setError("");
         try {
             await signup(username.trim(), email.trim(), password);
-        } catch {
-            setError(t("auth.signupFailed"));
+        } catch (e) {
+            setError(errorText(e, t));
         } finally {
             setBusy(false);
         }

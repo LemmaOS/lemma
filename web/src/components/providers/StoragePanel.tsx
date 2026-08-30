@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Code, ConnectError } from "@connectrpc/connect";
 import { Eye, EyeOff } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { storageClient } from "@/lib/clients";
+import { errorText } from "@/lib/errors";
 
 type Progress = { done: number; total: number; skipped: number };
 
@@ -129,7 +129,7 @@ export function StoragePanel() {
                 }
             }
         } catch (e) {
-            setError(e instanceof ConnectError ? e.message : String(e));
+            setError(errorText(e, t));
         } finally {
             setMigrating(false);
         }
@@ -158,7 +158,7 @@ export function StoragePanel() {
                 void runMigration();
             }
         } catch (e) {
-            setError(e instanceof ConnectError ? e.message : String(e));
+            setError(errorText(e, t));
         } finally {
             setBusy(false);
         }
@@ -178,13 +178,7 @@ export function StoragePanel() {
             });
             setTestMsg(t("storage.testOk"));
         } catch (e) {
-            if (e instanceof ConnectError && e.code === Code.NotFound) {
-                setError(t("storage.bucketNotFound", { bucket }));
-            } else if (e instanceof ConnectError) {
-                setError(`${t("storage.testFail")} · ${e.message}`);
-            } else {
-                setError(String(e));
-            }
+            setError(errorText(e, t));
         } finally {
             setBusy(false);
         }
@@ -203,13 +197,7 @@ export function StoragePanel() {
             setAccessKey("");
             setSecretKey("");
         } catch (e) {
-            if (e instanceof ConnectError && e.code === Code.FailedPrecondition) {
-                setError(t("storage.deleteBlocked"));
-            } else if (e instanceof ConnectError) {
-                setError(`${t("storage.deleteFail")} · ${e.message}`);
-            } else {
-                setError(String(e));
-            }
+            setError(errorText(e, t));
         } finally {
             setBusy(false);
         }
