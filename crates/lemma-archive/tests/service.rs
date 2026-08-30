@@ -176,6 +176,10 @@ async fn first_save_requires_core_fields(pool: PgPool) {
         .err()
         .unwrap();
     assert_eq!(err.code, ErrorCode::InvalidArgument);
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::StorageEndpointRequired)
+    );
 
     // endpoint/bucket 给了但密钥缺失
     let err = update(&s, &token, Some("http://x"), None, Some("b"), None, None)
@@ -183,6 +187,10 @@ async fn first_save_requires_core_fields(pool: PgPool) {
         .err()
         .unwrap();
     assert_eq!(err.code, ErrorCode::InvalidArgument);
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::StorageAccessKeyRequired)
+    );
 }
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
@@ -297,6 +305,10 @@ async fn delete_guarded_by_archives(pool: PgPool) {
         .err()
         .unwrap();
     assert_eq!(err.code, ErrorCode::FailedPrecondition);
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::StorageHasArchives)
+    );
 
     // 无存量（新用户）：删除成功且 get 变回未配置
     let (_, t2) = new_user(&pool).await;

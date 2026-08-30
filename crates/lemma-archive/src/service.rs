@@ -7,9 +7,10 @@ use lemma_auth::require_user;
 use lemma_crypto::{derive_key, mask, open, seal};
 use lemma_db::entity::S3Config as DbS3Config;
 use lemma_proto::lemma::v1::{
-    DeleteStorageConfigResponse, GetStorageConfigResponse, MigrateArchivesResponse, StorageConfig,
-    TestStorageConfigResponse, UpdateStorageConfigResponse,
+    DeleteStorageConfigResponse, ErrorReason, GetStorageConfigResponse, MigrateArchivesResponse,
+    StorageConfig, TestStorageConfigResponse, UpdateStorageConfigResponse,
 };
+use lemma_proto::{app_error, app_error_with};
 use sqlx::PgPool;
 
 use crate::store::{self, UpsertS3Config};
@@ -163,9 +164,9 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
         let old = existing.as_ref();
 
         let endpoint = pick(request.endpoint, old.map(|c| c.endpoint.as_str()))
-            .ok_or_else(|| ConnectError::invalid_argument("endpoint required"))?;
+            .ok_or_else(|| app_error(ErrorReason::StorageEndpointRequired))?;
         let bucket = pick(request.bucket, old.map(|c| c.bucket.as_str()))
-            .ok_or_else(|| ConnectError::invalid_argument("bucket required"))?;
+            .ok_or_else(|| app_error(ErrorReason::StorageBucketRequired))?;
         // region 宽松：不给就沿用，首配默认 us-east-1
         let region = pick(request.region, old.map(|c| c.region.as_str()))
             .unwrap_or_else(|| "us-east-1".to_string());
@@ -175,13 +176,13 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
             Some(k) if !k.is_empty() => seal_with(&self.secret_key, k)?,
             _ => old
                 .map(|c| c.access_key.clone())
-                .ok_or_else(|| ConnectError::invalid_argument("access_key required"))?,
+                .ok_or_else(|| app_error(ErrorReason::StorageAccessKeyRequired))?,
         };
         let sealed_secret = match request.secret_key {
             Some(k) if !k.is_empty() => seal_with(&self.secret_key, k)?,
             _ => old
                 .map(|c| c.secret_key.clone())
-                .ok_or_else(|| ConnectError::invalid_argument("secret_key required"))?,
+                .ok_or_else(|| app_error(ErrorReason::StorageSecretKeyRequired))?,
         };
 
         // 后端变更（endpoint/bucket 任一变化）且有存量归档 → 写旧配置快照；
@@ -252,9 +253,7 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
             .await
             .map_err(map_db)?;
         if !keys.is_empty() {
-            return Err(ConnectError::failed_precondition(
-                "archived conversations still reference this storage; restore or delete them first",
-            ));
+            return Err(app_error(ErrorReason::StorageHasArchives));
         }
         store::delete_by_user(&self.pool, user_id)
             .await
@@ -282,9 +281,9 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
             }
         };
         let endpoint = pick(request.endpoint, old.map(|c| c.endpoint.as_str()))
-            .ok_or_else(|| ConnectError::invalid_argument("endpoint required"))?;
+            .ok_or_else(|| app_error(ErrorReason::StorageEndpointRequired))?;
         let bucket = pick(request.bucket, old.map(|c| c.bucket.as_str()))
-            .ok_or_else(|| ConnectError::invalid_argument("bucket required"))?;
+            .ok_or_else(|| app_error(ErrorReason::StorageBucketRequired))?;
         let region = pick(request.region, old.map(|c| c.region.as_str()))
             .unwrap_or_else(|| "us-east-1".to_string());
         let access = if !request.access_key.is_empty() {
@@ -292,7 +291,7 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
         } else {
             match old {
                 Some(c) => open_with(&self.secret_key, &c.access_key)?,
-                None => return Err(ConnectError::invalid_argument("access_key required")),
+                None => return Err(app_error(ErrorReason::StorageAccessKeyRequired)),
             }
         };
         let secret = if !request.secret_key.is_empty() {
@@ -300,7 +299,7 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
         } else {
             match old {
                 Some(c) => open_with(&self.secret_key, &c.secret_key)?,
-                None => return Err(ConnectError::invalid_argument("secret_key required")),
+                None => return Err(app_error(ErrorReason::StorageSecretKeyRequired)),
             }
         };
 
@@ -313,9 +312,10 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
         });
         // 桶必须预先存在（RustFS 控制台或 aws-cli 建）
         if !probe.bucket_exists().await.map_err(map_archive)? {
-            return Err(ConnectError::not_found(format!(
-                "bucket {bucket} not found"
-            )));
+            return Err(app_error_with(
+                ErrorReason::BucketNotFound,
+                &[("bucket", &bucket)],
+            ));
         }
         let message = "bucket reachable".to_string();
         Response::ok(TestStorageConfigResponse {
@@ -333,9 +333,9 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
         let cfg = store::find_by_user(&self.pool, user_id)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::invalid_argument("storage not configured"))?;
+            .ok_or_else(|| app_error(ErrorReason::StorageNotConfigured))?;
         let Some(snapshot) = cfg.migration_from.as_ref().map(|j| j.0.clone()) else {
-            return Err(ConnectError::invalid_argument("no pending migration"));
+            return Err(app_error(ErrorReason::MigrationNotPending));
         };
         let from: MigrationFrom = serde_json::from_value(snapshot)
             .map_err(|e| ConnectError::internal(format!("snapshot: {e}")))?;
