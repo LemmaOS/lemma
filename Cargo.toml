@@ -30,10 +30,10 @@ lemma-archive = { path = "crates/lemma-archive" }
 lemma-crypto = { path = "crates/lemma-crypto" }
 # 远程依赖
 axum = "0.8.9"
-buffa = { version = "0.8.1", features = ["json"] }
-buffa-types = { version = "0.8.1", features = ["json", "chrono"] }
-connectrpc = { version = "0.8.1", features = ["server", "axum"] }
-connectrpc-build = "0.8.0"
+buffa = { version = "0.9.1", features = ["json"] }
+buffa-types = { version = "0.9.1", features = ["json", "chrono"] }
+connectrpc = { version = "0.9.0", features = ["server", "axum"] }
+connectrpc-build = "0.9.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 sqlx = { version = "0.9.0", features = [
