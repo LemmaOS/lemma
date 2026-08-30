@@ -1,19 +1,19 @@
 /*
- * Design tokens — single source of truth for color (see design.md §2).
- * Raw values (oklch) are ONLY allowed in this file.
+ * Design tokens — single source of truth for color (see WEB_DESIGN_SYSTEM.md).
+ * Raw values are ONLY allowed in this file.
  * Everything else must consume the semantic Tailwind classes generated below
  * (bg-background, text-muted-foreground, bg-sidebar, bg-code, ...).
  */
 
 :root {
-    --background: #f8f8f8;
+    --background: #fdfbfd;
     --foreground: oklch(0.21 0.01 260);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.21 0.01 260);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.21 0.01 260);
-    --primary: oklch(0.52 0.09 262);
-    --primary-foreground: oklch(0.98 0.005 260);
+    --primary: #60b1ff;
+    --primary-foreground: #0b1220;
     --secondary: oklch(0.96 0.003 260);
     --secondary-foreground: oklch(0.3 0.01 260);
     --muted: oklch(0.965 0.003 260);
@@ -24,8 +24,9 @@
     --destructive-foreground: oklch(0.98 0 0);
     --border: oklch(0.91 0.005 260);
     --input: oklch(0.91 0.005 260);
-    --ring: oklch(0.52 0.09 262 / 0.35);
-    --sidebar: #fbfaf9;
+    /* ring 从主色派生：换主色焦点圈自动跟随 */
+    --ring: color-mix(in srgb, var(--primary) 40%, transparent);
+    --sidebar: #fcf8fb;
     --sidebar-foreground: oklch(0.21 0.01 260);
     --sidebar-border: oklch(0.91 0.005 260);
     --sidebar-accent: oklch(0.965 0.002 95);
@@ -33,17 +34,16 @@
     --code: oklch(0.96 0.004 260);
     --code-foreground: oklch(0.28 0.02 260);
     --code-border: oklch(0.91 0.005 260);
+    --composer: #ffffff;
 }
 
 [data-theme="dark"] {
-    --background: oklch(0.21 0.008 260);
+    --background: #151615;
     --foreground: oklch(0.92 0.005 260);
     --card: oklch(0.24 0.008 260);
     --card-foreground: oklch(0.92 0.005 260);
     --popover: oklch(0.24 0.008 260);
     --popover-foreground: oklch(0.92 0.005 260);
-    --primary: oklch(0.68 0.1 262);
-    --primary-foreground: oklch(0.16 0.01 262);
     --secondary: oklch(0.27 0.009 260);
     --secondary-foreground: oklch(0.85 0.005 260);
     --muted: oklch(0.26 0.008 260);
@@ -54,8 +54,7 @@
     --destructive-foreground: oklch(0.97 0 0);
     --border: oklch(0.31 0.009 260);
     --input: oklch(0.34 0.01 260);
-    --ring: oklch(0.68 0.1 262 / 0.4);
-    --sidebar: oklch(0.165 0.006 260);
+    --sidebar: #000000;
     --sidebar-foreground: oklch(0.92 0.005 260);
     --sidebar-border: oklch(0.31 0.009 260);
     --sidebar-accent: oklch(0.26 0.01 262);
@@ -63,6 +62,7 @@
     --code: oklch(0.25 0.008 260);
     --code-foreground: oklch(0.87 0.01 260);
     --code-border: oklch(0.31 0.009 260);
+    --composer: #252528;
 }
 
 @theme inline {
@@ -94,6 +94,7 @@
     --color-code: var(--code);
     --color-code-foreground: var(--code-foreground);
     --color-code-border: var(--code-border);
+    --color-composer: var(--composer);
 
     /* typography */
     --font-sans:
@@ -127,5 +128,9 @@
     }
     body {
         @apply bg-background text-foreground font-sans antialiased;
+    }
+    /* 暗色主区域纵向渐变：app 满屏不滚动，渐变稳定锚在视口 */
+    [data-theme="dark"] body {
+        background-image: linear-gradient(to top, #0e0d0f, #1c1e1b);
     }
 }
