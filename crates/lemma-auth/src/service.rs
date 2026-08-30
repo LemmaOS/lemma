@@ -3,9 +3,10 @@ use buffa_types::google::protobuf::Timestamp;
 use chrono::{Duration, Utc};
 use connectrpc::{ConnectError, RequestContext, Response, ServiceRequest, ServiceResult};
 use lemma_db::entity::User as DbUser;
+use lemma_proto::app_error;
 use lemma_proto::lemma::v1::{
-    AuthTokens, LoginResponse, LogoutResponse, MeResponse, RefreshResponse, Role, SignUpResponse,
-    User,
+    AuthTokens, ErrorReason, LoginResponse, LogoutResponse, MeResponse, RefreshResponse, Role,
+    SignUpResponse, User,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -84,7 +85,7 @@ fn user_to_proto(u: &DbUser) -> User {
 fn map_db(e: sqlx::Error) -> ConnectError {
     match &e {
         sqlx::Error::Database(d) if d.is_unique_violation() => {
-            ConnectError::invalid_argument("username or email already taken")
+            app_error(ErrorReason::UsernameTaken)
         }
         _ => ConnectError::internal(format!("db: {e}")),
     }
@@ -108,9 +109,7 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
         let email = request.email.trim();
         let password = request.password;
         if username.is_empty() || email.is_empty() || password.len() < 8 {
-            return Err(ConnectError::invalid_argument(
-                "username and email required, password at least 8 chars",
-            ));
+            return Err(app_error(ErrorReason::SignupFieldsRequired));
         }
         let hash = hash_password(password)
             .map_err(|e| ConnectError::internal(format!("hash password: {e}")))?;
@@ -141,17 +140,15 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
             (false, true) => username,
             (true, false) => email,
             _ => {
-                return Err(ConnectError::invalid_argument(
-                    "provide exactly one of username or email",
-                ));
+                return Err(app_error(ErrorReason::LoginTargetRequired));
             }
         };
         let user = users::find_by_login(&self.pool, login)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::unauthenticated("invalid credentials"))?;
+            .ok_or_else(|| app_error(ErrorReason::CredentialsInvalid))?;
         if !verify_password(request.password, &user.password_hash) {
-            return Err(ConnectError::unauthenticated("invalid credentials"));
+            return Err(app_error(ErrorReason::CredentialsInvalid));
         }
         let (tokens, _) = self.issue_tokens(&self.pool, user.id).await?;
         Response::ok(LoginResponse {
@@ -170,16 +167,14 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
         let row = tokens::find_by_hash(&self.pool, &hash)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::unauthenticated("invalid refresh token"))?;
+            .ok_or_else(|| app_error(ErrorReason::TokenInvalid))?;
         // 已吊销/已轮换的 token 再出现 = 泄露，整链吊销
         if row.revoked_at.is_some() || row.replaced_by.is_some() {
             let _ = tokens::revoke_chain(&self.pool, row.id).await;
-            return Err(ConnectError::unauthenticated(
-                "refresh token replay detected",
-            ));
+            return Err(app_error(ErrorReason::TokenInvalid));
         }
         if row.expires_at <= Utc::now() {
-            return Err(ConnectError::unauthenticated("refresh token expired"));
+            return Err(app_error(ErrorReason::TokenInvalid));
         }
         // 事务内轮换：插新 token + 标记旧 token
         let mut tx = self.pool.begin().await.map_err(map_db)?;
@@ -218,7 +213,7 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
         let user = users::find_by_id(&self.pool, user_id)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::not_found("user not found"))?;
+            .ok_or_else(|| app_error(ErrorReason::UserNotFound))?;
         Response::ok(MeResponse {
             user: user_to_proto(&user).into(),
             ..Default::default()

@@ -29,15 +29,17 @@ pub fn require_user(
     secret: &str,
     ctx: &connectrpc::RequestContext,
 ) -> Result<uuid::Uuid, connectrpc::ConnectError> {
+    use lemma_proto::app_error;
+    use lemma_proto::lemma::v1::ErrorReason;
+
     let token = ctx
         .header("authorization")
         .and_then(|v| v.to_str().ok())
         .and_then(|v| v.strip_prefix("Bearer "))
-        .ok_or_else(|| connectrpc::ConnectError::unauthenticated("missing bearer token"))?;
-    let claims = verify_access_token(secret, token)
-        .map_err(|_| connectrpc::ConnectError::unauthenticated("invalid access token"))?;
-    uuid::Uuid::parse_str(&claims.sub)
-        .map_err(|_| connectrpc::ConnectError::unauthenticated("invalid access token"))
+        .ok_or_else(|| app_error(ErrorReason::TokenInvalid))?;
+    let claims =
+        verify_access_token(secret, token).map_err(|_| app_error(ErrorReason::TokenInvalid))?;
+    uuid::Uuid::parse_str(&claims.sub).map_err(|_| app_error(ErrorReason::TokenInvalid))
 }
 
 #[cfg(test)]
