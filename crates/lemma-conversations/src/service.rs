@@ -8,10 +8,12 @@ use lemma_archive::{
 };
 use lemma_auth::require_user;
 use lemma_db::entity::{Conversation as DbConversation, Message as DbMessage};
+use lemma_proto::app_error;
 use lemma_proto::lemma::v1::{
     ArchiveConversationResponse, Conversation, ConversationStatus, CreateConversationResponse,
-    DeleteArchivedResponse, ListArchivedResponse, ListConversationsResponse, ListMessagesResponse,
-    Message, MessageStatus, RenameConversationResponse, RestoreConversationResponse,
+    DeleteArchivedResponse, ErrorReason, ListArchivedResponse, ListConversationsResponse,
+    ListMessagesResponse, Message, MessageStatus, RenameConversationResponse,
+    RestoreConversationResponse,
 };
 use sqlx::PgPool;
 use uuid::Uuid;
@@ -81,7 +83,7 @@ fn message_to_proto(m: &DbMessage) -> Message {
 }
 
 fn parse_id(id: &str) -> Result<Uuid, ConnectError> {
-    Uuid::parse_str(id).map_err(|_| ConnectError::invalid_argument("invalid id"))
+    Uuid::parse_str(id).map_err(|_| app_error(ErrorReason::IdInvalid))
 }
 
 fn map_archive(e: ArchiveError) -> ConnectError {
@@ -131,12 +133,12 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
         let id = parse_id(request.id)?;
         let title = request.title.trim();
         if title.is_empty() {
-            return Err(ConnectError::invalid_argument("title required"));
+            return Err(app_error(ErrorReason::TitleRequired));
         }
         let c = store::rename(&self.pool, id, user_id, title)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::not_found("conversation not found"))?;
+            .ok_or_else(|| app_error(ErrorReason::ConversationNotFound))?;
         Response::ok(RenameConversationResponse {
             conversation: conversation_to_proto(&c).into(),
             ..Default::default()
@@ -155,7 +157,7 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
         store::find_by_id_and_user(&self.pool, conversation_id, user_id)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::not_found("conversation not found"))?;
+            .ok_or_else(|| app_error(ErrorReason::ConversationNotFound))?;
         let before_id = if request.before_id.is_empty() {
             None
         } else {
@@ -191,9 +193,7 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
             .map_err(map_db)?
             .is_none()
         {
-            return Err(ConnectError::not_found(
-                "conversation not found or already archived",
-            ));
+            return Err(app_error(ErrorReason::ConversationNotActive));
         }
 
         let conversation = if let Some(archive) = store {
@@ -217,9 +217,7 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
             store::archive(&mut *tx, id, user_id)
                 .await
                 .map_err(map_db)?
-                .ok_or_else(|| {
-                    ConnectError::not_found("conversation not found or already archived")
-                })?
+                .ok_or_else(|| app_error(ErrorReason::ConversationNotActive))?
         };
         tx.commit().await.map_err(map_db)?;
 
@@ -242,7 +240,7 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
             .await
             .map_err(map_db)?;
         let key = locked
-            .ok_or_else(|| ConnectError::not_found("conversation not found or not archived"))?
+            .ok_or_else(|| app_error(ErrorReason::ConversationNotArchived))?
             .archive_key;
 
         // 有对象键 = 内容迁移模式：拉对象回灌（原 seq/时间戳）
@@ -262,7 +260,7 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
         let conversation = store::restore(&mut *tx, id, user_id)
             .await
             .map_err(map_db)?
-            .ok_or_else(|| ConnectError::not_found("conversation not found or not archived"))?;
+            .ok_or_else(|| app_error(ErrorReason::ConversationNotArchived))?;
         tx.commit().await.map_err(map_db)?;
 
         // 内容已回灌 PG，对象尽力清理（失败留孤儿，无害）
@@ -306,13 +304,13 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
             .await
             .map_err(map_db)?;
         if key.is_none() {
-            return Err(ConnectError::not_found("archived conversation not found"));
+            return Err(app_error(ErrorReason::ArchivedConversationNotFound));
         }
         let deleted = store::delete_archived(&self.pool, id, user_id)
             .await
             .map_err(map_db)?;
         if !deleted {
-            return Err(ConnectError::not_found("archived conversation not found"));
+            return Err(app_error(ErrorReason::ArchivedConversationNotFound));
         }
         // 对象尽力清理（失败留孤儿，无害）
         if let (Some(archive), Some(key)) = (store.as_ref(), key.flatten().as_deref()) {
