@@ -323,36 +323,39 @@ Lemma 是三态（亮 / 暗 / 跟随系统）的自托管 AI 聊天工作台。�
 
 ## Colors
 
-> Source pages: linear.app (home), /intake, /pricing, /contact/sales, /build.
+> 原始值的唯一事实来源是 `theme.css`；本章解释各 token 的角色与意图，双态取值见 front matter `colors:` 块。
 
 ### Brand & Accent
-- **Lavender-Blue** ({colors.primary}): The signature Linear accent — primary CTA, brand mark, link emphasis.
-- **Lavender Hover** ({colors.primary-hover}): Lighter lavender (#828fff) — hovered state of the primary CTA.
-- **Lavender Focus** ({colors.primary-focus}): Focus-ring tint (#5e69d1) — focused inputs, focused buttons.
-- **Brand Secure** ({colors.brand-secure}): Muted lavender-gray (#7a7fad) — used in "Linear Security" surfaces.
+- **Sky Blue**（`{colors.primary}`）：唯一彩色强调 #60b1ff——主按钮、焦点圈、链接强调。两态共享。
+- **On Primary**（`{colors.primary-foreground}`）：压在主色上的深墨字 #0b1220，保对比。两态共享。
+- **Ring**（`{colors.ring}`）：焦点圈，无独立色值——`color-mix` 从主色派生（40% 透明），换主色自动跟随。
+- hover / pressed 不设 token：一律透明度修饰（`primary/90`、`secondary/80`）。
 
 ### Surface
-- **Canvas** ({colors.canvas}): Default page background — #010102, near-pure black with a faint blue tint.
-- **Surface 1** ({colors.surface-1}): One step above canvas — feature cards, pricing cards, product screenshot panels.
-- **Surface 2** ({colors.surface-2}): Two steps above — featured pricing card, hovered cards.
-- **Surface 3** ({colors.surface-3}): Three steps above — line-tertiary backgrounds, sub-nav.
-- **Surface 4** ({colors.surface-4}): Four steps above — bg-level-3, deepest lifted surface.
-- **Hairline** ({colors.hairline}): 1px borders on cards and dividers.
-- **Hairline Strong** ({colors.hairline-strong}): Stronger 1px borders — input focus rings.
-- **Hairline Tertiary** ({colors.hairline-tertiary}): Tertiary borders for nested surfaces.
-- **Inverse Canvas** ({colors.inverse-canvas}): Pure white — surface of the inverse pill CTA on a small set of section openers.
-- **Inverse Surface 1** ({colors.inverse-surface-1}): One step above inverse canvas.
-- **Inverse Surface 2** ({colors.inverse-surface-2}): Two steps above inverse canvas.
+- **Background**（`{colors.background}`）：主画布。亮色 #fdfbfd 实色；暗色 #151615 作渐变的兜底中点。
+- **Canvas From / To**（`{colors.canvas-from}` / `{colors.canvas-to}`）：暗色专属——主区纵向渐变两端（底 #0e0d0f → 顶 #1c1e1b），`background-attachment: fixed` 锚定视口，面板内部滚动不拉伸。
+- **Sidebar**（`{colors.sidebar}`）：侧栏专区。亮 #fcf8fb 微暖；暗 #000000 纯黑。
+- **Composer**（`{colors.composer}`）：输入区面板。亮 #ffffff；暗 #252528。
+- **Card / Popover**（`{colors.card}` / `{colors.popover}`）：面板与浮层。亮色同为纯白，暗色同为一级炭灰。
+- **Secondary / Muted / Accent**：填充系三色——次要按钮底、弱化填充（用户气泡）、悬停态背景。
+- **Code**（`{colors.code}` + `{colors.code-border}`）：代码块底与边；代码块以 60% 透明度叠加在画布上。
 
 ### Text
-- **Ink** ({colors.ink}): All headlines and emphasized body type — light gray #f7f8f8.
-- **Ink Muted** ({colors.ink-muted}): Secondary type at #d0d6e0 — meta info on hero panels.
-- **Ink Subtle** ({colors.ink-subtle}): Tertiary type at #8a8f98 — deselected pricing tabs, footer columns.
-- **Ink Tertiary** ({colors.ink-tertiary}): Quaternary at #62666d — disabled, footnotes.
+- **Foreground**（`{colors.foreground}`）：全部标题与正文主文字。
+- **Muted Foreground**（`{colors.muted-foreground}`）：次要文字——注释、元信息、组标题、placeholder。
+- 各表面自带同名后缀的配对文字（`card-foreground`、`sidebar-foreground`、`code-foreground`……），随表面 token 走。
+- **两级灰阶是刻意选择**：更细的层级由字重（400/500/600）承担，不再加灰色档。
+
+### Border
+- **Border**（`{colors.border}`）：卡片与分隔线的默认发丝边。
+- **Input**（`{colors.input}`）：输入框边框，暗色下比 border 亮一档。
+- 专区变体：`sidebar-border`、`code-border`，与同系表面配对。
 
 ### Semantic
-- **Success Green** ({colors.semantic-success}): Status pills, success indicators. The only semantic color on marketing.
-- **Overlay** ({colors.semantic-overlay}): Pure black overlay scrim for modals.
+- **Destructive**（`{colors.destructive}`）：删除与危险操作，亮暗各一档亮度。
+- **Warning**（TBD）：迁移挂起横幅现硬编码 amber-50/300/900，收编时补双套值。
+- **Success**（TBD）：测试连接成功等正向反馈。
+- 遮罩：暂无对话框组件；引入时以 `black/60` 起步，不单独立 token。
 
 ## Typography
 
