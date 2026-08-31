@@ -1,0 +1,65 @@
+name: Spec CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "proto/**"
+      - "DESIGN.md"
+      - ".github/workflows/spec-ci.yml"
+  pull_request:
+    paths:
+      - "proto/**"
+      - "DESIGN.md"
+      - ".github/workflows/spec-ci.yml"
+
+concurrency:
+  group: spec-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  proto:
+    name: Proto
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Lint
+        run: cd proto && buf lint
+
+      - name: Build
+        run: cd proto && buf build
+
+  design:
+    name: Design
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+
+      - name: Lint DESIGN.md
+        run: npx -y @google/design.md lint DESIGN.md
+
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    needs:
+      - proto
+      - design
+    if: ${{ always() }}
+    steps:
+      - name: Verify required jobs
+        run: |
+          if [ "${{ needs.proto.result }}" != "success" ] || \
+             [ "${{ needs.design.result }}" != "success" ]; then
+            echo "Spec CI failed"
+            exit 1
+          fi
