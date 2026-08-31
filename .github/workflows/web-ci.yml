@@ -1,0 +1,58 @@
+name: Web CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "web/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/web-ci.yml"
+  pull_request:
+    paths:
+      - "web/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/web-ci.yml"
+
+concurrency:
+  group: web-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 生成物不入 git，先重新生成（web/src/gen 已被 prettier/eslint 忽略）
+      - name: Generate proto code
+        run: npm run gen:proto
+
+      - name: Format check
+        run: npm run format:check -w web
+
+      - name: Lint
+        run: npm run lint -w web
+
+      - name: Build
+        run: npm run build -w web
+
+      - name: Test
+        run: npm run test -w web
