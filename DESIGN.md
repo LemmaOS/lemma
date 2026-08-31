@@ -1,7 +1,7 @@
 ---
 version: alpha
 name: Lemma
-description: "wait to be filled in"
+description: "Lemma's design system: a three-state (light / dark / system) self-hosted AI chat workbench. Sky blue #60b1ff is the single chromatic accent, with the focus ring derived from it and hovers expressed as opacity. Surfaces are role-based (canvas / sidebar / composer / card / popover) with hairline borders; shadows belong to overlays only. Dark mode pairs a pure-black sidebar with a viewport-fixed vertical gradient canvas. Fonts are self-hosted: Sarasa UI SC for UI text (CJK included) and Maple Mono NF CN for code (Nerd Font icons render). The rhythm is a workbench — 260px session sidebar, centered max-w-3xl conversation column, bottom composer."
 
 # Canonical flat schema: unprefixed tokens = light theme (mirrors :root in theme.css),
 # dark-* = dark override (mirrors [data-theme="dark"]). theme.css is the source of truth.
@@ -124,7 +124,7 @@ typography:
     fontFamily: Sarasa UI SC
     fontSize: 14px
     fontWeight: 400
-    lineHeight: 1.50
+    lineHeight: 1.60
     letterSpacing: 0
   caption:
     fontFamily: Sarasa UI SC
@@ -384,7 +384,7 @@ One sans family spans display to body; the family change is silent, hierarchy co
 | `{typography.subhead}`    | 20px | 400    | 1.40        | -0.2px         | Lead paragraphs (empty state)              |
 | `{typography.body-lg}`    | 18px | 400    | 1.50        | -0.1px         | Emphasized body, section titles            |
 | `{typography.body}`       | 16px | 400    | 1.50        | -0.05px        | Default body                               |
-| `{typography.body-sm}`    | 14px | 400    | 1.50        | 0              | UI workhorse: lists, forms, chat body      |
+| `{typography.body-sm}`    | 14px | 400    | 1.60        | 0              | UI workhorse: lists, forms, chat body      |
 | `{typography.caption}`    | 12px | 400    | 1.40        | 0              | Captions, meta, group headers              |
 | `{typography.button}`     | 14px | 500    | 1.20        | 0              | All button and tab labels                  |
 | `{typography.eyebrow}`    | 13px | 500    | 1.30        | 0.4px          | Uppercase taxonomy labels                  |
@@ -575,46 +575,40 @@ Code currently derives radii from a 10px base (card at 14px); aligning the code 
 
 ### Breakpoints
 
-| Name       | Width  | Key Changes                                         |
-| ---------- | ------ | --------------------------------------------------- |
-| Desktop-XL | 1440px | Default desktop layout                              |
-| Desktop    | 1280px | Card grid 3-up maintained                           |
-| Tablet     | 1024px | Card grid 3-up → 2-up                               |
-| Mobile-Lg  | 768px  | Pricing comparison becomes accordion; nav hamburger |
-| Mobile     | 480px  | Single-column; display-xl scales 80px → ~36px       |
+| Name    | Width   | Key Changes                                                  |
+| ------- | ------- | ------------------------------------------------------------ |
+| Desktop | ≥1024px | Default workbench: 260px sidebar + main canvas               |
+| Tablet  | 768px   | Content column shrinks; sidebar manually collapsible         |
+| Mobile  | <768px  | Not yet adapted (see Known Gaps)                             |
 
 ### Touch Targets
 
-- CTAs hold ≥40px tap height across viewports.
-- Pricing tab pills hold ≥36px tap height; touch viewports grow to ≥44px.
-- Form inputs hold ≥44px tap target on touch.
+- Buttons are h-9 (36px), icon buttons 28–36px — below the 44px touch guidance. Desktop-first; revisit when mobile ships.
+- Form inputs are h-9 (36px).
 
 ### Collapsing Strategy
 
-- **Top nav**: links collapse to hamburger below 768px.
-- **Card grids**: 3-up → 2-up at 1024px → 1-up below 768px.
-- **Pricing comparison**: per-tier accordion below 768px.
-- **Display type**: `{typography.display-xl}` 80px scales toward `{typography.display-md}` 40px on mobile.
+- **Sidebar**: manual collapse, leaving an edge expand button; the session list scrolls independently.
+- **Chat column**: capped at max-w-3xl and centered; user bubbles keep the 75% width cap.
+- **Display type**: display sizes are reserved for landing pages, so no in-app scaling rules exist.
 
 ### Image Behavior
 
-- Product UI screenshots maintain aspect ratio and never crop.
-- Customer logos in the marquee may collapse from 6-up to 3-up below 768px.
+No images in the app — icons are Lucide, avatars are initial/symbol circles. Nothing to scale.
 
 ## Iteration Guide
 
 1. Focus on ONE component at a time and reference it by its `components:` token name.
-2. When introducing a section, decide first which surface lift it lives on.
-3. Default body to `{typography.body}` at weight 400.
-4. Run `npx @google/design.md lint DESIGN.md` after edits.
-5. Add new variants as separate component entries.
-6. Treat lavender as scarce: brand mark, primary CTA, focus, link emphasis.
-7. Lead every section with a product UI screenshot.
+2. Introducing a surface: pick an existing role (`background` / `card` / `popover` / `sidebar` / `composer`); do not invent new ones casually.
+3. Default UI text to `{typography.body-sm}` at weight 400; reach hierarchy through weight (500 / 600) before new sizes.
+4. Run `npx @google/design.md lint DESIGN.md` after edits — 0 errors required. Warning baseline (by design): unreferenced `dark-*` / display tokens, the `border` sub-token, transparent-background contrast false positives.
+5. Add new component variants as separate entries; interaction states (hover / pressed) fold into comments.
+6. Raw values live only in `theme.css`; this document mirrors the code, never the reverse.
+7. Treat sky blue as scarce: primary buttons, focus ring, link emphasis.
 
 ## Known Gaps
 
-- The four-step surface ladder values are extracted directly from Linear's `--color-bg-level-3`, `--color-line-tint`, etc. CSS variables; they are Linear's canonical surface spec.
-- Form-field error and validation styling is not visible on the inspected pages.
-- Light mode is not documented because the marketing site does not ship a light theme.
-- Linear's actual product UI uses a richer color-tag palette (red, orange, yellow, green, blue, purple) for issue priorities and project labels — those colors live in the in-product surfaces shown in mockups.
-- The custom display, text, and mono families are proprietary; an open-source substitute is acceptable.
+- Form-field validation styling (`aria-invalid` rings exist in the primitives) is not designed into any flow yet.
+- Mobile layout (<768px) is not adapted — sidebar and composer need a dedicated treatment.
+- Open follow-ups from the color refactor: text shade calibration, chat bubble / avatar review, whether the login page joins the dark gradient.
+- The mono font is not subset — the first code block on a slow network may swap in late.
