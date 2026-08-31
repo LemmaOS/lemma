@@ -554,23 +554,23 @@ Code currently derives radii from a 10px base (card at 14px); aligning the code 
 
 ### Do
 
-- Reserve `{colors.canvas}` (#010102) as the system's anchor surface — the faint blue tint is intentional.
-- Use `{colors.primary}` lavender ONLY for: brand mark, primary CTA, focus ring, link emphasis.
-- Use the four-step surface ladder for hierarchy. Avoid skipping levels.
-- Pair display weight 600 with body weight 400 — Linear resists 700+ display weights.
-- Apply negative letter-spacing aggressively on display.
-- Use product UI screenshots as the protagonist of every section.
-- Compose CTAs as `{rounded.md}` 8px corners.
+- Reference **semantic tokens only** — raw values live exclusively in `theme.css`.
+- Reserve `{colors.primary}` sky blue for system-level emphasis: primary buttons, focus ring, link emphasis.
+- Use **surface roles** for hierarchy — canvas, card, popover, plus the dedicated sidebar and composer zones.
+- Pair display weight 600 with body weight 400 — resist 700+ display weights.
+- Apply negative letter-spacing on display sizes only.
+- Derive the focus ring from primary (`color-mix`); express hover as opacity modifiers — swapping the primary cascades everywhere automatically.
+- Compose buttons and inputs at `{rounded.md}` 8px corners; reserve `{rounded.full}` for avatars, switch, and round icon buttons (send / stop).
 
 ### Don't
 
-- Don't ship a light-mode marketing page.
-- Don't use lavender as a section background or card fill.
-- Don't introduce a second chromatic accent (orange, pink, green for marketing).
-- Don't add atmospheric gradients or spotlight cards.
-- Don't pill-round CTAs.
-- Don't use `#000000` true black as the canvas.
-- Don't combine multiple bright accents in product screenshot mockups.
+- Don't hard-code raw color values in components — the amber migration banner is the known violation, pending adoption of `{colors.warning}`.
+- Don't introduce a second chromatic accent.
+- Don't add drop shadows outside overlays (popover / dropdown / tooltip).
+- Don't use display-size type inside the app — display-xl through display-md are reserved for landing pages.
+- Don't load fonts from a CDN — both families are self-hosted woff2.
+- Don't add more text grays — finer hierarchy comes from weight (400 / 500 / 600), not new shades.
+- Don't pill-round rectangular CTAs.
 
 ## Responsive Behavior
 
