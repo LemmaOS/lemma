@@ -447,22 +447,24 @@ Depth is carried by surface roles + hairline borders. Components stay flat; drop
 
 ### Border Radius Scale
 
-| Token            | Value  | Use                                             |
-| ---------------- | ------ | ----------------------------------------------- |
-| `{rounded.xs}`   | 4px    | Small chips, status badges                      |
-| `{rounded.sm}`   | 6px    | Inline tags                                     |
-| `{rounded.md}`   | 8px    | All buttons, form inputs                        |
-| `{rounded.lg}`   | 12px   | Pricing cards, feature cards, testimonial cards |
-| `{rounded.xl}`   | 16px   | Product screenshot panels                       |
-| `{rounded.xxl}`  | 24px   | Oversized CTA banners (rare)                    |
-| `{rounded.pill}` | 9999px | Pricing tab toggles, status pills               |
-| `{rounded.full}` | 9999px | Avatar circles                                  |
+| Token            | Value  | Use                                                   |
+| ---------------- | ------ | ----------------------------------------------------- |
+| `{rounded.xs}`   | 4px    | Inline code, sidebar inline action buttons            |
+| `{rounded.sm}`   | 6px    | Spare step — nothing assigned today                   |
+| `{rounded.md}`   | 8px    | All buttons, form inputs, session rows, code blocks, dropdown items |
+| `{rounded.lg}`   | 12px   | Tabs track, new-chat button                           |
+| `{rounded.xl}`   | 16px   | Cards, user bubbles, composer                         |
+| `{rounded.xxl}`  | 24px   | Reserved (landing banners)                            |
+| `{rounded.pill}` | 9999px | Status pills                                          |
+| `{rounded.full}` | 9999px | Avatars, switch, round icon buttons (send / stop)     |
 
-### Photography & Illustration Geometry
+Code currently derives radii from a 10px base (card at 14px); aligning the code to this scale is a pending change tracked outside this document.
 
-- Product UI screenshots dominate; they sit in `{rounded.xl}` 16px tiles with `{spacing.lg}` 24px outer padding.
-- Customer logo tiles render at small sizes (~24px logo height) on `{colors.canvas}` with no border.
-- Avatar circles in testimonial cards use `{rounded.full}` at 32–40px sizes.
+### Iconography & Avatars
+
+- Icons are **Lucide**: 16px (`size-4`) default, 14px (`size-3.5`) in dense contexts, 12px (`size-3`) only for sidebar inline actions.
+- Avatars are round initials / symbols, never photos: the 28px assistant avatar (inverse `bg-foreground` + Sparkles icon) and the 28px sidebar user avatar (username initial).
+- No photography, no product screenshots, no logo walls anywhere in the app.
 
 ## Components
 
