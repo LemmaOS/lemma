@@ -1,0 +1,121 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/**"
+      - "proto/**"
+      - ".github/workflows/rust.yml"
+  pull_request:
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "crates/**"
+      - "proto/**"
+      - ".github/workflows/rust.yml"
+
+concurrency:
+  group: rust-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Format
+        run: cargo fmt --all --check
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "36.0"
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets -- -D warnings
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: paradedb/paradedb:pg18
+        env:
+          POSTGRES_DB: lemma-db
+          POSTGRES_USER: lemma
+          POSTGRES_PASSWORD: lemma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -h 127.0.0.1 -U lemma -d lemma-db"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://lemma:lemma@127.0.0.1:5432/lemma-db
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "36.0"
+
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+
+      - name: Test
+        run: cargo nextest run --workspace
+
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    needs:
+      - fmt
+      - clippy
+      - test
+    if: ${{ always() }}
+    steps:
+      - name: Verify required jobs
+        run: |
+          if [ "${{ needs.fmt.result }}" != "success" ] || \
+             [ "${{ needs.clippy.result }}" != "success" ] || \
+             [ "${{ needs.test.result }}" != "success" ]; then
+            echo "Rust CI failed"
+            exit 1
+          fi
