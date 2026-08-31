@@ -3,160 +3,155 @@ version: alpha
 name: Lemma
 description: "wait to be filled in"
 
-# Token names mirror theme.css semantic variables; values copied verbatim (code is the source of truth)
+# Canonical flat schema: unprefixed tokens = light theme (mirrors :root in theme.css),
+# dark-* = dark override (mirrors [data-theme="dark"]). theme.css is the source of truth.
 colors:
-  # Shared by both themes; warning/success TBD (per-theme values when the amber banner is adopted)
-  shared:
-    primary: "#60b1ff"
-    primary-foreground: "#0b1220"
-    ring: "color-mix(in srgb, primary 40%, transparent)"
-    warning: TBD
-    success: TBD
-  light:
-    background: "#fdfbfd"
-    foreground: "oklch(0.21 0.01 260)"
-    card: "oklch(1 0 0)"
-    card-foreground: "oklch(0.21 0.01 260)"
-    popover: "oklch(1 0 0)"
-    popover-foreground: "oklch(0.21 0.01 260)"
-    secondary: "oklch(0.96 0.003 260)"
-    secondary-foreground: "oklch(0.3 0.01 260)"
-    muted: "oklch(0.965 0.003 260)"
-    muted-foreground: "oklch(0.5 0.012 260)"
-    accent: "oklch(0.955 0.005 262)"
-    accent-foreground: "oklch(0.28 0.02 262)"
-    destructive: "oklch(0.55 0.18 25)"
-    destructive-foreground: "oklch(0.98 0 0)"
-    border: "oklch(0.91 0.005 260)"
-    input: "oklch(0.91 0.005 260)"
-    sidebar: "#fcf8fb"
-    sidebar-foreground: "oklch(0.21 0.01 260)"
-    sidebar-border: "oklch(0.91 0.005 260)"
-    sidebar-accent: "oklch(0.965 0.002 95)"
-    sidebar-accent-foreground: "oklch(0.28 0.02 262)"
-    code: "oklch(0.96 0.004 260)"
-    code-foreground: "oklch(0.28 0.02 260)"
-    code-border: "oklch(0.91 0.005 260)"
-    composer: "#ffffff"
-  dark:
-    canvas-from: "#0e0d0f"
-    canvas-to: "#1c1e1b"
-    background: "#151615"
-    foreground: "oklch(0.92 0.005 260)"
-    card: "oklch(0.24 0.008 260)"
-    card-foreground: "oklch(0.92 0.005 260)"
-    popover: "oklch(0.24 0.008 260)"
-    popover-foreground: "oklch(0.92 0.005 260)"
-    secondary: "oklch(0.27 0.009 260)"
-    secondary-foreground: "oklch(0.85 0.005 260)"
-    muted: "oklch(0.26 0.008 260)"
-    muted-foreground: "oklch(0.67 0.012 260)"
-    accent: "oklch(0.29 0.01 262)"
-    accent-foreground: "oklch(0.92 0.01 262)"
-    destructive: "oklch(0.62 0.17 25)"
-    destructive-foreground: "oklch(0.97 0 0)"
-    border: "oklch(0.31 0.009 260)"
-    input: "oklch(0.34 0.01 260)"
-    sidebar: "#000000"
-    sidebar-foreground: "oklch(0.92 0.005 260)"
-    sidebar-border: "oklch(0.31 0.009 260)"
-    sidebar-accent: "oklch(0.26 0.01 262)"
-    sidebar-accent-foreground: "oklch(0.92 0.01 262)"
-    code: "oklch(0.25 0.008 260)"
-    code-foreground: "oklch(0.87 0.01 260)"
-    code-border: "oklch(0.31 0.009 260)"
-    composer: "#252528"
+  primary: "#60b1ff"
+  primary-foreground: "#0b1220"
+  ring: "#60b1ff66"            # derived: color-mix(in srgb, primary 40%, transparent)
+  warning: "#f59e0b"           # provisional — amber banner adoption pending
+  success: "#27a644"           # provisional
+  background: "#fdfbfd"
+  foreground: "oklch(0.21 0.01 260)"
+  card: "oklch(1 0 0)"
+  card-foreground: "oklch(0.21 0.01 260)"
+  popover: "oklch(1 0 0)"
+  popover-foreground: "oklch(0.21 0.01 260)"
+  secondary: "oklch(0.96 0.003 260)"
+  secondary-foreground: "oklch(0.3 0.01 260)"
+  muted: "oklch(0.965 0.003 260)"
+  muted-foreground: "oklch(0.5 0.012 260)"
+  accent: "oklch(0.955 0.005 262)"
+  accent-foreground: "oklch(0.28 0.02 262)"
+  destructive: "oklch(0.55 0.18 25)"
+  destructive-foreground: "oklch(0.98 0 0)"
+  border: "oklch(0.91 0.005 260)"
+  input: "oklch(0.91 0.005 260)"
+  sidebar: "#fcf8fb"
+  sidebar-foreground: "oklch(0.21 0.01 260)"
+  sidebar-border: "oklch(0.91 0.005 260)"
+  sidebar-accent: "oklch(0.965 0.002 95)"
+  sidebar-accent-foreground: "oklch(0.28 0.02 262)"
+  code: "oklch(0.96 0.004 260)"
+  code-foreground: "oklch(0.28 0.02 260)"
+  code-border: "oklch(0.91 0.005 260)"
+  composer: "#ffffff"
+  dark-canvas-from: "#0e0d0f"
+  dark-canvas-to: "#1c1e1b"
+  dark-background: "#151615"
+  dark-foreground: "oklch(0.92 0.005 260)"
+  dark-card: "oklch(0.24 0.008 260)"
+  dark-card-foreground: "oklch(0.92 0.005 260)"
+  dark-popover: "oklch(0.24 0.008 260)"
+  dark-popover-foreground: "oklch(0.92 0.005 260)"
+  dark-secondary: "oklch(0.27 0.009 260)"
+  dark-secondary-foreground: "oklch(0.85 0.005 260)"
+  dark-muted: "oklch(0.26 0.008 260)"
+  dark-muted-foreground: "oklch(0.67 0.012 260)"
+  dark-accent: "oklch(0.29 0.01 262)"
+  dark-accent-foreground: "oklch(0.92 0.01 262)"
+  dark-destructive: "oklch(0.62 0.17 25)"
+  dark-destructive-foreground: "oklch(0.97 0 0)"
+  dark-border: "oklch(0.31 0.009 260)"
+  dark-input: "oklch(0.34 0.01 260)"
+  dark-sidebar: "#000000"
+  dark-sidebar-foreground: "oklch(0.92 0.005 260)"
+  dark-sidebar-border: "oklch(0.31 0.009 260)"
+  dark-sidebar-accent: "oklch(0.26 0.01 262)"
+  dark-sidebar-accent-foreground: "oklch(0.92 0.01 262)"
+  dark-code: "oklch(0.25 0.008 260)"
+  dark-code-foreground: "oklch(0.87 0.01 260)"
+  dark-code-border: "oklch(0.31 0.009 260)"
+  dark-composer: "#252528"
+  dark-warning: "#d97706"      # provisional
+  dark-success: "#3fb950"      # provisional
 
-# Both fonts self-hosted (woff2 from GitHub releases, no CDN): sans ships CJK, mono ships CJK + NF icons
+# Font metadata (weights, fallbacks, self-hosting) lives in the Typography chapter
 typography:
-  fonts:
-    sans: "Sarasa UI SC"        # 400/500/600; Latin from Iosevka, CJK included
-    mono: "Maple Mono NF CN"    # 400/700; CJK 2:1 alignment, renders Nerd Font icons
-  scale:
-    display-xl:
-      fontFamily: Sarasa UI SC
-      fontSize: 80px
-      fontWeight: 600
-      lineHeight: 1.05
-      letterSpacing: -3.0px
-    display-lg:
-      fontFamily: Sarasa UI SC
-      fontSize: 56px
-      fontWeight: 600
-      lineHeight: 1.10
-      letterSpacing: -1.8px
-    display-md:
-      fontFamily: Sarasa UI SC
-      fontSize: 40px
-      fontWeight: 600
-      lineHeight: 1.15
-      letterSpacing: -1.0px
-    headline:
-      fontFamily: Sarasa UI SC
-      fontSize: 28px
-      fontWeight: 600
-      lineHeight: 1.20
-      letterSpacing: -0.6px
-    card-title:
-      fontFamily: Sarasa UI SC
-      fontSize: 22px
-      fontWeight: 500
-      lineHeight: 1.25
-      letterSpacing: -0.4px
-    subhead:
-      fontFamily: Sarasa UI SC
-      fontSize: 20px
-      fontWeight: 400
-      lineHeight: 1.40
-      letterSpacing: -0.2px
-    body-lg:
-      fontFamily: Sarasa UI SC
-      fontSize: 18px
-      fontWeight: 400
-      lineHeight: 1.50
-      letterSpacing: -0.1px
-    body:
-      fontFamily: Sarasa UI SC
-      fontSize: 16px
-      fontWeight: 400
-      lineHeight: 1.50
-      letterSpacing: -0.05px
-    body-sm:
-      fontFamily: Sarasa UI SC
-      fontSize: 14px
-      fontWeight: 400
-      lineHeight: 1.50
-      letterSpacing: 0
-    caption:
-      fontFamily: Sarasa UI SC
-      fontSize: 12px
-      fontWeight: 400
-      lineHeight: 1.40
-      letterSpacing: 0
-    button:
-      fontFamily: Sarasa UI SC
-      fontSize: 14px
-      fontWeight: 500
-      lineHeight: 1.20
-      letterSpacing: 0
-    eyebrow:
-      fontFamily: Sarasa UI SC
-      fontSize: 13px
-      fontWeight: 500
-      lineHeight: 1.30
-      letterSpacing: 0.4px
-    mono:
-      fontFamily: Maple Mono NF CN
-      fontSize: 13px
-      fontWeight: 400
-      lineHeight: 1.50
-      letterSpacing: 0
-    mono-sm:
-      fontFamily: Maple Mono NF CN
-      fontSize: 12px
-      fontWeight: 400
-      lineHeight: 1.40
-      letterSpacing: 0
+  display-xl:
+    fontFamily: Sarasa UI SC
+    fontSize: 80px
+    fontWeight: 600
+    lineHeight: 1.05
+    letterSpacing: -3.0px
+  display-lg:
+    fontFamily: Sarasa UI SC
+    fontSize: 56px
+    fontWeight: 600
+    lineHeight: 1.10
+    letterSpacing: -1.8px
+  display-md:
+    fontFamily: Sarasa UI SC
+    fontSize: 40px
+    fontWeight: 600
+    lineHeight: 1.15
+    letterSpacing: -1.0px
+  headline:
+    fontFamily: Sarasa UI SC
+    fontSize: 28px
+    fontWeight: 600
+    lineHeight: 1.20
+    letterSpacing: -0.6px
+  card-title:
+    fontFamily: Sarasa UI SC
+    fontSize: 22px
+    fontWeight: 500
+    lineHeight: 1.25
+    letterSpacing: -0.4px
+  subhead:
+    fontFamily: Sarasa UI SC
+    fontSize: 20px
+    fontWeight: 400
+    lineHeight: 1.40
+    letterSpacing: -0.2px
+  body-lg:
+    fontFamily: Sarasa UI SC
+    fontSize: 18px
+    fontWeight: 400
+    lineHeight: 1.50
+    letterSpacing: -0.1px
+  body:
+    fontFamily: Sarasa UI SC
+    fontSize: 16px
+    fontWeight: 400
+    lineHeight: 1.50
+    letterSpacing: -0.05px
+  body-sm:
+    fontFamily: Sarasa UI SC
+    fontSize: 14px
+    fontWeight: 400
+    lineHeight: 1.50
+    letterSpacing: 0
+  caption:
+    fontFamily: Sarasa UI SC
+    fontSize: 12px
+    fontWeight: 400
+    lineHeight: 1.40
+    letterSpacing: 0
+  button:
+    fontFamily: Sarasa UI SC
+    fontSize: 14px
+    fontWeight: 500
+    lineHeight: 1.20
+    letterSpacing: 0
+  eyebrow:
+    fontFamily: Sarasa UI SC
+    fontSize: 13px
+    fontWeight: 500
+    lineHeight: 1.30
+    letterSpacing: 0.4px
+  mono:
+    fontFamily: Maple Mono NF CN
+    fontSize: 13px
+    fontWeight: 400
+    lineHeight: 1.50
+    letterSpacing: 0
+  mono-sm:
+    fontFamily: Maple Mono NF CN
+    fontSize: 12px
+    fontWeight: 400
+    lineHeight: 1.40
+    letterSpacing: 0
 
 rounded:
   xs: 4px
@@ -178,9 +173,9 @@ spacing:
   xxl: 48px
   section: 96px
 
-# Component recipes. Reference convention: colors without light/dark prefix are
-# theme-adaptive semantic tokens; typography refs omit the scale prefix;
-# hover/pressed states fold into comments, never separate tokens
+# Component recipes. Reference convention: unprefixed color tokens are
+# theme-adaptive (dark-* holds the dark override); states (hover/pressed)
+# fold into comments, never separate tokens
 components:
   # ---- primitives ----
   button-primary:
@@ -312,7 +307,7 @@ components:
 
 Lemma is a self-hosted AI chat workbench with three theme states (light / dark / system). The design system is **semantic-token-only**: components reference semantic names like `{colors.card}` and `{typography.button}`; raw values live exclusively in `theme.css`, with both theme sets registered in the colors block of this document.
 
-Surfaces are organized by **role**, not ladder: `{colors.background}` main canvas, `{colors.sidebar}` sidebar zone, `{colors.composer}` input zone, `{colors.card}` / `{colors.popover}` panels and overlays, `{colors.muted}` / `{colors.secondary}` / `{colors.accent}` fills. Light mode is all solid color — near-white canvas #fdfbfd, faintly warm sidebar #fcf8fb, pure white composer. Dark mode is a **pure black sidebar #000000 plus a vertical gradient canvas** (bottom `{colors.canvas-from}` #0e0d0f → top `{colors.canvas-to}` #1c1e1b, fixed to the viewport), composer #252528. Hierarchy comes from surface roles + hairline borders; shadows are reserved for overlays.
+Surfaces are organized by **role**, not ladder: `{colors.background}` main canvas, `{colors.sidebar}` sidebar zone, `{colors.composer}` input zone, `{colors.card}` / `{colors.popover}` panels and overlays, `{colors.muted}` / `{colors.secondary}` / `{colors.accent}` fills. Light mode is all solid color — near-white canvas #fdfbfd, faintly warm sidebar #fcf8fb, pure white composer. Dark mode is a **pure black sidebar #000000 plus a vertical gradient canvas** (bottom `{colors.dark-canvas-from}` #0e0d0f → top `{colors.dark-canvas-to}` #1c1e1b, fixed to the viewport), composer #252528. Hierarchy comes from surface roles + hairline borders; shadows are reserved for overlays.
 
 The single chromatic accent is sky blue `{colors.primary}` #60b1ff — primary buttons, focus rings, link emphasis — topped with dark ink text `{colors.primary-foreground}` #0b1220 for contrast. The focus ring has no standalone value: it is derived from primary via `color-mix`; hovers use opacity modifiers (`primary/90`); swapping the primary cascades everywhere automatically. The only semantic color today is `{colors.destructive}`; warning / success are TBD (decided when the amber migration banner is adopted).
 
@@ -330,7 +325,7 @@ The page rhythm is a **workbench, not a marketing narrative**: a 260px session s
 
 ## Colors
 
-> Raw values live only in `theme.css`; this chapter explains each token's role and intent. Per-theme values are registered in the front matter `colors:` block.
+> Raw values live only in `theme.css`; this chapter explains each token's role and intent. Light values are unprefixed, dark overrides carry the `dark-` prefix — mirroring `:root` / `[data-theme="dark"]` in `theme.css`.
 
 ### Brand & Accent
 - **Sky Blue** (`{colors.primary}`): The single chromatic accent #60b1ff — primary buttons, focus rings, link emphasis. Shared by both themes.
@@ -340,7 +335,7 @@ The page rhythm is a **workbench, not a marketing narrative**: a 260px session s
 
 ### Surface
 - **Background** (`{colors.background}`): Main canvas. Solid #fdfbfd in light; #151615 in dark as the gradient's midpoint fallback.
-- **Canvas From / To** (`{colors.canvas-from}` / `{colors.canvas-to}`): Dark-only — the two ends of the main-area vertical gradient (bottom #0e0d0f → top #1c1e1b), anchored to the viewport via `background-attachment: fixed` so inner panel scrolling never stretches it.
+- **Canvas From / To** (`{colors.dark-canvas-from}` / `{colors.dark-canvas-to}`): Dark-only — the two ends of the main-area vertical gradient (bottom #0e0d0f → top #1c1e1b), anchored to the viewport via `background-attachment: fixed` so inner panel scrolling never stretches it.
 - **Sidebar** (`{colors.sidebar}`): Sidebar zone. Faintly warm #fcf8fb in light; pure black #000000 in dark.
 - **Composer** (`{colors.composer}`): Input-area panel. #ffffff in light; #252528 in dark.
 - **Card / Popover** (`{colors.card}` / `{colors.popover}`): Panels and overlays. Both pure white in light; both first-step charcoal in dark.
@@ -439,7 +434,7 @@ Depth is carried by surface roles + hairline borders. Components stay flat; drop
 
 ### Decorative Depth
 
-- **The dark canvas gradient** (`{colors.canvas-from}` → `{colors.canvas-to}`) is the single atmospheric element — anchored to the viewport, calm, non-interactive.
+- **The dark canvas gradient** (`{colors.dark-canvas-from}` → `{colors.dark-canvas-to}`) is the single atmospheric element — anchored to the viewport, calm, non-interactive.
 - **Streaming cursor** — the pulsing caret on in-flight assistant messages is the only motion used as depth.
 - No product screenshots, no edge highlights, no spotlight cards.
 
