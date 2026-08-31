@@ -1,5 +1,5 @@
 /*
- * Design tokens — single source of truth for color (see WEB_DESIGN_SYSTEM.md).
+ * Design tokens — single source of truth for color (see DESIGN.md at repo root).
  * Raw values are ONLY allowed in this file.
  * Everything else must consume the semantic Tailwind classes generated below
  * (bg-background, text-muted-foreground, bg-sidebar, bg-code, ...).

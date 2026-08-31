@@ -1,6 +1,6 @@
 ---
 version: alpha
-name: Lemma-web-design-system
+name: Lemma
 description: "wait to be filled in"
 
 # Token names mirror theme.css semantic variables; values copied verbatim (code is the source of truth)
