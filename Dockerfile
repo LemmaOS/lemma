@@ -1,5 +1,5 @@
 # 阶段 1：前端（proto 生成 + vite 构建）
-FROM node:24-bookworm-slim AS web-builder
+FROM node:26-bookworm-slim AS web-builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY web/package.json web/package.json
