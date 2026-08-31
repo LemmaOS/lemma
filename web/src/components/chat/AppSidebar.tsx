@@ -233,7 +233,7 @@ export function AppSidebar({
             </div>
 
             {/* 会话列表 */}
-            <div className="flex-1 overflow-y-auto pb-3">
+            <div className="flex-1 overflow-y-auto px-2 pb-3">
                 {groups.map((group) => (
                     <div key={group.key}>
                         <p className="text-xs text-muted-foreground px-3 pt-4 pb-1">
