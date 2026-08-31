@@ -303,22 +303,23 @@ components:
 
 ## Overview
 
-Linear's marketing canvas is the deepest dark surface in this collection — `{colors.canvas}` is #010102, essentially pure black with a faint blue tint. On top sits a four-step surface ladder (`{colors.surface-1}` through `{colors.surface-4}`) for cards, panels, and lifted tiles, with hairline borders running from `{colors.hairline}` (#23252a) up through `{colors.hairline-strong}` and `{colors.hairline-tertiary}`. Light gray text (`{colors.ink}` #f7f8f8) carries the body and headlines.
+Lemma 是三态（亮 / 暗 / 跟随系统）的自托管 AI 聊天工作台。设计系统以**语义 token** 为唯一入口：组件只引用 `{colors.card}`、`{typography.button}` 这类语义名，原始值只允许出现在 `theme.css`，亮暗双套在本文档 colors 块登记。
 
-The single chromatic accent is **Linear lavender-blue** `{colors.primary}` (#5e6ad2) — used on the brand mark, focus rings, and the primary CTA button. A lighter hover state (`{colors.primary-hover}` #828fff) and a focus-tinted variant (`{colors.primary-focus}` #5e69d1) extend the same hue. Linear avoids saturated greens, oranges, reds, etc. on the marketing canvas — the only semantic color is `{colors.semantic-success}` (#27a644) for status pills and the rare success indicator.
+表面体系按**角色**而非阶梯组织：`{colors.background}` 主画布、`{colors.sidebar}` 侧栏专区、`{colors.composer}` 输入区、`{colors.card}` / `{colors.popover}` 面板与浮层、`{colors.muted}` / `{colors.secondary}` / `{colors.accent}` 填充。亮色是纯实色——近白画布 #fdfbfd、微暖侧栏 #fcf8fb、纯白输入区；暗色是**纯黑侧栏 #000000 + 纵向渐变画布**（底 `{colors.canvas-from}` #0e0d0f → 顶 `{colors.canvas-to}` #1c1e1b，fixed 锚定视口），输入区 #252528。层次靠表面角色 + 发丝边框表达，投影只留给浮层。
 
-Display type runs Linear's custom sans (with `SF Pro Display` fallback) at weight 500–700 with negative letter-spacing scaling from -3.0px at 80px down to 0 at body. The body family is Linear's text cut, and a Linear Mono is reserved for code snippets in product screenshots.
+唯一彩色强调是天蓝 `{colors.primary}` #60b1ff——主按钮、焦点圈、链接强调，上压深墨字 `{colors.primary-foreground}` #0b1220 保对比。焦点圈不设独立色，由 `color-mix` 从主色派生；悬停用透明度修饰（`primary/90`）；换主色时全链自动跟随。语义色现仅有 `{colors.destructive}`，warning / success 待建（收编 amber 迁移横幅时定）。
 
-The page rhythm is **dense product screenshots** — Linear's marketing leads with high-fidelity captures of the product UI (issue list, project view, dashboard) framed in `{colors.surface-1}` panels with `{rounded.xl}` 16px corners. The chrome is intentionally minimal so the app screenshots can do the heavy lifting.
+字体双自托管（GitHub release woff2，不走 CDN）：**Sarasa UI SC**（400/500/600）任界面与正文，拉丁源自 Iosevka、自带中文，三平台观感统一；**Maple Mono NF CN**（400/700）任代码，中文 2:1 对齐，可渲染 Nerd Font 图标——粘贴终端输出不再是豆腐块。字号沿用 13 级阶梯，大标题负字距保留（-3.0px @ 80px 收至正文 0）。
+
+页面节奏是**工作台而非营销叙事**：左侧 260px 会话侧栏，中间对话流（用户消息右对齐 `{colors.muted}` 气泡，assistant 反色圆头像 + 正文直排），底部 composer 输入区（`{colors.composer}` 面板 + 反色圆形发送钮），内容列收敛 max-w-3xl。语言服务长时间阅读与输入，不服务展示。
 
 **Key Characteristics:**
-- **Dark-canvas marketing system** — `{colors.canvas}` (#010102) is the deepest dark in this collection.
-- **Lavender-blue brand accent** (`{colors.primary}` #5e6ad2) — used scarcely on brand mark, focus, and the primary CTA.
-- Four-step surface ladder (canvas → surface-1 → surface-2 → surface-3 → surface-4) carries hierarchy without shadow.
-- Display tracking pulls aggressively negative (-3.0px at 80px); body holds at -0.05px.
-- Cards use `{rounded.lg}` 12px corners with 1px hairline borders — never pill, rarely 16px.
-- **Product UI screenshots** dominate the page. The marketing chrome is a dark frame for the app.
-- No second chromatic color. No atmospheric gradients. No spotlight cards.
+- **三态主题**——亮实色 / 暗渐变 / 跟随系统；语义 token 一处定义、两态取值。
+- **天蓝单一强调** `{colors.primary}` #60b1ff——焦点圈派生、悬停透明化，无第二彩色。
+- **角色制表面** + 发丝边框；组件扁平，投影仅浮层。
+- **双自托管字体**——Sarasa UI SC + Maple Mono NF CN，中文一等公民。
+- **工作台节奏**——侧栏 + 对话流 + composer，内容列 max-w-3xl。
+- 圆角阶梯 4/6/8/12/16/24px——按钮与输入框 8px，卡片与气泡 16px。
 
 ## Colors
 
