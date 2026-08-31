@@ -67,85 +67,90 @@ colors:
     code-border: "oklch(0.31 0.009 260)"
     composer: "#252528"
 
+# 字体双自托管（GitHub release 下载 woff2，不走 CDN）：sans 自带中文，mono 自带中文 + NF 图标
 typography:
-  display-xl:
-    fontFamily: Linear Display
-    fontSize: 80px
-    fontWeight: 600
-    lineHeight: 1.05
-    letterSpacing: -3.0px
-  display-lg:
-    fontFamily: Linear Display
-    fontSize: 56px
-    fontWeight: 600
-    lineHeight: 1.10
-    letterSpacing: -1.8px
-  display-md:
-    fontFamily: Linear Display
-    fontSize: 40px
-    fontWeight: 600
-    lineHeight: 1.15
-    letterSpacing: -1.0px
-  headline:
-    fontFamily: Linear Display
-    fontSize: 28px
-    fontWeight: 600
-    lineHeight: 1.20
-    letterSpacing: -0.6px
-  card-title:
-    fontFamily: Linear Display
-    fontSize: 22px
-    fontWeight: 500
-    lineHeight: 1.25
-    letterSpacing: -0.4px
-  subhead:
-    fontFamily: Linear Display
-    fontSize: 20px
-    fontWeight: 400
-    lineHeight: 1.40
-    letterSpacing: -0.2px
-  body-lg:
-    fontFamily: Linear Text
-    fontSize: 18px
-    fontWeight: 400
-    lineHeight: 1.50
-    letterSpacing: -0.1px
-  body:
-    fontFamily: Linear Text
-    fontSize: 16px
-    fontWeight: 400
-    lineHeight: 1.50
-    letterSpacing: -0.05px
-  body-sm:
-    fontFamily: Linear Text
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 1.50
-    letterSpacing: 0
-  caption:
-    fontFamily: Linear Text
-    fontSize: 12px
-    fontWeight: 400
-    lineHeight: 1.40
-    letterSpacing: 0
-  button:
-    fontFamily: Linear Text
-    fontSize: 14px
-    fontWeight: 500
-    lineHeight: 1.20
-    letterSpacing: 0
-  eyebrow:
-    fontFamily: Linear Text
-    fontSize: 13px
-    fontWeight: 500
-    lineHeight: 1.30
-    letterSpacing: 0.4px
-  mono:
-    fontFamily: Linear Mono
-    fontSize: 13px
-    fontWeight: 400
-    lineHeight: 1.50
-    letterSpacing: 0
+  fonts:
+    sans: "Sarasa UI SC"        # 400/500/600；拉丁源自 Iosevka，自带中文
+    mono: "Maple Mono NF CN"    # 400/700；中文 2:1 对齐，渲染 Nerd Font 图标
+  scale:
+    display-xl:
+      fontFamily: Sarasa UI SC
+      fontSize: 80px
+      fontWeight: 600
+      lineHeight: 1.05
+      letterSpacing: -3.0px
+    display-lg:
+      fontFamily: Sarasa UI SC
+      fontSize: 56px
+      fontWeight: 600
+      lineHeight: 1.10
+      letterSpacing: -1.8px
+    display-md:
+      fontFamily: Sarasa UI SC
+      fontSize: 40px
+      fontWeight: 600
+      lineHeight: 1.15
+      letterSpacing: -1.0px
+    headline:
+      fontFamily: Sarasa UI SC
+      fontSize: 28px
+      fontWeight: 600
+      lineHeight: 1.20
+      letterSpacing: -0.6px
+    card-title:
+      fontFamily: Sarasa UI SC
+      fontSize: 22px
+      fontWeight: 500
+      lineHeight: 1.25
+      letterSpacing: -0.4px
+    subhead:
+      fontFamily: Sarasa UI SC
+      fontSize: 20px
+      fontWeight: 400
+      lineHeight: 1.40
+      letterSpacing: -0.2px
+    body-lg:
+      fontFamily: Sarasa UI SC
+      fontSize: 18px
+      fontWeight: 400
+      lineHeight: 1.50
+      letterSpacing: -0.1px
+    body:
+      fontFamily: Sarasa UI SC
+      fontSize: 16px
+      fontWeight: 400
+      lineHeight: 1.50
+      letterSpacing: -0.05px
+    body-sm:
+      fontFamily: Sarasa UI SC
+      fontSize: 14px
+      fontWeight: 400
+      lineHeight: 1.50
+      letterSpacing: 0
+    caption:
+      fontFamily: Sarasa UI SC
+      fontSize: 12px
+      fontWeight: 400
+      lineHeight: 1.40
+      letterSpacing: 0
+    button:
+      fontFamily: Sarasa UI SC
+      fontSize: 14px
+      fontWeight: 500
+      lineHeight: 1.20
+      letterSpacing: 0
+    eyebrow:
+      fontFamily: Sarasa UI SC
+      fontSize: 13px
+      fontWeight: 500
+      lineHeight: 1.30
+      letterSpacing: 0.4px
+    mono:
+      fontFamily: Maple Mono NF CN
+      fontSize: 13px
+      fontWeight: 400
+      lineHeight: 1.50
+      letterSpacing: 0
 
 rounded:
   xs: 4px
