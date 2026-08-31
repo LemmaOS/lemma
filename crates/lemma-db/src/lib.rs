@@ -1,3 +1,5 @@
+//! 存储内核：连接池、迁移、共享实体；领域查询住在各领域 crate
+
 pub mod entity;
 
 use sqlx::PgPool;
