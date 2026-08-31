@@ -451,7 +451,7 @@ Depth is carried by surface roles + hairline borders. Components stay flat; drop
 | `{rounded.xs}`   | 4px    | Inline code, sidebar inline action buttons            |
 | `{rounded.sm}`   | 6px    | Spare step — nothing assigned today                   |
 | `{rounded.md}`   | 8px    | All buttons, form inputs, session rows, code blocks, dropdown items |
-| `{rounded.lg}`   | 12px   | Tabs track, new-chat button                           |
+| `{rounded.lg}`   | 12px   | Tabs track, new-chat button, page canvas panels             |
 | `{rounded.xl}`   | 16px   | Cards, user bubbles, composer                         |
 | `{rounded.xxl}`  | 24px   | Reserved (landing banners)                            |
 | `{rounded.pill}` | 9999px | Status pills                                          |

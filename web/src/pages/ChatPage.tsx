@@ -230,7 +230,7 @@ export default function ChatPage() {
                     sidebarCollapsed ? "p-2" : "py-2 pr-2",
                 )}
             >
-                <div className="relative flex h-full flex-col overflow-hidden rounded-xl border border-border app-canvas">
+                <div className="relative flex h-full flex-col overflow-hidden rounded-lg border border-border app-canvas">
                     {sidebarCollapsed && (
                         <div className="absolute left-3 top-3 z-10">
                             <Button

@@ -95,7 +95,7 @@ export function ProviderListPane({
     const disabledProviders = filtered.filter((p) => !p.enabled);
 
     return (
-        <section className="flex w-[260px] shrink-0 flex-col rounded-xl border border-border bg-background">
+        <section className="flex w-[260px] shrink-0 flex-col rounded-lg border border-border bg-background">
             <div className="flex items-center gap-2 p-3">
                 <div className="relative flex-1">
                     <Search className="pointer-events-none absolute left-2.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
