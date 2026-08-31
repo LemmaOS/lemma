@@ -9,14 +9,14 @@ on:
       - "Cargo.lock"
       - "crates/**"
       - "proto/**"
-      - ".github/workflows/rust.yml"
+      - ".github/workflows/rust-ci.yml"
   pull_request:
     paths:
       - "Cargo.toml"
       - "Cargo.lock"
       - "crates/**"
       - "proto/**"
-      - ".github/workflows/rust.yml"
+      - ".github/workflows/rust-ci.yml"
 
 concurrency:
   group: rust-ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
