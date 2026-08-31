@@ -236,7 +236,7 @@ export default function ChatPage() {
                             <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                className="size-8 rounded-lg border border-border bg-background text-muted-foreground shadow-xs"
+                                className="size-8 rounded-lg border border-border bg-background text-muted-foreground"
                                 onClick={() => toggleSidebar(false)}
                                 aria-label={t("sidebar.expand")}
                                 title={t("sidebar.expand")}

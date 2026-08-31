@@ -49,7 +49,7 @@ export function ChatComposer({
 
     return (
         <div className="px-6 pb-6">
-            <div className="max-w-3xl mx-auto rounded-xl border border-input bg-composer shadow-xs">
+            <div className="max-w-3xl mx-auto rounded-xl border border-input bg-composer">
                 <Textarea
                     ref={textareaRef}
                     value={value}
