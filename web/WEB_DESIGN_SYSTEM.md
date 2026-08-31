@@ -3,9 +3,9 @@ version: alpha
 name: Lemma-web-design-system
 description: "wait to be filled in"
 
-# 命名与 theme.css 语义变量一一对应；值逐字抄自 theme.css（代码侧唯一事实来源）
+# Token names mirror theme.css semantic variables; values copied verbatim (code is the source of truth)
 colors:
-  # 两态共享；warning/success 待建（收编 amber 横幅时按亮暗双套定值）
+  # Shared by both themes; warning/success TBD (per-theme values when the amber banner is adopted)
   shared:
     primary: "#60b1ff"
     primary-foreground: "#0b1220"
@@ -67,11 +67,11 @@ colors:
     code-border: "oklch(0.31 0.009 260)"
     composer: "#252528"
 
-# 字体双自托管（GitHub release 下载 woff2，不走 CDN）：sans 自带中文，mono 自带中文 + NF 图标
+# Both fonts self-hosted (woff2 from GitHub releases, no CDN): sans ships CJK, mono ships CJK + NF icons
 typography:
   fonts:
-    sans: "Sarasa UI SC"        # 400/500/600；拉丁源自 Iosevka，自带中文
-    mono: "Maple Mono NF CN"    # 400/700；中文 2:1 对齐，渲染 Nerd Font 图标
+    sans: "Sarasa UI SC"        # 400/500/600; Latin from Iosevka, CJK included
+    mono: "Maple Mono NF CN"    # 400/700; CJK 2:1 alignment, renders Nerd Font icons
   scale:
     display-xl:
       fontFamily: Sarasa UI SC
@@ -172,16 +172,17 @@ spacing:
   xxl: 48px
   section: 96px
 
-# 组件配方。引用约定：colors 不带 light/dark 前缀 = 主题自适应语义 token；
-# typography 引用省略 scale 前缀；hover/pressed 等状态折叠为注释，不建独立 token
+# Component recipes. Reference convention: colors without light/dark prefix are
+# theme-adaptive semantic tokens; typography refs omit the scale prefix;
+# hover/pressed states fold into comments, never separate tokens
 components:
-  # ---- 基元 ----
+  # ---- primitives ----
   button-primary:
     backgroundColor: "{colors.primary}"
     textColor: "{colors.primary-foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.md}"
-    padding: 8px 16px             # h-9；hover: primary/90；focus: 3px ring
+    padding: 8px 16px             # h-9; hover: primary/90; focus: 3px ring
   button-secondary:
     backgroundColor: "{colors.secondary}"
     textColor: "{colors.secondary-foreground}"
@@ -200,7 +201,7 @@ components:
     textColor: "{colors.foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.md}"
-    padding: 8px 16px             # hover: bg accent；图标按钮同配方
+    padding: 8px 16px             # hover: bg accent; icon buttons share this recipe
   button-destructive:
     backgroundColor: "{colors.destructive}"
     textColor: "{colors.destructive-foreground}"
@@ -208,92 +209,92 @@ components:
     rounded: "{rounded.md}"
     padding: 8px 16px             # hover: destructive/90
   text-input:
-    backgroundColor: transparent  # hairline 风格：透明底 + 细边框（textarea 同）
+    backgroundColor: transparent  # hairline style: transparent bg + thin border (textarea identical)
     textColor: "{colors.foreground}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.md}"
     padding: 8px 12px
-    border: "{colors.input}"      # placeholder: muted-foreground；focus: ring
+    border: "{colors.input}"      # placeholder: muted-foreground; focus: ring
   card:
     backgroundColor: "{colors.card}"
     textColor: "{colors.card-foreground}"
     typography: "{typography.body-sm}"
-    rounded: "{rounded.xl}"       # 现 14px，rounded 对齐模板后为 16px
+    rounded: "{rounded.xl}"       # currently 14px, becomes 16px once code aligns with template radii
     padding: 24px
     border: "{colors.border}"
   popover:
-    backgroundColor: "{colors.popover}"   # dropdown-menu / select 浮层共用
+    backgroundColor: "{colors.popover}"   # shared by dropdown-menu / select overlays
     textColor: "{colors.popover-foreground}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.md}"
     padding: 4px
-    border: "{colors.border}"     # 仅浮层允许 shadow-md，其余组件扁平
+    border: "{colors.border}"     # only overlays may use shadow-md; everything else stays flat
   tooltip:
-    backgroundColor: "{colors.foreground}"  # 反色小浮层
+    backgroundColor: "{colors.foreground}"  # inverse-color mini overlay
     textColor: "{colors.background}"
     typography: "{typography.caption}"
     rounded: "{rounded.md}"
     padding: 6px 12px
   switch:
-    backgroundColor: "{colors.input}"     # 关闭态；开启态: primary
+    backgroundColor: "{colors.input}"     # off state; on state: primary
     rounded: "{rounded.full}"
-    height: 18px                          # 圆形滑块 16px
+    height: 18px                          # 16px round thumb
   tabs:
-    backgroundColor: "{colors.muted}"     # 轨道；选中项: background + shadow-xs
+    backgroundColor: "{colors.muted}"     # track; selected: background + shadow-xs
     textColor: "{colors.muted-foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.lg}"
-    padding: 4px                          # 选中项文字: foreground
-  # ---- 产品组件 ----
+    padding: 4px                          # selected text: foreground
+  # ---- product components ----
   sidebar:
     backgroundColor: "{colors.sidebar}"
     textColor: "{colors.sidebar-foreground}"
     typography: "{typography.body-sm}"
-    width: 260px                          # 组标题: caption + muted-foreground
+    width: 260px                          # group headers: caption + muted-foreground
   sidebar-session-row:
-    backgroundColor: transparent  # hover: accent/60；active: sidebar-accent + 500 字重
+    backgroundColor: transparent  # hover: accent/60; active: sidebar-accent + weight 500
     textColor: "{colors.sidebar-foreground}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.md}"
-    padding: 6px 12px             # 悬停浮现行内操作钮（重命名/归档）
+    padding: 6px 12px             # inline action buttons fade in on hover (rename/archive)
   message-bubble-user:
     backgroundColor: "{colors.muted}"
     textColor: "{colors.foreground}"
     typography: "{typography.body-sm}"
-    rounded: "{rounded.xl}"       # 右对齐，max-width 75%
+    rounded: "{rounded.xl}"       # right-aligned, max-width 75%
     padding: 10px 16px
   message-assistant:
-    backgroundColor: transparent  # 无气泡：28px 圆形反色头像 + 正文直排
+    backgroundColor: transparent  # no bubble: 28px round inverse avatar + plain flow
     textColor: "{colors.foreground}"
-    typography: "{typography.body-sm}"    # 错误: destructive；来源/停止提示: caption + muted-foreground
+    typography: "{typography.body-sm}"    # errors: destructive; source/stop notices: caption + muted-foreground
   composer:
     backgroundColor: "{colors.composer}"
     textColor: "{colors.foreground}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.xl}"       # 16px
     padding: 12px
-    border: "{colors.input}"      # 发送钮 32px 圆形反色（bg-foreground）；输入区透明无边框
+    border: "{colors.input}"      # 32px round inverse send button (bg-foreground); input area transparent, borderless
   model-switcher:
-    backgroundColor: transparent  # ghost 触发器 + popover 浮层
+    backgroundColor: transparent  # ghost trigger + popover overlay
     textColor: "{colors.muted-foreground}"
-    typography: "{typography.mono-sm}"    # 模型 ID 用等宽
+    typography: "{typography.mono-sm}"    # model IDs in mono
     rounded: "{rounded.md}"
   code-block:
-    backgroundColor: "{colors.code}"      # 现状 60% 透明度叠加
+    backgroundColor: "{colors.code}"      # currently overlaid at 60% opacity
     textColor: "{colors.code-foreground}"
     typography: "{typography.mono}"
     rounded: "{rounded.md}"
-    padding: 16px                 # 行内 code 同色系，padding 2px 4px
+    padding: 16px                 # inline code same family, padding 2px 4px
     border: "{colors.code-border}"
   banner-warning:
-    backgroundColor: "{colors.warning}"   # TBD：迁移挂起横幅现硬编码 amber-50/300/900，收编时定双套
+    backgroundColor: "{colors.warning}"   # TBD: pending-migration banner currently hard-coded amber-50/300/900
     textColor: "{colors.foreground}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.md}"
     padding: 8px 12px
     border: "{colors.warning}"
   auth-card:
-    backgroundColor: "{colors.card}"      # 登录/注册页居中卡片
+    backgroundColor: "{colors.card}"      # centered card on the login/signup page
     textColor: "{colors.card-foreground}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.xl}"
@@ -303,59 +304,59 @@ components:
 
 ## Overview
 
-Lemma 是三态（亮 / 暗 / 跟随系统）的自托管 AI 聊天工作台。设计系统以**语义 token** 为唯一入口：组件只引用 `{colors.card}`、`{typography.button}` 这类语义名，原始值只允许出现在 `theme.css`，亮暗双套在本文档 colors 块登记。
+Lemma is a self-hosted AI chat workbench with three theme states (light / dark / system). The design system is **semantic-token-only**: components reference semantic names like `{colors.card}` and `{typography.button}`; raw values live exclusively in `theme.css`, with both theme sets registered in the colors block of this document.
 
-表面体系按**角色**而非阶梯组织：`{colors.background}` 主画布、`{colors.sidebar}` 侧栏专区、`{colors.composer}` 输入区、`{colors.card}` / `{colors.popover}` 面板与浮层、`{colors.muted}` / `{colors.secondary}` / `{colors.accent}` 填充。亮色是纯实色——近白画布 #fdfbfd、微暖侧栏 #fcf8fb、纯白输入区；暗色是**纯黑侧栏 #000000 + 纵向渐变画布**（底 `{colors.canvas-from}` #0e0d0f → 顶 `{colors.canvas-to}` #1c1e1b，fixed 锚定视口），输入区 #252528。层次靠表面角色 + 发丝边框表达，投影只留给浮层。
+Surfaces are organized by **role**, not ladder: `{colors.background}` main canvas, `{colors.sidebar}` sidebar zone, `{colors.composer}` input zone, `{colors.card}` / `{colors.popover}` panels and overlays, `{colors.muted}` / `{colors.secondary}` / `{colors.accent}` fills. Light mode is all solid color — near-white canvas #fdfbfd, faintly warm sidebar #fcf8fb, pure white composer. Dark mode is a **pure black sidebar #000000 plus a vertical gradient canvas** (bottom `{colors.canvas-from}` #0e0d0f → top `{colors.canvas-to}` #1c1e1b, fixed to the viewport), composer #252528. Hierarchy comes from surface roles + hairline borders; shadows are reserved for overlays.
 
-唯一彩色强调是天蓝 `{colors.primary}` #60b1ff——主按钮、焦点圈、链接强调，上压深墨字 `{colors.primary-foreground}` #0b1220 保对比。焦点圈不设独立色，由 `color-mix` 从主色派生；悬停用透明度修饰（`primary/90`）；换主色时全链自动跟随。语义色现仅有 `{colors.destructive}`，warning / success 待建（收编 amber 迁移横幅时定）。
+The single chromatic accent is sky blue `{colors.primary}` #60b1ff — primary buttons, focus rings, link emphasis — topped with dark ink text `{colors.primary-foreground}` #0b1220 for contrast. The focus ring has no standalone value: it is derived from primary via `color-mix`; hovers use opacity modifiers (`primary/90`); swapping the primary cascades everywhere automatically. The only semantic color today is `{colors.destructive}`; warning / success are TBD (decided when the amber migration banner is adopted).
 
-字体双自托管（GitHub release woff2，不走 CDN）：**Sarasa UI SC**（400/500/600）任界面与正文，拉丁源自 Iosevka、自带中文，三平台观感统一；**Maple Mono NF CN**（400/700）任代码，中文 2:1 对齐，可渲染 Nerd Font 图标——粘贴终端输出不再是豆腐块。字号沿用 13 级阶梯，大标题负字距保留（-3.0px @ 80px 收至正文 0）。
+Fonts are dual self-hosted (woff2 from GitHub releases, no CDN): **Sarasa UI SC** (400/500/600) carries UI and body text — Latin from Iosevka, CJK included, identical rendering across platforms; **Maple Mono NF CN** (400/700) carries code — CJK 2:1 alignment, renders Nerd Font icons, so pasted terminal output no longer degrades to tofu boxes. The 13-step type scale is kept as-is, including negative display tracking (-3.0px @ 80px down to 0 at body).
 
-页面节奏是**工作台而非营销叙事**：左侧 260px 会话侧栏，中间对话流（用户消息右对齐 `{colors.muted}` 气泡，assistant 反色圆头像 + 正文直排），底部 composer 输入区（`{colors.composer}` 面板 + 反色圆形发送钮），内容列收敛 max-w-3xl。语言服务长时间阅读与输入，不服务展示。
+The page rhythm is a **workbench, not a marketing narrative**: a 260px session sidebar on the left, the conversation flow in the middle (user messages right-aligned in `{colors.muted}` bubbles; assistant messages as inverse round avatar + plain flow), and the composer at the bottom (`{colors.composer}` panel + inverse round send button), with the content column capped at max-w-3xl. The language serves long reading and typing sessions, not presentation.
 
 **Key Characteristics:**
-- **三态主题**——亮实色 / 暗渐变 / 跟随系统；语义 token 一处定义、两态取值。
-- **天蓝单一强调** `{colors.primary}` #60b1ff——焦点圈派生、悬停透明化，无第二彩色。
-- **角色制表面** + 发丝边框；组件扁平，投影仅浮层。
-- **双自托管字体**——Sarasa UI SC + Maple Mono NF CN，中文一等公民。
-- **工作台节奏**——侧栏 + 对话流 + composer，内容列 max-w-3xl。
-- 圆角阶梯 4/6/8/12/16/24px——按钮与输入框 8px，卡片与气泡 16px。
+- **Three-state theme** — solid light / gradient dark / follow system; semantic tokens defined once, valued per theme.
+- **Single sky-blue accent** `{colors.primary}` #60b1ff — derived focus ring, opacity hovers, no second chromatic color.
+- **Role-based surfaces** + hairline borders; components stay flat, shadows only on overlays.
+- **Dual self-hosted fonts** — Sarasa UI SC + Maple Mono NF CN; CJK is a first-class citizen.
+- **Workbench rhythm** — sidebar + conversation flow + composer; content column max-w-3xl.
+- Radius ladder 4/6/8/12/16/24px — 8px for buttons and inputs, 16px for cards and bubbles.
 
 ## Colors
 
-> 原始值的唯一事实来源是 `theme.css`；本章解释各 token 的角色与意图，双态取值见 front matter `colors:` 块。
+> Raw values live only in `theme.css`; this chapter explains each token's role and intent. Per-theme values are registered in the front matter `colors:` block.
 
 ### Brand & Accent
-- **Sky Blue**（`{colors.primary}`）：唯一彩色强调 #60b1ff——主按钮、焦点圈、链接强调。两态共享。
-- **On Primary**（`{colors.primary-foreground}`）：压在主色上的深墨字 #0b1220，保对比。两态共享。
-- **Ring**（`{colors.ring}`）：焦点圈，无独立色值——`color-mix` 从主色派生（40% 透明），换主色自动跟随。
-- hover / pressed 不设 token：一律透明度修饰（`primary/90`、`secondary/80`）。
+- **Sky Blue** (`{colors.primary}`): The single chromatic accent #60b1ff — primary buttons, focus rings, link emphasis. Shared by both themes.
+- **On Primary** (`{colors.primary-foreground}`): Dark ink #0b1220 on the primary color, for contrast. Shared by both themes.
+- **Ring** (`{colors.ring}`): Focus ring with no standalone value — derived from primary via `color-mix` at 40% opacity, follows the primary automatically.
+- No hover/pressed tokens: always opacity modifiers (`primary/90`, `secondary/80`).
 
 ### Surface
-- **Background**（`{colors.background}`）：主画布。亮色 #fdfbfd 实色；暗色 #151615 作渐变的兜底中点。
-- **Canvas From / To**（`{colors.canvas-from}` / `{colors.canvas-to}`）：暗色专属——主区纵向渐变两端（底 #0e0d0f → 顶 #1c1e1b），`background-attachment: fixed` 锚定视口，面板内部滚动不拉伸。
-- **Sidebar**（`{colors.sidebar}`）：侧栏专区。亮 #fcf8fb 微暖；暗 #000000 纯黑。
-- **Composer**（`{colors.composer}`）：输入区面板。亮 #ffffff；暗 #252528。
-- **Card / Popover**（`{colors.card}` / `{colors.popover}`）：面板与浮层。亮色同为纯白，暗色同为一级炭灰。
-- **Secondary / Muted / Accent**：填充系三色——次要按钮底、弱化填充（用户气泡）、悬停态背景。
-- **Code**（`{colors.code}` + `{colors.code-border}`）：代码块底与边；代码块以 60% 透明度叠加在画布上。
+- **Background** (`{colors.background}`): Main canvas. Solid #fdfbfd in light; #151615 in dark as the gradient's midpoint fallback.
+- **Canvas From / To** (`{colors.canvas-from}` / `{colors.canvas-to}`): Dark-only — the two ends of the main-area vertical gradient (bottom #0e0d0f → top #1c1e1b), anchored to the viewport via `background-attachment: fixed` so inner panel scrolling never stretches it.
+- **Sidebar** (`{colors.sidebar}`): Sidebar zone. Faintly warm #fcf8fb in light; pure black #000000 in dark.
+- **Composer** (`{colors.composer}`): Input-area panel. #ffffff in light; #252528 in dark.
+- **Card / Popover** (`{colors.card}` / `{colors.popover}`): Panels and overlays. Both pure white in light; both first-step charcoal in dark.
+- **Secondary / Muted / Accent**: The fill trio — secondary button background, subdued fill (user bubble), hover-state background.
+- **Code** (`{colors.code}` + `{colors.code-border}`): Code block background and border; blocks overlay the canvas at 60% opacity.
 
 ### Text
-- **Foreground**（`{colors.foreground}`）：全部标题与正文主文字。
-- **Muted Foreground**（`{colors.muted-foreground}`）：次要文字——注释、元信息、组标题、placeholder。
-- 各表面自带同名后缀的配对文字（`card-foreground`、`sidebar-foreground`、`code-foreground`……），随表面 token 走。
-- **两级灰阶是刻意选择**：更细的层级由字重（400/500/600）承担，不再加灰色档。
+- **Foreground** (`{colors.foreground}`): All headlines and primary body text.
+- **Muted Foreground** (`{colors.muted-foreground}`): Secondary text — captions, meta info, group headers, placeholders.
+- Every surface ships a matching text token with the same suffix (`card-foreground`, `sidebar-foreground`, `code-foreground`, ...).
+- **Two text levels are deliberate**: finer hierarchy is carried by font weight (400/500/600), not by additional grays.
 
 ### Border
-- **Border**（`{colors.border}`）：卡片与分隔线的默认发丝边。
-- **Input**（`{colors.input}`）：输入框边框，暗色下比 border 亮一档。
-- 专区变体：`sidebar-border`、`code-border`，与同系表面配对。
+- **Border** (`{colors.border}`): Default hairline on cards and dividers.
+- **Input** (`{colors.input}`): Input border, one step lighter than border in dark.
+- Zone variants: `sidebar-border`, `code-border`, paired with their surfaces.
 
 ### Semantic
-- **Destructive**（`{colors.destructive}`）：删除与危险操作，亮暗各一档亮度。
-- **Warning**（TBD）：迁移挂起横幅现硬编码 amber-50/300/900，收编时补双套值。
-- **Success**（TBD）：测试连接成功等正向反馈。
-- 遮罩：暂无对话框组件；引入时以 `black/60` 起步，不单独立 token。
+- **Destructive** (`{colors.destructive}`): Delete and dangerous actions; one lightness step per theme.
+- **Warning** (TBD): The pending-migration banner is currently hard-coded amber-50/300/900; per-theme values land when it is adopted.
+- **Success** (TBD): Positive feedback such as a successful storage connection test.
+- Overlay scrim: no dialog component yet; start at `black/60` when introduced, no standalone token.
 
 ## Typography
 
