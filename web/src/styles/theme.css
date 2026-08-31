@@ -5,6 +5,50 @@
  * (bg-background, text-muted-foreground, bg-sidebar, bg-code, ...).
  */
 
+/* 自托管字体：src/assets/fonts，OFL 许可同目录。Sarasa 无 Medium，SemiBold 同时注册 500/600 */
+@font-face {
+    font-family: "Sarasa UI SC";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../assets/fonts/SarasaUiSC-Regular.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Sarasa UI SC";
+    font-style: normal;
+    font-weight: 500;
+    font-display: swap;
+    src: url("../assets/fonts/SarasaUiSC-SemiBold.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Sarasa UI SC";
+    font-style: normal;
+    font-weight: 600;
+    font-display: swap;
+    src: url("../assets/fonts/SarasaUiSC-SemiBold.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Sarasa UI SC";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../assets/fonts/SarasaUiSC-Bold.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Maple Mono NF CN";
+    font-style: normal;
+    font-weight: 400;
+    font-display: swap;
+    src: url("../assets/fonts/MapleMono-NF-CN-Regular.woff2") format("woff2");
+}
+@font-face {
+    font-family: "Maple Mono NF CN";
+    font-style: normal;
+    font-weight: 700;
+    font-display: swap;
+    src: url("../assets/fonts/MapleMono-NF-CN-Bold.woff2") format("woff2");
+}
+
 :root {
     --background: #fdfbfd;
     --foreground: oklch(0.21 0.01 260);
@@ -98,12 +142,12 @@
 
     /* typography */
     --font-sans:
-        ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-        "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB",
-        "Microsoft YaHei", sans-serif;
+        "Sarasa UI SC", ui-sans-serif, system-ui, -apple-system,
+        "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC",
+        "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
     --font-mono:
-        ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas,
-        "Liberation Mono", monospace;
+        "Maple Mono NF CN", ui-monospace, "SF Mono", SFMono-Regular,
+        Menlo, Consolas, "Liberation Mono", monospace;
     --text-sm: 0.875rem;
     --text-sm--line-height: 1.6;
 
