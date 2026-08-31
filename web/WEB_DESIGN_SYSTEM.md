@@ -151,6 +151,12 @@ typography:
       fontWeight: 400
       lineHeight: 1.50
       letterSpacing: 0
+    mono-sm:
+      fontFamily: Maple Mono NF CN
+      fontSize: 12px
+      fontWeight: 400
+      lineHeight: 1.40
+      letterSpacing: 0
 
 rounded:
   xs: 4px
@@ -362,40 +368,42 @@ The page rhythm is a **workbench, not a marketing narrative**: a 260px session s
 
 ### Font Family
 
-- **Linear Display** — Linear's custom display sans; fallback `SF Pro Display, -apple-system, system-ui, Segoe UI, Roboto`. Carries display-xl through subhead.
-- **Linear Text** — Linear's custom text sans (a slightly different cut tuned for body sizes); same fallback stack. Carries body sizes, button labels, captions.
-- **Linear Mono** — Linear's custom mono; fallback `ui-monospace, SF Mono, Menlo`. Used for code snippets in product screenshots and for status / ID tokens.
+- **Sarasa UI SC** — self-hosted sans (OFL). Latin glyphs derive from Iosevka; CJK glyphs are bundled, so Chinese UI text renders identically on every platform. Weights: 400 / 500 / 600. Fallback stack: `ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif`. Carries display-xl through eyebrow.
+- **Maple Mono NF CN** — self-hosted mono (OFL). CJK aligns 2:1 with Latin; the Nerd Font patch renders icons in pasted terminal output instead of tofu boxes. Weights: 400 / 700. Fallback stack: `ui-monospace, "SF Mono", Menlo, Consolas, monospace`. Carries mono and mono-sm.
 
-The marketing surface treats Display and Text as one continuous voice; the family change is silent.
+One sans family spans display to body; the family change is silent, hierarchy comes from weight and tracking.
 
 ### Hierarchy
 
-| Token                     | Size | Weight | Line Height | Letter Spacing | Use                                         |
-| ------------------------- | ---- | ------ | ----------- | -------------- | ------------------------------------------- |
-| `{typography.display-xl}` | 80px | 600    | 1.05        | -3.0px         | Largest hero headline                       |
-| `{typography.display-lg}` | 56px | 600    | 1.10        | -1.8px         | Section opener headlines                    |
-| `{typography.display-md}` | 40px | 600    | 1.15        | -1.0px         | Sub-section headlines                       |
-| `{typography.headline}`   | 28px | 600    | 1.20        | -0.6px         | Pricing tier titles, CTA banner heading     |
-| `{typography.card-title}` | 22px | 500    | 1.25        | -0.4px         | Feature card title                          |
-| `{typography.subhead}`    | 20px | 400    | 1.40        | -0.2px         | Lead body, intro paragraphs                 |
-| `{typography.body-lg}`    | 18px | 400    | 1.50        | -0.1px         | Hero subhead, lead paragraphs               |
-| `{typography.body}`       | 16px | 400    | 1.50        | -0.05px        | Default body                                |
-| `{typography.body-sm}`    | 14px | 400    | 1.50        | 0              | Card body, footer columns                   |
-| `{typography.caption}`    | 12px | 400    | 1.40        | 0              | Captions, meta, status                      |
-| `{typography.button}`     | 14px | 500    | 1.20        | 0              | All button labels                           |
-| `{typography.eyebrow}`    | 13px | 500    | 1.30        | 0.4px          | Section eyebrow (slight positive tracking)  |
-| `{typography.mono}`       | 13px | 400    | 1.50        | 0              | Linear Mono for code in product screenshots |
+| Token                     | Size | Weight | Line Height | Letter Spacing | Use                                        |
+| ------------------------- | ---- | ------ | ----------- | -------------- | ------------------------------------------ |
+| `{typography.display-xl}` | 80px | 600    | 1.05        | -3.0px         | Reserved: landing / marketing hero         |
+| `{typography.display-lg}` | 56px | 600    | 1.10        | -1.8px         | Reserved: landing section openers          |
+| `{typography.display-md}` | 40px | 600    | 1.15        | -1.0px         | Reserved: landing sub-sections             |
+| `{typography.headline}`   | 28px | 600    | 1.20        | -0.6px         | Page-level titles                          |
+| `{typography.card-title}` | 22px | 500    | 1.25        | -0.4px         | Card titles (auth card, settings panels)   |
+| `{typography.subhead}`    | 20px | 400    | 1.40        | -0.2px         | Lead paragraphs (empty state)              |
+| `{typography.body-lg}`    | 18px | 400    | 1.50        | -0.1px         | Emphasized body, section titles            |
+| `{typography.body}`       | 16px | 400    | 1.50        | -0.05px        | Default body                               |
+| `{typography.body-sm}`    | 14px | 400    | 1.50        | 0              | UI workhorse: lists, forms, chat body      |
+| `{typography.caption}`    | 12px | 400    | 1.40        | 0              | Captions, meta, group headers              |
+| `{typography.button}`     | 14px | 500    | 1.20        | 0              | All button and tab labels                  |
+| `{typography.eyebrow}`    | 13px | 500    | 1.30        | 0.4px          | Uppercase taxonomy labels                  |
+| `{typography.mono}`       | 13px | 400    | 1.50        | 0              | Code blocks                                |
+| `{typography.mono-sm}`    | 12px | 400    | 1.40        | 0              | Model IDs, inline code                     |
 
 ### Principles
 
-- **Aggressive negative tracking on display** (-3.0px at 80px ≈ 4% of size).
-- **Single voice from display to body.** Display-xl at 600 → body at 400 — same family, narrower weights.
+- **Negative tracking belongs to display sizes** — -3.0px at 80px tapering to 0 at body; nothing at body size or below gets negative tracking.
+- **Single voice from display to body.** Display-xl at 600 → body at 400 — one family (Sarasa), hierarchy via weight.
 - **Eyebrow uses positive tracking** (+0.4px) — contrast against the negative-tracked display marks the eyebrow as taxonomy.
-- **Mono only in code contexts.** Linear Mono lives inside product screenshots — not on marketing chrome.
+- **Mono marks machine text** — code blocks, inline code, model IDs. Never for prose.
 
-### Note on Font Substitutes
+### Self-hosting
 
-Linear's custom typeface isn't publicly distributed; the documented fallback `SF Pro Display, -apple-system, system-ui` is the recommended substitute on macOS. For cross-platform implementation, **Inter** at weight 500 / 600 / 700 is the closest free substitute. **Geist Sans** is also viable. For mono, **JetBrains Mono** or **Geist Mono** at weight 400 closely approximates Linear Mono.
+- Both families are downloaded from their GitHub releases (Sarasa-Gothic, maple-font), converted to woff2 when the release ships TTF, vendored under the project, and registered via `@font-face` in `theme.css`. OFL license files ship alongside.
+- No CDN, no font-service dependency; loading uses `font-display: swap` so system fonts render first.
+- Mono loads on demand — pages without code never fetch it.
 
 ## Layout
 
