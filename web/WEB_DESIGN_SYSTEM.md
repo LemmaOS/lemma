@@ -470,72 +470,85 @@ Code currently derives radii from a 10px base (card at 14px); aligning the code 
 
 ### Buttons
 
-**`button-primary`** — Lavender CTA. The default primary CTA across all pages.
-- Background `{colors.primary}`, text `{colors.on-primary}`, type `{typography.button}`, padding 8px 14px, rounded `{rounded.md}`.
-- Pressed state lives in `button-primary-pressed` (background shifts to `{colors.primary-focus}`).
-- Hover state lives in `button-primary-hover` (background shifts to `{colors.primary-hover}` lighter lavender).
+**`button-primary`** — Sky-blue CTA. Used sparingly: sign in, save changes, send-level actions.
+- Background `{colors.primary}`, text `{colors.primary-foreground}`, type `{typography.button}`, padding 8px 16px, rounded `{rounded.md}`.
+- Hover is an opacity modifier (`primary/90`); focus is the derived 3px `{colors.ring}`.
 
-**`button-secondary`** — Charcoal button. Used for secondary CTAs ("Sign in", "Read changelog").
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.button}`, padding 8px 14px, rounded `{rounded.md}`. 1px `{colors.hairline}` border.
+**`button-secondary`** — Quiet filled button for secondary actions.
+- Background `{colors.secondary}`, text `{colors.secondary-foreground}`; hover `secondary/80`.
 
-**`button-tertiary`** — Plain text button.
-- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.button}`, rounded `{rounded.md}`, padding 8px 14px.
+**`button-outline`** — Bordered button on the page canvas.
+- Background `{colors.background}`, 1px `{colors.border}` border; hover fills `{colors.accent}`.
 
-**`button-inverse`** — White-on-dark inverse CTA.
-- Background `{colors.inverse-canvas}`, text `{colors.inverse-ink}`, type `{typography.button}`, rounded `{rounded.md}`, padding 8px 14px.
+**`button-ghost`** — Borderless action for dense toolbars and icon buttons.
+- Transparent; hover fills `{colors.accent}`. Icon buttons (copy, regenerate, collapse) are the same recipe, square or round.
 
-### Pricing Tabs
+**`button-destructive`** — Danger actions (delete provider, delete storage).
+- Background `{colors.destructive}`, text `{colors.destructive-foreground}`; hover `destructive/90`.
 
-**`pricing-tab-default`** + **`pricing-tab-selected`** — Pill-toggle on `/pricing`.
-- Default: `{colors.canvas}` background, `{colors.ink-subtle}` text, rounded `{rounded.pill}`, padding 6px 14px.
-- Selected: `{colors.surface-2}` background, `{colors.ink}` text — selected = surface lift.
+### Forms
 
-### Cards & Containers
+**`text-input`** — Hairline field: transparent background, 1px `{colors.input}` border. Textareas share the recipe.
+- Type `{typography.body-sm}`, rounded `{rounded.md}`, padding 8px 12px; placeholder in `{colors.muted-foreground}`.
+- Focus keeps the surface; the 3px `{colors.ring}` ring carries the state — no separate focus color exists.
 
-**`pricing-card`** — Each tier on `/pricing`.
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.lg}`, padding 24px. 1px `{colors.hairline}` border.
+### Overlays
 
-**`pricing-card-featured`** — Recommended tier — surface lift to surface-2.
-- Background `{colors.surface-2}`, otherwise identical structure.
+**`popover`** — Floating panel shared by dropdown menus and selects.
+- Background `{colors.popover}`, 1px `{colors.border}`, rounded `{rounded.md}`, padding 4px.
+- The only component family allowed a drop shadow (shadow-md); everything else stays flat.
 
-**`feature-card`** — Generic feature highlight tile.
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.lg}`, padding 24px.
+**`tooltip`** — Inverse mini overlay.
+- Background `{colors.foreground}`, text `{colors.background}`, type `{typography.caption}`, padding 6px 12px.
 
-**`product-screenshot-card`** — The dominant card type — frames a high-fidelity Linear app UI screenshot.
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.xl}`, padding 24px.
+### Toggles
 
-**`testimonial-card`** — Customer quote with avatar + name + role.
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body-lg}`, rounded `{rounded.lg}`, padding 32px.
+**`switch`** — Round-thumb toggle.
+- Off: `{colors.input}`; on: `{colors.primary}`. Rounded `{rounded.full}`, 18px tall with a 16px thumb.
 
-**`customer-logo-tile`** — Small tile in the customer marquee.
-- Background `{colors.canvas}`, text `{colors.ink-subtle}`, type `{typography.caption}`, rounded `{rounded.xs}`, padding 16px.
+**`tabs`** — Segmented control (settings groups).
+- Track `{colors.muted}` with `{colors.muted-foreground}` labels; the selected segment lifts to `{colors.background}` with shadow-xs and `{colors.foreground}` text. Selected = lift, not color.
 
-**`cta-banner`** — Closing CTA panel near page bottom.
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.headline}`, rounded `{rounded.lg}`, padding 48px.
+### Sidebar
 
-### Inputs & Forms
+**`sidebar`** — The session rail, a dedicated surface zone.
+- Background `{colors.sidebar}`, text `{colors.sidebar-foreground}`, width 260px; group headers in `{typography.caption}` + `{colors.muted-foreground}`.
 
-**`text-input`** + **`text-input-focused`** — Form fields on `/contact/sales` and signup overlays.
-- Background `{colors.surface-1}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.md}`, padding 8px 12px.
-- Focused state retains the same surface; the focus ring is a 2px `{colors.primary-focus}` outline at 50% opacity.
+**`sidebar-session-row`** — One conversation in the list.
+- Transparent, rounded `{rounded.md}`, padding 6px 12px; hover tints `accent/60`; the active row fills `{colors.sidebar-accent}` and bumps to weight 500.
+- Inline actions (rename / archive) fade in on hover — the row stays text-pure at rest.
 
-### Status & Build Page
+### Messages
 
-**`changelog-row`** — Each row in `/build` (changelog page) listing version, date, and changes.
-- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body}`, rounded `{rounded.xs}`, padding 24px 0. 1px `{colors.hairline}` bottom rule.
+**`message-bubble-user`** — Right-aligned bubble, capped at 75% width.
+- Background `{colors.muted}`, type `{typography.body-sm}`, rounded `{rounded.xl}`, padding 10px 16px.
 
-**`status-badge`** — Small status pill.
-- Background `{colors.surface-2}`, text `{colors.ink-muted}`, type `{typography.caption}`, rounded `{rounded.pill}`, padding 2px 8px.
+**`message-assistant`** — Deliberately bubble-less: a 28px round inverse avatar (Sparkles) followed by plain-flowing markdown.
+- Long answers read as documents, not chat frames. Errors render in `{colors.destructive}`; source and stop notices in `{typography.caption}` + `{colors.muted-foreground}`; action buttons are ghost icons.
 
-### Navigation
+### Composer
 
-**`top-nav`** — Sticky dark bar with the Linear wordmark left, primary nav links centered, and a `button-secondary` ("Sign in") + `button-primary` ("Get started") pair right.
-- Background `{colors.canvas}`, text `{colors.ink}`, type `{typography.body-sm}`, height 56px.
+**`composer`** — The input panel, its own surface token.
+- Background `{colors.composer}`, 1px `{colors.input}` border, rounded `{rounded.xl}`, padding 12px; the textarea inside is transparent and borderless.
+- The send button is a 32px round **inverse** button (`{colors.foreground}` on `{colors.background}`), not primary — blue is reserved for system-level emphasis.
 
-### Footer
+**`model-switcher`** — Ghost trigger + popover overlay.
+- Model IDs render in `{typography.mono-sm}` — machine text in machine type.
 
-**`footer`** — Dense link grid on `{colors.canvas}` with the Linear wordmark left.
-- Background `{colors.canvas}`, text `{colors.ink-subtle}`, type `{typography.caption}`, padding 64px 32px.
+### Code
+
+**`code-block`** — Fenced code in chat.
+- Background `{colors.code}` overlaid at 60% opacity, 1px `{colors.code-border}`, type `{typography.mono}`, padding 16px. Inline code uses the same family at 2px 4px padding.
+
+### Feedback
+
+**`banner-warning`** — Inline warning banner (pending migration notice).
+- Background/border `{colors.warning}` (TBD — currently hard-coded amber-50/300/900), type `{typography.body-sm}`, rounded `{rounded.md}`, padding 8px 12px.
+
+### Auth
+
+**`auth-card`** — The centered login / signup card.
+- Background `{colors.card}`, 1px `{colors.border}`, rounded `{rounded.xl}`, padding 32px.
 
 ## Do's and Don'ts
 
