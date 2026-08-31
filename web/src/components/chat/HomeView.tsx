@@ -39,7 +39,7 @@ export function HomeView({ onSubmit, model, onModelChange }: HomeViewProps) {
     return (
         <div className="flex-1 grid place-items-center px-6">
             <div className="w-full max-w-2xl">
-                <p className="text-center text-2xl font-semibold tracking-tight mb-8">
+                <p className="text-center text-headline font-semibold mb-8">
                     {t("common.appName")}
                 </p>
                 <div className="rounded-xl border border-input bg-composer p-4">
