@@ -172,131 +172,133 @@ spacing:
   xxl: 48px
   section: 96px
 
+# 组件配方。引用约定：colors 不带 light/dark 前缀 = 主题自适应语义 token；
+# typography 引用省略 scale 前缀；hover/pressed 等状态折叠为注释，不建独立 token
 components:
+  # ---- 基元 ----
   button-primary:
     backgroundColor: "{colors.primary}"
-    textColor: "{colors.on-primary}"
+    textColor: "{colors.primary-foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.md}"
-    padding: 8px 14px
-  button-primary-pressed:
-    backgroundColor: "{colors.primary-focus}"
-    textColor: "{colors.on-primary}"
-    typography: "{typography.button}"
-    rounded: "{rounded.md}"
-  button-primary-hover:
-    backgroundColor: "{colors.primary-hover}"
-    textColor: "{colors.on-primary}"
-    typography: "{typography.button}"
-    rounded: "{rounded.md}"
+    padding: 8px 16px             # h-9；hover: primary/90；focus: 3px ring
   button-secondary:
-    backgroundColor: "{colors.surface-1}"
-    textColor: "{colors.ink}"
+    backgroundColor: "{colors.secondary}"
+    textColor: "{colors.secondary-foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.md}"
-    padding: 8px 14px
-  button-tertiary:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
+    padding: 8px 16px             # hover: secondary/80
+  button-outline:
+    backgroundColor: "{colors.background}"
+    textColor: "{colors.foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.md}"
-    padding: 8px 14px
-  button-inverse:
-    backgroundColor: "{colors.inverse-canvas}"
-    textColor: "{colors.inverse-ink}"
+    padding: 8px 16px
+    border: "{colors.border}"     # hover: bg accent
+  button-ghost:
+    backgroundColor: transparent
+    textColor: "{colors.foreground}"
     typography: "{typography.button}"
     rounded: "{rounded.md}"
-    padding: 8px 14px
-  pricing-card:
-    backgroundColor: "{colors.surface-1}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.lg}"
-    padding: 24px
-  pricing-card-featured:
-    backgroundColor: "{colors.surface-2}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.lg}"
-    padding: 24px
-  feature-card:
-    backgroundColor: "{colors.surface-1}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.lg}"
-    padding: 24px
-  product-screenshot-card:
-    backgroundColor: "{colors.surface-1}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.xl}"
-    padding: 24px
-  testimonial-card:
-    backgroundColor: "{colors.surface-1}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body-lg}"
-    rounded: "{rounded.lg}"
-    padding: 32px
-  customer-logo-tile:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink-subtle}"
-    typography: "{typography.caption}"
-    rounded: "{rounded.xs}"
-    padding: 16px
+    padding: 8px 16px             # hover: bg accent；图标按钮同配方
+  button-destructive:
+    backgroundColor: "{colors.destructive}"
+    textColor: "{colors.destructive-foreground}"
+    typography: "{typography.button}"
+    rounded: "{rounded.md}"
+    padding: 8px 16px             # hover: destructive/90
   text-input:
-    backgroundColor: "{colors.surface-1}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.md}"
-    padding: 8px 12px
-  text-input-focused:
-    backgroundColor: "{colors.surface-1}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.md}"
-    padding: 8px 12px
-  pricing-tab-default:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink-subtle}"
-    typography: "{typography.button}"
-    rounded: "{rounded.pill}"
-    padding: 6px 14px
-  pricing-tab-selected:
-    backgroundColor: "{colors.surface-2}"
-    textColor: "{colors.ink}"
-    typography: "{typography.button}"
-    rounded: "{rounded.pill}"
-    padding: 6px 14px
-  cta-banner:
-    backgroundColor: "{colors.surface-1}"
-    textColor: "{colors.ink}"
-    typography: "{typography.headline}"
-    rounded: "{rounded.lg}"
-    padding: 48px
-  changelog-row:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
-    typography: "{typography.body}"
-    rounded: "{rounded.xs}"
-    padding: 24px 0
-  status-badge:
-    backgroundColor: "{colors.surface-2}"
-    textColor: "{colors.ink-muted}"
-    typography: "{typography.caption}"
-    rounded: "{rounded.pill}"
-    padding: 2px 8px
-  top-nav:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink}"
+    backgroundColor: transparent  # hairline 风格：透明底 + 细边框（textarea 同）
+    textColor: "{colors.foreground}"
     typography: "{typography.body-sm}"
-    rounded: "{rounded.xs}"
-    height: 56px
-  footer:
-    backgroundColor: "{colors.canvas}"
-    textColor: "{colors.ink-subtle}"
+    rounded: "{rounded.md}"
+    padding: 8px 12px
+    border: "{colors.input}"      # placeholder: muted-foreground；focus: ring
+  card:
+    backgroundColor: "{colors.card}"
+    textColor: "{colors.card-foreground}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.xl}"       # 现 14px，rounded 对齐模板后为 16px
+    padding: 24px
+    border: "{colors.border}"
+  popover:
+    backgroundColor: "{colors.popover}"   # dropdown-menu / select 浮层共用
+    textColor: "{colors.popover-foreground}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.md}"
+    padding: 4px
+    border: "{colors.border}"     # 仅浮层允许 shadow-md，其余组件扁平
+  tooltip:
+    backgroundColor: "{colors.foreground}"  # 反色小浮层
+    textColor: "{colors.background}"
     typography: "{typography.caption}"
-    rounded: "{rounded.xs}"
-    padding: 64px 32px
+    rounded: "{rounded.md}"
+    padding: 6px 12px
+  switch:
+    backgroundColor: "{colors.input}"     # 关闭态；开启态: primary
+    rounded: "{rounded.full}"
+    height: 18px                          # 圆形滑块 16px
+  tabs:
+    backgroundColor: "{colors.muted}"     # 轨道；选中项: background + shadow-xs
+    textColor: "{colors.muted-foreground}"
+    typography: "{typography.button}"
+    rounded: "{rounded.lg}"
+    padding: 4px                          # 选中项文字: foreground
+  # ---- 产品组件 ----
+  sidebar:
+    backgroundColor: "{colors.sidebar}"
+    textColor: "{colors.sidebar-foreground}"
+    typography: "{typography.body-sm}"
+    width: 260px                          # 组标题: caption + muted-foreground
+  sidebar-session-row:
+    backgroundColor: transparent  # hover: accent/60；active: sidebar-accent + 500 字重
+    textColor: "{colors.sidebar-foreground}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.md}"
+    padding: 6px 12px             # 悬停浮现行内操作钮（重命名/归档）
+  message-bubble-user:
+    backgroundColor: "{colors.muted}"
+    textColor: "{colors.foreground}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.xl}"       # 右对齐，max-width 75%
+    padding: 10px 16px
+  message-assistant:
+    backgroundColor: transparent  # 无气泡：28px 圆形反色头像 + 正文直排
+    textColor: "{colors.foreground}"
+    typography: "{typography.body-sm}"    # 错误: destructive；来源/停止提示: caption + muted-foreground
+  composer:
+    backgroundColor: "{colors.composer}"
+    textColor: "{colors.foreground}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.xl}"       # 16px
+    padding: 12px
+    border: "{colors.input}"      # 发送钮 32px 圆形反色（bg-foreground）；输入区透明无边框
+  model-switcher:
+    backgroundColor: transparent  # ghost 触发器 + popover 浮层
+    textColor: "{colors.muted-foreground}"
+    typography: "{typography.mono-sm}"    # 模型 ID 用等宽
+    rounded: "{rounded.md}"
+  code-block:
+    backgroundColor: "{colors.code}"      # 现状 60% 透明度叠加
+    textColor: "{colors.code-foreground}"
+    typography: "{typography.mono}"
+    rounded: "{rounded.md}"
+    padding: 16px                 # 行内 code 同色系，padding 2px 4px
+    border: "{colors.code-border}"
+  banner-warning:
+    backgroundColor: "{colors.warning}"   # TBD：迁移挂起横幅现硬编码 amber-50/300/900，收编时定双套
+    textColor: "{colors.foreground}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.md}"
+    padding: 8px 12px
+    border: "{colors.warning}"
+  auth-card:
+    backgroundColor: "{colors.card}"      # 登录/注册页居中卡片
+    textColor: "{colors.card-foreground}"
+    typography: "{typography.body-sm}"
+    rounded: "{rounded.xl}"
+    padding: 32px
+    border: "{colors.border}"
 ---
 
 ## Overview
