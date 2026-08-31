@@ -36,7 +36,7 @@ jobs:
     name: Web dist
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Setup buf
         uses: bufbuild/buf-action@v1
@@ -69,7 +69,7 @@ jobs:
     name: Format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: web-dist
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Download web/dist
         uses: actions/download-artifact@v4
@@ -129,7 +129,7 @@ jobs:
       DATABASE_URL: postgres://lemma:lemma@127.0.0.1:5432/lemma-db
     needs: web-dist
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Download web/dist
         uses: actions/download-artifact@v4
