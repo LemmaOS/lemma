@@ -32,7 +32,7 @@ export function EmptyState({ onPickSuggestion }: EmptyStateProps) {
                         key={key}
                         type="button"
                         onClick={() => onPickSuggestion(t(key))}
-                        className="rounded-lg border p-3 text-sm text-left hover:bg-accent cursor-pointer transition-colors"
+                        className="rounded-md border p-3 text-sm text-left hover:bg-accent cursor-pointer transition-colors"
                     >
                         {t(key)}
                     </button>
