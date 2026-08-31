@@ -38,7 +38,8 @@ export default {
         storageSecretKeyRequired: "请填写 Secret Access Key。",
         storageNotConfigured: "尚未配置归档存储。",
         migrationNotPending: "当前没有待迁移的归档。",
-        storageHasArchives: "无法删除：仍有归档会话引用此存储，请先恢复或删除。",
+        storageHasArchives:
+            "无法删除：仍有归档会话引用此存储，请先恢复或删除。",
         bucketNotFound: "存储桶 {{bucket}} 不存在，请先在后端创建。",
     },
     auth: {

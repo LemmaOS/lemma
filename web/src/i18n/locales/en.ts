@@ -41,7 +41,8 @@ export default {
         migrationNotPending: "There is no pending migration.",
         storageHasArchives:
             "Cannot delete: archived conversations still reference this storage. Restore or delete them first.",
-        bucketNotFound: "Bucket {{bucket}} does not exist. Create it on the backend first.",
+        bucketNotFound:
+            "Bucket {{bucket}} does not exist. Create it on the backend first.",
     },
     auth: {
         productName: "Self-hosted AI Chat",

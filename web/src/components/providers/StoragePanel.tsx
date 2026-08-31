@@ -237,7 +237,9 @@ export function StoragePanel() {
             label: t("storage.accessKey"),
             value: accessKey,
             onChange: setAccessKey,
-            placeholder: configured ? t("storage.secretPlaceholder") : undefined,
+            placeholder: configured
+                ? t("storage.secretPlaceholder")
+                : undefined,
             secret: true,
         },
         {
@@ -245,7 +247,9 @@ export function StoragePanel() {
             label: t("storage.secretKey"),
             value: secretKey,
             onChange: setSecretKey,
-            placeholder: configured ? t("storage.secretPlaceholder") : undefined,
+            placeholder: configured
+                ? t("storage.secretPlaceholder")
+                : undefined,
             secret: true,
         },
     ];
@@ -336,12 +340,8 @@ export function StoragePanel() {
                 </p>
             )}
 
-            {error && (
-                <p className="mt-4 text-xs text-destructive">{error}</p>
-            )}
-            {testMsg && (
-                <p className="mt-2 text-xs text-success">{testMsg}</p>
-            )}
+            {error && <p className="mt-4 text-xs text-destructive">{error}</p>}
+            {testMsg && <p className="mt-2 text-xs text-success">{testMsg}</p>}
         </div>
     );
 }

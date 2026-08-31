@@ -22,7 +22,9 @@ export function EmptyState({ onPickSuggestion }: EmptyStateProps) {
                 className="size-8 text-muted-foreground/50"
                 strokeWidth={1.5}
             />
-            <h1 className="text-card-title font-medium">{t("chat.emptyTitle")}</h1>
+            <h1 className="text-card-title font-medium">
+                {t("chat.emptyTitle")}
+            </h1>
             <p className="text-sm text-muted-foreground">
                 {t("chat.emptySubtitle")}
             </p>

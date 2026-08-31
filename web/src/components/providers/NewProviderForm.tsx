@@ -156,9 +156,7 @@ export function NewProviderForm({ onSave, onCancel }: NewProviderFormProps) {
                         </button>
                     </div>
                 </div>
-                {failed && (
-                    <p className="text-xs text-destructive">{failed}</p>
-                )}
+                {failed && <p className="text-xs text-destructive">{failed}</p>}
                 <div className="flex items-center gap-2 pt-2">
                     <Button
                         type="button"
