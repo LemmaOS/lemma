@@ -263,7 +263,7 @@ export function StoragePanel() {
             </p>
 
             {pending && !migrating && (
-                <div className="mt-4 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+                <div className="mt-4 rounded-md border border-warning-border bg-warning-soft px-3 py-2 text-sm text-warning">
                     <span>{t("storage.pendingBanner")}</span>
                     <Button
                         variant="outline"
@@ -331,7 +331,7 @@ export function StoragePanel() {
                 </div>
             )}
             {migrateDone && (
-                <p className="mt-2 text-sm text-foreground">
+                <p className="mt-2 text-sm text-success">
                     {t("storage.migrated")}
                 </p>
             )}
@@ -340,7 +340,7 @@ export function StoragePanel() {
                 <p className="mt-4 text-xs text-destructive">{error}</p>
             )}
             {testMsg && (
-                <p className="mt-2 text-xs text-muted-foreground">{testMsg}</p>
+                <p className="mt-2 text-xs text-success">{testMsg}</p>
             )}
         </div>
     );

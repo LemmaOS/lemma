@@ -66,6 +66,10 @@
     --accent-foreground: oklch(0.28 0.02 262);
     --destructive: oklch(0.55 0.18 25);
     --destructive-foreground: oklch(0.98 0 0);
+    --warning: #b45309;
+    --warning-soft: #fffbeb;
+    --warning-border: #fcd34d;
+    --success: #27a644;
     --border: oklch(0.91 0.005 260);
     --input: oklch(0.91 0.005 260);
     /* ring 从主色派生：换主色焦点圈自动跟随 */
@@ -96,6 +100,10 @@
     --accent-foreground: oklch(0.92 0.01 262);
     --destructive: oklch(0.62 0.17 25);
     --destructive-foreground: oklch(0.97 0 0);
+    --warning: #fbbf24;
+    --warning-soft: #451a03;
+    --warning-border: #92400e;
+    --success: #3fb950;
     --border: oklch(0.31 0.009 260);
     --input: oklch(0.34 0.01 260);
     --sidebar: #000000;
@@ -127,6 +135,10 @@
     --color-accent-foreground: var(--accent-foreground);
     --color-destructive: var(--destructive);
     --color-destructive-foreground: var(--destructive-foreground);
+    --color-warning: var(--warning);
+    --color-warning-soft: var(--warning-soft);
+    --color-warning-border: var(--warning-border);
+    --color-success: var(--success);
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);

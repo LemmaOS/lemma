@@ -9,8 +9,10 @@ colors:
   primary: "#60b1ff"
   primary-foreground: "#0b1220"
   ring: "#60b1ff66"            # derived: color-mix(in srgb, primary 40%, transparent)
-  warning: "#f59e0b"           # provisional — amber banner adoption pending
-  success: "#27a644"           # provisional
+  warning: "#b45309"           # strong: banner text / icon
+  warning-soft: "#fffbeb"      # banner background
+  warning-border: "#fcd34d"
+  success: "#27a644"
   background: "#fdfbfd"
   foreground: "oklch(0.21 0.01 260)"
   card: "oklch(1 0 0)"
@@ -63,8 +65,10 @@ colors:
   dark-code-foreground: "oklch(0.87 0.01 260)"
   dark-code-border: "oklch(0.31 0.009 260)"
   dark-composer: "#252528"
-  dark-warning: "#d97706"      # provisional
-  dark-success: "#3fb950"      # provisional
+  dark-warning: "#fbbf24"
+  dark-warning-soft: "#451a03"
+  dark-warning-border: "#92400e"
+  dark-success: "#3fb950"
 
 # Font metadata (weights, fallbacks, self-hosting) lives in the Typography chapter
 typography:
@@ -288,12 +292,12 @@ components:
     padding: 16px                 # inline code same family, padding 2px 4px
     border: "{colors.code-border}"
   banner-warning:
-    backgroundColor: "{colors.warning}"   # TBD: pending-migration banner currently hard-coded amber-50/300/900
-    textColor: "{colors.foreground}"
+    backgroundColor: "{colors.warning-soft}"
+    textColor: "{colors.warning}"
     typography: "{typography.body-sm}"
     rounded: "{rounded.md}"
     padding: 8px 12px
-    border: "{colors.warning}"
+    border: "{colors.warning-border}"
   auth-card:
     backgroundColor: "{colors.card}"      # centered card on the login/signup page
     textColor: "{colors.card-foreground}"
@@ -355,8 +359,8 @@ The page rhythm is a **workbench, not a marketing narrative**: a 260px session s
 
 ### Semantic
 - **Destructive** (`{colors.destructive}`): Delete and dangerous actions; one lightness step per theme.
-- **Warning** (TBD): The pending-migration banner is currently hard-coded amber-50/300/900; per-theme values land when it is adopted.
-- **Success** (TBD): Positive feedback such as a successful storage connection test.
+- **Warning** (`{colors.warning}` / `{colors.warning-soft}` / `{colors.warning-border}`): Banner trio — strong text, soft background, border. Adopted from the amber palette the migration banner shipped with.
+- **Success** (`{colors.success}`): Positive feedback — storage test "Connected", migration finished.
 - Overlay scrim: no dialog component yet; start at `black/60` when introduced, no standalone token.
 
 ## Typography
