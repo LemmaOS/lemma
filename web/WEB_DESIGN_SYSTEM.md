@@ -427,21 +427,21 @@ Density serves long reading and typing sessions. Separation comes from **surface
 
 ## Elevation & Depth
 
-| Level              | Treatment                                                          | Use                                      |
-| ------------------ | ------------------------------------------------------------------ | ---------------------------------------- |
-| 0 (flat)           | No shadow, no border                                               | Default for body type, hero text, footer |
-| 1 (charcoal lift)  | `{colors.surface-1}` background on canvas, 1px `{colors.hairline}` | Default cards, product panels            |
-| 2 (surface-2 lift) | `{colors.surface-2}` background, 1px `{colors.hairline-strong}`    | Featured pricing card, hovered cards     |
-| 3 (surface-3 lift) | `{colors.surface-3}` background                                    | Sub-nav, dropdown menus                  |
-| 4 (focus ring)     | 2px `{colors.primary-focus}` outline at 50% opacity                | Focused input, focused button            |
+| Level          | Treatment                                                        | Use                                       |
+| -------------- | ---------------------------------------------------------------- | ----------------------------------------- |
+| 0 (flat)       | No shadow, no border                                             | Body text, assistant messages, sidebar rows |
+| 1 (panel)      | `{colors.card}` background, 1px `{colors.border}`                | Cards, settings panels, auth card         |
+| 2 (fill shift) | `{colors.accent}` / `{colors.muted}` fill                        | Hovered rows, ghost buttons, selected tabs |
+| 3 (overlay)    | `{colors.popover}` background, 1px `{colors.border}`, shadow-md  | Dropdown menus, selects, tooltips         |
+| 4 (focus ring) | 3px `{colors.ring}`, derived from primary                        | Focused input, focused button             |
 
-Linear's depth is carried by surface ladder + hairline borders. The brand resists drop shadows on dark almost entirely.
+Depth is carried by surface roles + hairline borders. Components stay flat; drop shadows are granted to overlays only. The focus ring is the highest attention layer.
 
 ### Decorative Depth
 
-- **Product UI screenshots** dominate as decorative depth.
-- **No atmospheric gradients, no spotlight cards.**
-- **Subtle white edge highlight** on the top edge of lifted panels — gives the dark surface a faint "pixel rendered" feel.
+- **The dark canvas gradient** (`{colors.canvas-from}` → `{colors.canvas-to}`) is the single atmospheric element — anchored to the viewport, calm, non-interactive.
+- **Streaming cursor** — the pulsing caret on in-flight assistant messages is the only motion used as depth.
+- No product screenshots, no edge highlights, no spotlight cards.
 
 ## Shapes
 
