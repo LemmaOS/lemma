@@ -37,6 +37,8 @@ jobs:
 
       - name: Setup buf
         uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
