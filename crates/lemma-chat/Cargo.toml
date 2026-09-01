@@ -1,32 +1,32 @@
 [package]
-name = "lemma-chat"
 version.workspace = true
 edition.workspace = true
+name = "lemma-chat"
 
 [dependencies]
-lemma-db.workspace = true
-lemma-proto.workspace = true
-lemma-auth.workspace = true
-lemma-providers.workspace = true
-lemma-conversations.workspace = true
-lemma-crypto.workspace = true
-sqlx.workspace = true
-uuid.workspace = true
-chrono.workspace = true
-connectrpc.workspace = true
 buffa.workspace = true
 buffa-types.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-tokio.workspace = true
-tokio-stream.workspace = true
-reqwest.workspace = true
+chrono.workspace = true
+connectrpc.workspace = true
 dashmap.workspace = true
 futures.workspace = true
+lemma-auth.workspace = true
+lemma-conversations.workspace = true
+lemma-crypto.workspace = true
+lemma-db.workspace = true
+lemma-proto.workspace = true
+lemma-providers.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
-http.workspace = true
 axum.workspace = true
+http.workspace = true
 
 [lints]
 workspace = true

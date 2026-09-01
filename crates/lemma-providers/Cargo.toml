@@ -1,29 +1,28 @@
 [package]
-name = "lemma-providers"
 version.workspace = true
 edition.workspace = true
+name = "lemma-providers"
 
 [dependencies]
-lemma-proto.workspace = true
-lemma-auth.workspace = true
-lemma-crypto.workspace = true
-serde.workspace = true
-reqwest.workspace = true
-lemma-db.workspace = true
-sqlx.workspace = true
-uuid.workspace = true
-chrono.workspace = true
-connectrpc.workspace = true
 buffa.workspace = true
 buffa-types.workspace = true
+chrono.workspace = true
+connectrpc.workspace = true
+lemma-auth.workspace = true
+lemma-crypto.workspace = true
+lemma-db.workspace = true
+lemma-proto.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+sqlx.workspace = true
+uuid.workspace = true
 
 [lints]
 workspace = true
 
 [dev-dependencies]
-lemma-auth.workspace = true
-
-tokio.workspace = true
 axum.workspace = true
 http.workspace = true
+lemma-auth.workspace = true
 serde_json.workspace = true
+tokio.workspace = true

@@ -1,5 +1,4 @@
 [workspace]
-resolver = "2"
 members = [
     "crates/lemma-server",
     "crates/lemma-db",
@@ -12,30 +11,50 @@ members = [
     "crates/lemma-archive",
     "crates/lemma-crypto",
 ]
+resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
 edition = "2024"
+version = "0.1.0"
 
 [workspace.dependencies]
-# 本地依赖
-lemma-db = { path = "crates/lemma-db" }
-lemma-proto = { path = "crates/lemma-proto" }
-lemma-auth = { path = "crates/lemma-auth" }
-lemma-providers = { path = "crates/lemma-providers" }
-lemma-conversations = { path = "crates/lemma-conversations" }
-lemma-chat = { path = "crates/lemma-chat" }
-lemma-sync = { path = "crates/lemma-sync" }
-lemma-archive = { path = "crates/lemma-archive" }
-lemma-crypto = { path = "crates/lemma-crypto" }
-# 远程依赖
+aes-gcm = "0.11.1"
+argon2 = "0.6.0"
+aws-credential-types = "1.3.0"
+aws-sdk-s3 = { version = "1.144.0", default-features = false, features = [
+    "sigv4a",
+    "http-1x",
+    "default-https-client",
+    "rt-tokio",
+] }
 axum = "0.8.9"
+base64 = "0.23.1"
 buffa = { version = "0.9.1", features = ["json"] }
 buffa-types = { version = "0.9.1", features = ["json", "chrono"] }
+chrono = { version = "0.4.45", features = ["serde"] }
 connectrpc = { version = "0.9.0", features = ["server", "axum"] }
 connectrpc-build = "0.9.0"
+dashmap = "6.2.1"
+dotenvy = "0.15.7"
+futures = "0.3.34"
+hex = "0.4.3"
+http = "1.5.0"
+jsonwebtoken = { version = "11.0.0", features = ["rust_crypto"] }
+lemma-archive = { path = "crates/lemma-archive" }
+lemma-auth = { path = "crates/lemma-auth" }
+lemma-chat = { path = "crates/lemma-chat" }
+lemma-conversations = { path = "crates/lemma-conversations" }
+lemma-crypto = { path = "crates/lemma-crypto" }
+lemma-db = { path = "crates/lemma-db" }
+lemma-proto = { path = "crates/lemma-proto" }
+lemma-providers = { path = "crates/lemma-providers" }
+lemma-sync = { path = "crates/lemma-sync" }
+rand = "0.10.2"
+reqwest = { version = "0.13.4", features = ["json", "stream"] }
+rust-embed = { version = "8.12.0", features = ["mime-guess"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
+sha2 = "0.11.0"
 sqlx = { version = "0.9.0", features = [
     "postgres",
     "runtime-tokio",
@@ -47,28 +66,12 @@ sqlx = { version = "0.9.0", features = [
     "json",
 ] }
 tokio = { version = "1.53.1", features = ["full"] }
-uuid = { version = "1.25.0", features = ["v4"] }
-chrono = { version = "0.4.45", features = ["serde"] }
-argon2 = "0.6.0"
-dotenvy = "0.15.7"
-hex = "0.4.3"
-jsonwebtoken = { version = "11.0.0", features = ["rust_crypto"] }
-rand = "0.10.2"
-sha2 = "0.11.0"
-aes-gcm = "0.11.1"
-base64 = "0.23.1"
-reqwest = { version = "0.13.4", features = ["json", "stream"] }
-rust-embed = { version = "8.12.0", features = ["mime-guess"] }
-http = "1.5.0"
-dashmap = "6.2.1"
 tokio-stream = { version = "0.1.19", features = ["sync"] }
-futures = "0.3.34"
-aws-sdk-s3 = { version = "1.144.0", default-features = false, features = ["sigv4a", "http-1x", "default-https-client", "rt-tokio"] }
-aws-credential-types = "1.3.0"
+uuid = { version = "1.25.0", features = ["v4"] }
 
 [workspace.lints.clippy]
-unwrap_used = "deny"
 expect_used = "warn"
+unwrap_used = "deny"
 
 [workspace.lints.rust]
 linker_messages = "allow"

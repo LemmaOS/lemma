@@ -1,29 +1,29 @@
 [package]
-name = "lemma-archive"
 version.workspace = true
 edition.workspace = true
+name = "lemma-archive"
 
 [dependencies]
-lemma-db.workspace = true
-lemma-crypto.workspace = true
-aws-sdk-s3.workspace = true
 aws-credential-types.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-uuid.workspace = true
-chrono.workspace = true
-tokio.workspace = true
-sqlx.workspace = true
-lemma-proto.workspace = true
-lemma-auth.workspace = true
-connectrpc.workspace = true
+aws-sdk-s3.workspace = true
 buffa.workspace = true
 buffa-types.workspace = true
+chrono.workspace = true
+connectrpc.workspace = true
+lemma-auth.workspace = true
+lemma-crypto.workspace = true
+lemma-db.workspace = true
+lemma-proto.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
 tokio-stream.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
-lemma-auth.workspace = true
 http.workspace = true
+lemma-auth.workspace = true
 
 [lints]
 workspace = true

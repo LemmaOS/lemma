@@ -1,19 +1,19 @@
 [package]
-name = "lemma-conversations"
 version.workspace = true
 edition.workspace = true
+name = "lemma-conversations"
 
 [dependencies]
-lemma-db.workspace = true
-lemma-proto.workspace = true
-lemma-auth.workspace = true
-lemma-archive.workspace = true
-sqlx.workspace = true
-uuid.workspace = true
-chrono.workspace = true
-connectrpc.workspace = true
 buffa.workspace = true
 buffa-types.workspace = true
+chrono.workspace = true
+connectrpc.workspace = true
+lemma-archive.workspace = true
+lemma-auth.workspace = true
+lemma-db.workspace = true
+lemma-proto.workspace = true
+sqlx.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
 buffa.workspace = true
