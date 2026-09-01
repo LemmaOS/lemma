@@ -1,3 +1,5 @@
+//! Handler for the SyncService RPCs.
+
 use std::time::{Duration, Instant};
 
 use buffa::MessageField;
@@ -20,6 +22,7 @@ const PAGE_LIMIT: i64 = 500;
 const POLL_INTERVAL: Duration = Duration::from_secs(3);
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(15);
 
+/// Connect handler implementing the SyncService RPCs.
 pub struct SyncService {
     pool: PgPool,
     jwt_secret: String,
@@ -60,6 +63,10 @@ impl lemma_proto::lemma::v1::SyncService for SyncService {
         }
 
         let (next_after, has_more) = if conv_trunc || msg_trunc {
+            // One page covers both lists. When either side overflows,
+            // cut both at the smaller last sync_seq so the next pull
+            // resumes at a consistent boundary for conversations and
+            // messages alike.
             let boundary = match (conv_trunc, msg_trunc) {
                 (true, true) => match (convs.last(), msgs.last()) {
                     (Some(c), Some(m)) => c.sync_seq.min(m.sync_seq),
@@ -129,6 +136,9 @@ impl lemma_proto::lemma::v1::SyncService for SyncService {
     ) -> ServiceResult<ServiceStream<WatchResponse>> {
         require_user(&self.jwt_secret, &ctx)?;
         let pool = self.pool.clone();
+        // Polls the global sequence head: any user's write can produce a
+        // hint, so a hint only means "pull to find out". Heartbeats keep
+        // proxies from killing the idle stream.
         let s = stream::unfold(
             (pool, 0i64, Instant::now()),
             |(pool, last_head, mut last_beat)| async move {

@@ -1,6 +1,10 @@
+//! Queries backing sync pull: everything with a `sync_seq` greater than
+//! the client's cursor, in sequence order.
+
 use lemma_db::entity::{Conversation, Message};
 use uuid::Uuid;
 
+/// Pulls a user's conversations changed after the given sync cursor.
 pub async fn pull_conversations<'e, E>(
     executor: E,
     user_id: Uuid,
@@ -20,6 +24,8 @@ where
     .await
 }
 
+/// Pulls the user's messages changed after the given sync cursor. The
+/// join on conversations scopes messages to the user's own.
 pub async fn pull_messages<'e, E>(
     executor: E,
     user_id: Uuid,
@@ -45,6 +51,9 @@ where
     .await
 }
 
+/// Reads the current head of the global sync sequence. This spans all
+/// users, so watch hints may fire on other users' writes; the per-user
+/// filtering happens at pull time.
 pub async fn head_sync_seq<'e, E>(executor: E) -> sqlx::Result<i64>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
