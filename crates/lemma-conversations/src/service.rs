@@ -1,3 +1,5 @@
+//! Handler for the ConversationService RPCs.
+
 use buffa::MessageField;
 use buffa_types::google::protobuf::Timestamp;
 use chrono::Utc;
@@ -23,6 +25,11 @@ use crate::store;
 const DEFAULT_PAGE_LIMIT: i32 = 50;
 const MAX_PAGE_LIMIT: i32 = 100;
 
+/// Connect handler implementing the ConversationService RPCs.
+///
+/// The archive backend is per-user: when the user has no S3 storage
+/// configured, archiving degrades to a database-only status flip and the
+/// messages stay in place.
 pub struct ConversationService<S: ArchiveSource> {
     pool: PgPool,
     jwt_secret: String,
@@ -71,6 +78,8 @@ fn message_to_proto(m: &DbMessage) -> Message {
             "streaming" => MessageStatus::Streaming,
             "aborted" => MessageStatus::Aborted,
             "error" => MessageStatus::Error,
+            // Stored values predate the enum; anything unrecognized is a
+            // completed message.
             _ => MessageStatus::Done,
         }
         .into(),
@@ -194,6 +203,8 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
         }
 
         let conversation = if let Some(archive) = store {
+            // Upload before mutating the database: if the put fails, the
+            // transaction rolls back and nothing changes.
             let messages = store::list_all_messages(&mut tx, id)
                 .await
                 .map_err(map_db)?;
@@ -257,6 +268,8 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
         tx.commit().await.map_err(map_db)?;
 
         if let (Some(archive), Some(key)) = (store.as_ref(), key.as_deref()) {
+            // Post-commit cleanup: a failed delete leaves an orphan
+            // object, not an inconsistency, so it is best-effort.
             let _ = archive.delete(key).await;
         }
 
@@ -302,6 +315,7 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
             return Err(app_error(ErrorReason::ArchivedConversationNotFound));
         }
         if let (Some(archive), Some(key)) = (store.as_ref(), key.flatten().as_deref()) {
+            // Best-effort cleanup; the row is already gone.
             let _ = archive.delete(key).await;
         }
         Response::ok(DeleteArchivedResponse::default())

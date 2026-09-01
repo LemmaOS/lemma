@@ -1,6 +1,9 @@
+//! Queries for the conversations and messages tables.
+
 use lemma_db::entity::{Conversation, Message};
 use uuid::Uuid;
 
+/// Creates an empty conversation and returns it.
 pub async fn insert<'e, E>(executor: E, user_id: Uuid) -> sqlx::Result<Conversation>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -11,6 +14,7 @@ where
         .await
 }
 
+/// Lists a user's active conversations, most recently updated first.
 pub async fn list_active_by_user<'e, E>(
     executor: E,
     user_id: Uuid,
@@ -26,6 +30,7 @@ where
     .await
 }
 
+/// Lists a user's archived conversations, most recently archived first.
 pub async fn list_archived_by_user<'e, E>(
     executor: E,
     user_id: Uuid,
@@ -41,6 +46,7 @@ where
     .await
 }
 
+/// Finds a conversation owned by the given user, any status.
 pub async fn find_by_id_and_user<'e, E>(
     executor: E,
     id: Uuid,
@@ -56,6 +62,7 @@ where
         .await
 }
 
+/// Renames a conversation owned by the given user.
 pub async fn rename<'e, E>(
     executor: E,
     id: Uuid,
@@ -80,6 +87,9 @@ where
     .await
 }
 
+/// Archives an active conversation without touching its messages,
+/// snapshotting the message count. Returns `None` unless the conversation
+/// is currently active.
 pub async fn archive<'e, E>(
     executor: E,
     id: Uuid,
@@ -106,6 +116,9 @@ where
     .await
 }
 
+/// Restores an archived conversation to active, clearing the archive
+/// metadata. Returns `None` unless the conversation is currently
+/// archived.
 pub async fn restore<'e, E>(
     executor: E,
     id: Uuid,
@@ -129,6 +142,8 @@ where
     .await
 }
 
+/// Deletes an archived conversation. Active conversations are not
+/// deletable through this path.
 pub async fn delete_archived<'e, E>(executor: E, id: Uuid, user_id: Uuid) -> sqlx::Result<bool>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -141,6 +156,9 @@ where
         .map(|r| r.rows_affected() > 0)
 }
 
+/// Keyset-paginates a conversation's messages newest-first. `before_id`
+/// selects messages older than that message; one extra row is fetched to
+/// compute `has_more`.
 pub async fn list_messages<'e, E>(
     executor: E,
     conversation_id: Uuid,
@@ -151,6 +169,8 @@ where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
 {
     let rows: Vec<Message> = if let Some(before) = before_id {
+        // The self-join resolves before_id to its seq in the same
+        // conversation, so the cursor cannot page across conversations.
         sqlx::query_as::<_, Message>(
             r#"
             SELECT m.* FROM messages m
@@ -184,6 +204,7 @@ where
     Ok((messages, has_more))
 }
 
+/// Locks an active conversation row for update inside a transaction.
 pub async fn lock_active(
     conn: &mut sqlx::PgConnection,
     id: Uuid,
@@ -198,6 +219,7 @@ pub async fn lock_active(
     .await
 }
 
+/// Locks an archived conversation row for update inside a transaction.
 pub async fn lock_archived(
     conn: &mut sqlx::PgConnection,
     id: Uuid,
@@ -212,6 +234,7 @@ pub async fn lock_archived(
     .await
 }
 
+/// Lists all of a conversation's messages in seq order, for archiving.
 pub async fn list_all_messages(
     conn: &mut sqlx::PgConnection,
     conversation_id: Uuid,
@@ -222,6 +245,8 @@ pub async fn list_all_messages(
         .await
 }
 
+/// Marks a locked conversation archived with its S3 object key,
+/// snapshotting the message count.
 pub async fn mark_archived_with_key(
     conn: &mut sqlx::PgConnection,
     id: Uuid,
@@ -243,6 +268,8 @@ pub async fn mark_archived_with_key(
     .await
 }
 
+/// Deletes all of a conversation's messages, after they are safely in
+/// the archive.
 pub async fn delete_all_messages(
     conn: &mut sqlx::PgConnection,
     conversation_id: Uuid,
@@ -254,6 +281,9 @@ pub async fn delete_all_messages(
         .map(|r| r.rows_affected())
 }
 
+/// Reinserts messages recovered from an archive, preserving their ids and
+/// seq. `sync_seq` is intentionally not bound: the INSERT default draws a
+/// fresh sequence value.
 pub async fn insert_restored(
     conn: &mut sqlx::PgConnection,
     messages: &[Message],
@@ -284,6 +314,9 @@ pub async fn insert_restored(
     Ok(())
 }
 
+/// Returns the archive key of an archived conversation. The outer `None`
+/// means the conversation is missing or not archived; the inner `None`
+/// means it was archived in place without an S3 object.
 pub async fn find_archive_key<'e, E>(
     executor: E,
     id: Uuid,
