@@ -1,3 +1,5 @@
+//! The JSON envelope format for archived conversations.
+
 use chrono::{DateTime, Utc};
 use lemma_db::entity::{Message, TokenUsage};
 use serde::{Deserialize, Serialize};
@@ -5,14 +7,18 @@ use uuid::Uuid;
 
 use crate::ArchiveError;
 
+/// Top-level archive object.
 #[derive(Serialize, Deserialize)]
 pub struct ArchiveEnvelope {
+    /// Envelope schema version; currently 1.
     pub version: u32,
     pub conversation_id: String,
     pub archived_at: DateTime<Utc>,
     pub messages: Vec<ArchivedMessage>,
 }
 
+/// A message as stored in the archive. Ids are strings because the
+/// envelope is a portable JSON document, not a database row.
 #[derive(Serialize, Deserialize)]
 pub struct ArchivedMessage {
     pub id: String,
@@ -28,6 +34,7 @@ pub struct ArchivedMessage {
     pub updated_at: DateTime<Utc>,
 }
 
+/// Builds a version-1 envelope from a conversation's messages.
 pub fn envelope_from_messages(
     conversation_id: Uuid,
     archived_at: DateTime<Utc>,
@@ -56,14 +63,18 @@ pub fn envelope_from_messages(
     }
 }
 
+/// Serializes an envelope to JSON bytes.
 pub fn serialize_envelope(envelope: &ArchiveEnvelope) -> Result<Vec<u8>, ArchiveError> {
     serde_json::to_vec(envelope).map_err(|e| ArchiveError(format!("serialize: {e}")))
 }
 
+/// Parses an envelope from JSON bytes.
 pub fn deserialize_envelope(bytes: &[u8]) -> Result<ArchiveEnvelope, ArchiveError> {
     serde_json::from_slice(bytes).map_err(|e| ArchiveError(format!("deserialize: {e}")))
 }
 
+/// Converts an envelope back into message rows. The `sync_seq` field is a
+/// zero placeholder; reinsertion draws a fresh sequence value.
 pub fn messages_from_envelope(envelope: &ArchiveEnvelope) -> Result<Vec<Message>, ArchiveError> {
     envelope
         .messages

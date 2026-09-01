@@ -1,3 +1,5 @@
+//! Handler for the StorageService RPCs.
+
 use buffa::MessageField;
 use buffa_types::google::protobuf::Timestamp;
 use connectrpc::{
@@ -16,6 +18,9 @@ use sqlx::PgPool;
 use crate::store::{self, UpsertS3Config};
 use crate::{ArchiveError, ArchiveStore, S3ArchiveStore, S3Config};
 
+/// Snapshot of the previous storage backend, taken when the config
+/// changes while archives exist. Credentials stay sealed. Drives the
+/// migrate_archives stream.
 #[derive(serde::Serialize, serde::Deserialize)]
 struct MigrationFrom {
     endpoint: String,
@@ -37,6 +42,9 @@ impl From<&DbS3Config> for MigrationFrom {
     }
 }
 
+/// Connect handler implementing the StorageService RPCs. Holds two
+/// secrets: `jwt_secret` authenticates requests, `secret_key` derives the
+/// key that seals storage credentials at rest.
 pub struct StorageService {
     pool: PgPool,
     jwt_secret: String,
@@ -93,6 +101,8 @@ fn open_with(secret_key: &str, sealed: &str) -> Result<String, ConnectError> {
     open(&key, sealed).map_err(|e| ConnectError::internal(format!("open key: {e}")))
 }
 
+// Empty or absent input keeps the old value. The frontend never
+// resubmits the masked display value, so whatever arrives is real input.
 fn pick(new: Option<&str>, old: Option<&str>) -> Option<String> {
     match new {
         Some(s) if !s.trim().is_empty() => Some(s.trim().to_string()),
@@ -100,6 +110,9 @@ fn pick(new: Option<&str>, old: Option<&str>) -> Option<String> {
     }
 }
 
+/// Copies archive objects between two stores, invoking `on_progress`
+/// after each key. Objects missing at the source are counted as skipped
+/// rather than failing the run. Returns (done, total, skipped).
 pub async fn copy_archive_objects<F>(
     from: &impl ArchiveStore,
     to: &impl ArchiveStore,
@@ -181,6 +194,9 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
         let preserved = old.and_then(|c| c.migration_from.as_ref().map(|j| j.0.clone()));
         let mut counted: Option<Vec<String>> = None;
         let migration_from = if backend_changed {
+            // Switching endpoint or bucket strands existing archives on
+            // the old backend: snapshot it so migrate_archives can copy
+            // the objects over. No archives, no migration needed.
             let keys = store::list_archive_keys(&self.pool, user_id)
                 .await
                 .map_err(map_db)?;
@@ -240,6 +256,8 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
         let keys = store::list_archive_keys(&self.pool, user_id)
             .await
             .map_err(map_db)?;
+        // Deleting the storage config would orphan the archive objects
+        // it points at, so archives must be restored or deleted first.
         if !keys.is_empty() {
             return Err(app_error(ErrorReason::StorageHasArchives));
         }
@@ -297,6 +315,8 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
             access_key_id: access,
             secret_access_key: secret,
         });
+        // Probe only. Auto-creating a missing bucket was removed
+        // deliberately; do not reintroduce it here.
         if !probe.bucket_exists().await.map_err(map_archive)? {
             return Err(app_error_with(
                 ErrorReason::BucketNotFound,
@@ -343,6 +363,8 @@ impl lemma_proto::lemma::v1::StorageService for StorageService {
 
         let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
         let pool = self.pool.clone();
+        // The copy runs in a spawned task; failures travel in-band as a
+        // final frame with finished=true and the error message set.
         tokio::spawn(async move {
             let fail = |msg: String| {
                 let _ = tx.send(Ok(MigrateArchivesResponse {

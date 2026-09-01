@@ -1,3 +1,10 @@
+//! S3-backed [`ArchiveStore`], also used for connectivity probes.
+//!
+//! The put/get/delete error paths format the SDK error with `Display`,
+//! which folds specific service errors like NoSuchBucket into a generic
+//! "service error". Only [`S3ArchiveStore::bucket_exists`] inspects the
+//! raw HTTP response.
+
 use aws_credential_types::Credentials;
 use aws_sdk_s3::Client;
 use aws_sdk_s3::config::{BehaviorVersion, Region};
@@ -5,6 +12,8 @@ use aws_sdk_s3::primitives::ByteStream;
 
 use crate::{ArchiveError, ArchiveStore};
 
+/// Connection parameters with credentials in plaintext; the caller opens
+/// the sealed values from the database.
 #[derive(Clone)]
 pub struct S3Config {
     pub endpoint: String,
@@ -33,6 +42,8 @@ impl S3ArchiveStore {
             .region(Region::new(cfg.region.clone()))
             .endpoint_url(&cfg.endpoint)
             .credentials_provider(creds)
+            // S3-compatible endpoints (RustFS, MinIO) require
+            // path-style addressing.
             .force_path_style(true)
             .build();
         Self {
@@ -41,10 +52,15 @@ impl S3ArchiveStore {
         }
     }
 
+    /// Probes whether the configured bucket exists. Never creates it:
+    /// buckets must be provisioned out of band.
     pub async fn bucket_exists(&self) -> Result<bool, ArchiveError> {
         match self.client.head_bucket().bucket(&self.bucket).send().await {
             Ok(_) => Ok(true),
             Err(e) => {
+                // HeadBucket replies carry no body, so the SDK error's
+                // code and message are empty. The HTTP status from the
+                // raw response is the only reliable signal.
                 let status = e.raw_response().map(|r| r.status().as_u16());
                 let svc = e.into_service_error();
                 if svc.is_not_found() {

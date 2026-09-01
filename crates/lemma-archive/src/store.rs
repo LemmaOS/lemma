@@ -1,17 +1,24 @@
+//! Queries for the s3_configs table.
+
 use lemma_db::entity::S3Config;
 use sqlx::types::Json;
 use uuid::Uuid;
 
+/// Fields for upserting a user's storage config.
 pub struct UpsertS3Config<'a> {
     pub user_id: Uuid,
     pub endpoint: &'a str,
     pub region: &'a str,
     pub bucket: &'a str,
+    /// Must already be sealed with lemma-crypto.
     pub access_key: &'a str,
+    /// Must already be sealed with lemma-crypto.
     pub secret_key: &'a str,
+    /// Snapshot of the previous backend when a migration is pending.
     pub migration_from: Option<serde_json::Value>,
 }
 
+/// Inserts or replaces the user's storage config. One config per user.
 pub async fn upsert<'e, E>(executor: E, cfg: &UpsertS3Config<'_>) -> sqlx::Result<S3Config>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -42,6 +49,7 @@ where
     .await
 }
 
+/// Finds the user's storage config, if any.
 pub async fn find_by_user<'e, E>(executor: E, user_id: Uuid) -> sqlx::Result<Option<S3Config>>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -52,6 +60,8 @@ where
         .await
 }
 
+/// Deletes the user's storage config, returning whether a row was
+/// removed.
 pub async fn delete_by_user<'e, E>(executor: E, user_id: Uuid) -> sqlx::Result<bool>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -63,6 +73,8 @@ where
         .map(|r| r.rows_affected() > 0)
 }
 
+/// Marks a pending migration done: clears the snapshot and stamps
+/// `migrated_at`.
 pub async fn clear_migration<'e, E>(executor: E, user_id: Uuid) -> sqlx::Result<bool>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -78,6 +90,7 @@ where
     .map(|r| r.rows_affected() > 0)
 }
 
+/// Lists the archive object keys of the user's archived conversations.
 pub async fn list_archive_keys<'e, E>(executor: E, user_id: Uuid) -> sqlx::Result<Vec<String>>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,

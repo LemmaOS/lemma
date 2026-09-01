@@ -1,3 +1,5 @@
+//! In-memory [`ArchiveStore`] for tests.
+
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 

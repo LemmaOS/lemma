@@ -1,3 +1,5 @@
+//! Per-user resolution of archive stores.
+
 use std::sync::Arc;
 
 use lemma_crypto::{derive_key, open};
@@ -7,6 +9,8 @@ use uuid::Uuid;
 use crate::store;
 use crate::{ArchiveError, ArchiveStore, S3ArchiveStore, S3Config};
 
+/// Resolves the archive store for a user. `None` means the user has no
+/// storage configured, in which case archiving stays database-only.
 pub trait ArchiveSource: Send + Sync + 'static {
     type Store: ArchiveStore;
     fn store_for(
@@ -15,6 +19,8 @@ pub trait ArchiveSource: Send + Sync + 'static {
     ) -> impl Future<Output = Result<Option<Arc<Self::Store>>, ArchiveError>> + Send;
 }
 
+/// Resolves stores from the s3_configs table, opening the sealed
+/// credentials on each call so config edits take effect immediately.
 pub struct DbArchiveSource {
     pool: PgPool,
     secret_key: String,
