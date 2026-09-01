@@ -11,7 +11,6 @@ pub use service::AuthService;
 use rand::Rng;
 use sha2::{Digest, Sha256};
 
-// 32 字节随机 hex 明文，只在签发响应中出现一次，库侧存哈希
 pub fn generate_refresh_token() -> String {
     let mut bytes = [0u8; 32];
     rand::rng().fill_bytes(&mut bytes);
@@ -24,7 +23,6 @@ pub fn hash_token(token: &str) -> String {
     hex::encode(hasher.finalize())
 }
 
-// 校验 Bearer access token，返回 user_id；各服务统一走这里做鉴权
 pub fn require_user(
     secret: &str,
     ctx: &connectrpc::RequestContext,

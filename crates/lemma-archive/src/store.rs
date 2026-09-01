@@ -7,12 +7,11 @@ pub struct UpsertS3Config<'a> {
     pub endpoint: &'a str,
     pub region: &'a str,
     pub bucket: &'a str,
-    pub access_key: &'a str,                       // 已密封
-    pub secret_key: &'a str,                       // 已密封
-    pub migration_from: Option<serde_json::Value>, // 旧后端快照（密钥已密封）
+    pub access_key: &'a str,
+    pub secret_key: &'a str,
+    pub migration_from: Option<serde_json::Value>,
 }
 
-// 每用户单套：upsert 全量替换；migration_from 由 service 层算好传入（含保留旧快照的场景）
 pub async fn upsert<'e, E>(executor: E, cfg: &UpsertS3Config<'_>) -> sqlx::Result<S3Config>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -64,7 +63,6 @@ where
         .map(|r| r.rows_affected() > 0)
 }
 
-// 迁移完成：清快照、记时间；无快照可清返回 false
 pub async fn clear_migration<'e, E>(executor: E, user_id: Uuid) -> sqlx::Result<bool>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -80,7 +78,6 @@ where
     .map(|r| r.rows_affected() > 0)
 }
 
-// 跨域只读：conversations.archive_key 是归档域的指针列，迁移/删除守卫都要看它
 pub async fn list_archive_keys<'e, E>(executor: E, user_id: Uuid) -> sqlx::Result<Vec<String>>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,

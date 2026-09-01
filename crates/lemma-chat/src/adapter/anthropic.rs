@@ -1,5 +1,3 @@
-//! Anthropic Messages API：POST /messages，事件类型在 data JSON 的 type 字段里
-
 use serde::Deserialize;
 
 use lemma_db::entity::TokenUsage;
@@ -7,7 +5,6 @@ use lemma_db::entity::TokenUsage;
 use super::sse::{Parsed, SseParser, events_from_sse};
 use super::{AdapterError, BoxChatFuture, ChatRequest, LlmAdapter, bytes_of};
 
-/// API 必填；流式场景下只是上限，不代表实际生成量
 const MAX_TOKENS: u32 = 8192;
 const ANTHROPIC_VERSION: &str = "2023-06-01";
 
@@ -115,7 +112,6 @@ impl SseParser for Parser {
                 "anthropic error: {}",
                 event.error.map(|e| e.message).unwrap_or_default()
             ))),
-            // ping / content_block_start / content_block_stop 等
             _ => Ok(Parsed::Skip),
         }
     }

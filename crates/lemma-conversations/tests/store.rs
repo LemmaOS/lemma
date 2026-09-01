@@ -13,7 +13,6 @@ async fn new_user(pool: &PgPool) -> Uuid {
         .id
 }
 
-// 直插消息，offset_secs 拉开时间戳保证 keyset 顺序确定
 async fn seed_message(pool: &PgPool, conv: Uuid, offset_secs: f64) {
     sqlx::query(
         r#"
@@ -40,7 +39,6 @@ async fn create_defaults(pool: PgPool) {
     assert!(c.sync_seq > 0);
 }
 
-// 所有 UPDATE 必须显式分配新 sync_seq（同步正确性的根基）
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn rename_bumps_sync_seq(pool: PgPool) {
     let uid = new_user(&pool).await;
@@ -65,7 +63,6 @@ async fn archive_sets_metadata_and_guards(pool: PgPool) {
     assert!(archived.archived_at.is_some());
     assert_eq!(archived.message_count, Some(2));
 
-    // 重复归档 0 行
     assert!(store::archive(&pool, c.id, uid).await.unwrap().is_none());
 }
 
@@ -80,7 +77,6 @@ async fn restore_reactivates_and_guards(pool: PgPool) {
     assert!(restored.archived_at.is_none());
     assert!(restored.message_count.is_none());
 
-    // 未归档状态 restore 0 行
     assert!(store::restore(&pool, c.id, uid).await.unwrap().is_none());
 }
 
@@ -114,7 +110,6 @@ async fn delete_archived_cascades_messages(pool: PgPool) {
         .unwrap();
     assert_eq!(n, 0);
 
-    // 活跃会话不可彻底删除
     let live = store::insert(&pool, uid).await.unwrap();
     assert!(!store::delete_archived(&pool, live.id, uid).await.unwrap());
 }
@@ -123,7 +118,6 @@ async fn delete_archived_cascades_messages(pool: PgPool) {
 async fn message_keyset_pagination(pool: PgPool) {
     let uid = new_user(&pool).await;
     let c = store::insert(&pool, uid).await.unwrap();
-    // 5 条：最早 300s 前，依次递减到 60s 前
     for i in 1..=5 {
         seed_message(&pool, c.id, (6 - i) as f64 * 60.0).await;
     }
@@ -145,7 +139,6 @@ async fn message_keyset_pagination(pool: PgPool) {
     assert!(!more);
     assert_eq!(page3.len(), 1);
 
-    // 游标跨会话 → 空结果
     let other = store::insert(&pool, uid).await.unwrap();
     let (empty, more) = store::list_messages(&pool, c.id, Some(other.id), 2)
         .await

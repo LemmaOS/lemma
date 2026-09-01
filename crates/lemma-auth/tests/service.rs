@@ -17,8 +17,6 @@ use sqlx::PgPool;
 const SECRET: &str = "test-secret";
 const PASSWORD: &str = "password123";
 
-// 经 wire 编解码还原具体消息：rustc 走 M: Encodable<M> 自反实现，rust-analyzer 走
-// 不透明类型的 Encodable<M> 参数化，两侧推导一致，绕开 RA 对 RPITIT 精化的误报
 fn owned_body<M>(body: &impl Encodable<M>) -> M
 where
     M: Message + JsonSerialize,
@@ -197,7 +195,6 @@ async fn login_requires_exactly_one_identifier(pool: PgPool) {
     assert_eq!(err.code, ErrorCode::InvalidArgument);
 }
 
-// 黄金场景：轮换后重放旧 token，整条链（含新 token）都必须被吊销
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn refresh_replay_revokes_whole_chain(pool: PgPool) {
     let svc = AuthService::new(pool, SECRET);
@@ -223,7 +220,6 @@ async fn refresh_replay_revokes_whole_chain(pool: PgPool) {
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn logout_is_idempotent(pool: PgPool) {
     let svc = AuthService::new(pool, SECRET);
-    // 不存在的 token 也返回成功
     logout(&svc, "nonexistent").await.unwrap();
     let tokens = signup(&svc, "alice", "alice@example.com", PASSWORD)
         .await

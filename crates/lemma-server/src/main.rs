@@ -18,7 +18,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pool = lemma_db::connect(&config.database_url).await?;
     lemma_db::migrate(&pool).await?;
 
-    // 适配器以 trait object 注入，测试可换假实现
     let adapter: Arc<dyn LlmAdapter> = Arc::new(DispatchAdapter::new());
     let auth = Arc::new(AuthService::new(pool.clone(), config.jwt_secret.clone()));
     let provider = Arc::new(ProviderService::new(
@@ -26,7 +25,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config.jwt_secret.clone(),
         config.secret_key.clone(),
     ));
-    // 归档存储按用户从 DB 解析（设置页维护配置）；未配置就地归档
     let conversations = Arc::new(ConversationService::new(
         pool.clone(),
         config.jwt_secret.clone(),
@@ -52,9 +50,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .add_service(chat)
         .add_service(sync);
 
-    // RPC 路径形如 /lemma.v1.AuthService/Login：第一段含服务名，
-    // axum 路由只能按完整段匹配，所以每个服务显式挂一条前缀；
-    // 其余路径交给内嵌的前端静态资源（SPA 回退 index.html）
     let connect_service = connect.into_axum_service();
     let mut app = axum::Router::new().fallback(web::handler);
     for svc in [

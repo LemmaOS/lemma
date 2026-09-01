@@ -1,5 +1,3 @@
-//! Gemini Content Generation API：streamGenerateContent?alt=sse，无显式结束标记，EOF 收尾
-
 use serde::Deserialize;
 
 use lemma_db::entity::TokenUsage;
@@ -79,11 +77,9 @@ impl SseParser for Parser {
     fn parse_line(&mut self, data: &str) -> Result<Parsed, AdapterError> {
         let chunk: Chunk = serde_json::from_str(data)
             .map_err(|e| AdapterError::protocol(format!("bad chunk: {e}")))?;
-        // usageMetadata 常在最后一个 chunk 里，先收下来等 EOF
         if let Some(u) = chunk.usage {
             self.usage = Some(u);
         }
-        // v0 只取第一个候选；多 part 文本按序拼接
         let text: String = chunk
             .candidates
             .into_iter()
@@ -112,7 +108,6 @@ impl LlmAdapter for GeminiGenerate {
     fn stream_chat(&self, req: ChatRequest) -> BoxChatFuture {
         let client = self.client.clone();
         Box::pin(async move {
-            // 默认路径内嵌模型名；自定义 api_path 支持 {model} 占位
             let path = if req.api_path.is_empty() {
                 format!("/models/{}:streamGenerateContent?alt=sse", req.model)
             } else {
@@ -121,7 +116,6 @@ impl LlmAdapter for GeminiGenerate {
             let url = format!("{}{}", req.base_url.trim_end_matches('/'), path);
             let body = serde_json::json!({
                 "contents": req.messages.iter().map(|m| serde_json::json!({
-                    // Gemini 侧 assistant 叫 model
                     "role": if m.role == "assistant" { "model" } else { "user" },
                     "parts": [{ "text": m.content }],
                 })).collect::<Vec<_>>(),

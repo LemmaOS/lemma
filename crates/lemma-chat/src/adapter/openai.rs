@@ -1,5 +1,3 @@
-//! OpenAI Compatible：POST /chat/completions，data: [DONE] 收尾
-
 use serde::Deserialize;
 
 use lemma_db::entity::TokenUsage;
@@ -13,7 +11,6 @@ pub struct OpenAiCompatible {
 
 impl OpenAiCompatible {
     pub fn new() -> Self {
-        // 流式响应不设整体超时
         Self {
             client: reqwest::Client::new(),
         }
@@ -71,7 +68,6 @@ impl SseParser for Parser {
         }
         let chunk: StreamChunk = serde_json::from_str(data)
             .map_err(|e| super::AdapterError::protocol(format!("bad chunk: {e}")))?;
-        // 末段 usage chunk 的 choices 为空，须先判 usage
         if let Some(usage) = chunk.usage {
             self.usage = Some(usage);
             return Ok(Parsed::Skip);

@@ -2,7 +2,6 @@ use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode}
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// access token 寿命 15 分钟
 pub const ACCESS_TOKEN_TTL_SECS: i64 = 15 * 60;
 
 #[derive(Serialize, Deserialize)]
@@ -61,7 +60,6 @@ mod tests {
         assert!(verify_access_token("other", &token).is_err());
     }
 
-    // 手工构造过期 token
     #[test]
     fn expired_token_rejected() {
         let claims = Claims {

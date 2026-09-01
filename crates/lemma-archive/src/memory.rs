@@ -3,7 +3,6 @@ use std::sync::Mutex;
 
 use crate::{ArchiveError, ArchiveStore};
 
-/// 测试用内存实现
 #[derive(Default)]
 pub struct MemoryArchiveStore {
     objects: Mutex<BTreeMap<String, Vec<u8>>>,
@@ -53,7 +52,6 @@ mod tests {
         store.put("k", b"v").await.unwrap();
         assert_eq!(store.get("k").await.unwrap(), Some(b"v".to_vec()));
         store.delete("k").await.unwrap();
-        // 删除幂等
         store.delete("k").await.unwrap();
         assert_eq!(store.get("k").await.unwrap(), None);
     }

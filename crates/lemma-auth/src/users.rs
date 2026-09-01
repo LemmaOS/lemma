@@ -1,6 +1,5 @@
 use lemma_db::entity::User;
 
-// 首个用户为 owner；并发竞态由 owner 唯一部分索引兜底（23505）
 pub async fn insert<'e, E>(
     executor: E,
     username: &str,

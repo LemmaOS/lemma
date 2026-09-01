@@ -7,7 +7,6 @@ use lemma_providers::providers::{self, NewProvider};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-// 夹具：user + provider + conversation，返回各自 id
 async fn new_fixture(pool: &PgPool, name: &str) -> (Uuid, Uuid, Uuid) {
     let uid = users::insert(pool, name, &format!("{name}@example.com"), "hash")
         .await
@@ -75,13 +74,11 @@ async fn client_msg_id_unique_per_conversation(pool: PgPool) {
     store::insert_assistant_placeholder(&pool, cid, pid, "gpt-x", Some("dup"))
         .await
         .unwrap();
-    // 同一会话重复 → 唯一索引拒绝
     assert!(
         store::insert_assistant_placeholder(&pool, cid, pid, "gpt-x", Some("dup"))
             .await
             .is_err()
     );
-    // 另一会话同值 → 允许
     let cid2 = lemma_conversations::store::insert(&pool, _uid)
         .await
         .unwrap()
@@ -100,7 +97,6 @@ async fn list_context_excludes_streaming_and_orders(pool: PgPool) {
         .unwrap();
     store::finalize(&pool, a1.id, "a1", None).await.unwrap();
     store::insert_user_message(&pool, cid, "q2").await.unwrap();
-    // streaming 占位（新一轮）
     store::insert_assistant_placeholder(&pool, cid, pid, "gpt-x", None)
         .await
         .unwrap();
@@ -133,7 +129,6 @@ async fn flush_and_abort_keep_partial(pool: PgPool) {
         .unwrap();
     assert_eq!(aborted.status, "aborted");
     assert_eq!(aborted.content, "半截");
-    // 每次 UPDATE 都取新 sync_seq
     assert!(aborted.sync_seq > sync_after_flush);
 }
 
@@ -149,7 +144,6 @@ async fn find_by_id_and_user_enforces_ownership(pool: PgPool) {
             .unwrap()
             .is_some()
     );
-    // 别人的 user id → 查不到
     assert!(
         store::find_by_id_and_user(&pool, a.id, Uuid::new_v4())
             .await

@@ -15,7 +15,6 @@ use lemma_chat::adapter::{
 };
 use lemma_proto::lemma::v1::ProviderKind;
 
-// 单请求记账：每个测试只发一次，存 Option 直接整体替换
 #[derive(Default)]
 struct Hits {
     method: String,
@@ -36,7 +35,6 @@ fn h(headers: &axum::http::HeaderMap, name: &str) -> String {
         .to_string()
 }
 
-// 兜底路由按路径回不同协议的 SSE：路径本身就是适配器请求构造的产物
 async fn upstream(State(hits): State<SharedHits>, req: Request<Body>) -> Response {
     let method = req.method().to_string();
     let path = req.uri().path().to_string();
@@ -58,7 +56,6 @@ async fn upstream(State(hits): State<SharedHits>, req: Request<Body>) -> Respons
         return (StatusCode::INTERNAL_SERVER_ERROR, "boom").into_response();
     }
     let sse = if path.contains("chat/completions") {
-        // OpenAI：两条 delta + usage 段 + [DONE]
         concat(&[
             "data: {\"choices\":[{\"delta\":{\"content\":\"你\"}}]}\n\n",
             "data: {\"choices\":[{\"delta\":{\"content\":\"好\"}}]}\n\n",
@@ -66,7 +63,6 @@ async fn upstream(State(hits): State<SharedHits>, req: Request<Body>) -> Respons
             "data: [DONE]\n\n",
         ])
     } else if path.contains("/messages") {
-        // Anthropic：message_start 带输入 token，message_stop 前的 delta 带输出 token
         concat(&[
             "data: {\"type\":\"message_start\",\"message\":{\"usage\":{\"input_tokens\":10}}}\n\n",
             "data: {\"type\":\"content_block_delta\",\"delta\":{\"text\":\"你\"}}\n\n",
@@ -75,7 +71,6 @@ async fn upstream(State(hits): State<SharedHits>, req: Request<Body>) -> Respons
             "data: {\"type\":\"message_stop\"}\n\n",
         ])
     } else {
-        // Gemini：无显式结束标记，最后一段带 usageMetadata，EOF 收尾
         concat(&[
             "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"你\"}]}}]}\n\n",
             "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"好\"}]}}]}\n\n",
@@ -171,7 +166,6 @@ async fn anthropic_streams_over_http() {
     assert_eq!(events.len(), 3);
     assert!(matches!(&events[0], AdapterEvent::Delta(d) if d == "你"));
     assert!(matches!(&events[1], AdapterEvent::Delta(d) if d == "好"));
-    // 输入 10 + 输出 5
     assert!(matches!(&events[2], AdapterEvent::Done(Some(u)) if u.total == 15));
 
     let hit = take_hits(&hits);
@@ -196,10 +190,8 @@ async fn gemini_streams_over_http_and_model_in_path() {
     assert!(matches!(&events[2], AdapterEvent::Done(Some(u)) if u.total == 15));
 
     let hit = take_hits(&hits);
-    // 模型名内嵌路径（uri.path 不含 ?alt=sse 查询串）
     assert_eq!(hit.path, "/models/gemini-x:streamGenerateContent");
     assert_eq!(hit.goog_key, "sk-live-123456");
-    // assistant 在 Gemini 侧叫 model
     assert_eq!(hit.body["contents"][1]["role"], "model");
     assert_eq!(hit.body["contents"][0]["parts"][0]["text"], "hi");
 }
@@ -231,6 +223,5 @@ async fn dispatch_routes_by_kind() {
 
     assert_eq!(events.len(), 3);
     let hit = take_hits(&hits);
-    // DispatchAdapter 按 kind 分发到了 Gemini 路径
     assert!(hit.path.contains("streamGenerateContent"));
 }

@@ -26,7 +26,6 @@ const MAX_PAGE_LIMIT: i32 = 100;
 pub struct ConversationService<S: ArchiveSource> {
     pool: PgPool,
     jwt_secret: String,
-    // 按用户解析归档存储；未配置 → 就地归档（行为同旧版）
     archive: S,
 }
 
@@ -145,7 +144,6 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
         })
     }
 
-    // 分页按时间倒序（最新在前），before_id 为上一页末条 id
     async fn list_messages(
         &self,
         ctx: RequestContext,
@@ -153,7 +151,6 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
     ) -> ServiceResult<ListMessagesResponse> {
         let user_id = require_user(&self.jwt_secret, &ctx)?;
         let conversation_id = parse_id(request.conversation_id)?;
-        // 归属校验
         store::find_by_id_and_user(&self.pool, conversation_id, user_id)
             .await
             .map_err(map_db)?
@@ -197,7 +194,6 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
         }
 
         let conversation = if let Some(archive) = store {
-            // 内容迁移：快照 → 写对象（幂等）→ 归档落位 → 清 PG 消息
             let messages = store::list_all_messages(&mut tx, id)
                 .await
                 .map_err(map_db)?;
@@ -213,7 +209,6 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
                 .map_err(map_db)?;
             c
         } else {
-            // 未配置对象存储：就地归档
             store::archive(&mut *tx, id, user_id)
                 .await
                 .map_err(map_db)?
@@ -243,7 +238,6 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
             .ok_or_else(|| app_error(ErrorReason::ConversationNotArchived))?
             .archive_key;
 
-        // 有对象键 = 内容迁移模式：拉对象回灌（原 seq/时间戳）
         if let (Some(archive), Some(key)) = (store.as_ref(), key.as_deref()) {
             let bytes = archive
                 .get(key)
@@ -256,14 +250,12 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
                 .await
                 .map_err(map_db)?;
         }
-        // 键为空（历史就地归档）只翻状态
         let conversation = store::restore(&mut *tx, id, user_id)
             .await
             .map_err(map_db)?
             .ok_or_else(|| app_error(ErrorReason::ConversationNotArchived))?;
         tx.commit().await.map_err(map_db)?;
 
-        // 内容已回灌 PG，对象尽力清理（失败留孤儿，无害）
         if let (Some(archive), Some(key)) = (store.as_ref(), key.as_deref()) {
             let _ = archive.delete(key).await;
         }
@@ -289,8 +281,6 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
         })
     }
 
-    // 彻底删除，不可恢复
-    // 彻底删除，不可恢复
     async fn delete_archived(
         &self,
         ctx: RequestContext,
@@ -299,7 +289,6 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
         let user_id = require_user(&self.jwt_secret, &ctx)?;
         let id = parse_id(request.id)?;
         let store = self.archive.store_for(user_id).await.map_err(map_archive)?;
-        // 先取对象键（行删掉就没了）
         let key = store::find_archive_key(&self.pool, id, user_id)
             .await
             .map_err(map_db)?;
@@ -312,7 +301,6 @@ impl<S: ArchiveSource> lemma_proto::lemma::v1::ConversationService for Conversat
         if !deleted {
             return Err(app_error(ErrorReason::ArchivedConversationNotFound));
         }
-        // 对象尽力清理（失败留孤儿，无害）
         if let (Some(archive), Some(key)) = (store.as_ref(), key.flatten().as_deref()) {
             let _ = archive.delete(key).await;
         }

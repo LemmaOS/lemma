@@ -40,7 +40,6 @@ fn bearer_ctx(token: &str) -> RequestContext {
     RequestContext::new(headers)
 }
 
-// 经 wire 编解码还原具体消息（同 conversations 测试惯例，绕 RA 对 RPITIT 的误报）
 fn owned_body<M>(body: &impl Encodable<M>) -> M
 where
     M: Message + JsonSerialize,
@@ -128,7 +127,6 @@ async fn migrate_err(svc: &StorageService, token: &str) -> connectrpc::ConnectEr
         .unwrap()
 }
 
-// 直接 SQL 造一条带对象键的归档会话
 async fn seed_archived(pool: &PgPool, user: Uuid, key: &str) {
     sqlx::query(
         "INSERT INTO conversations (id, user_id, status, archive_key) VALUES ($1, $2, 'archived', $3)",
@@ -146,7 +144,6 @@ async fn first_save_masks_secrets(pool: PgPool) {
     let s = svc(&pool);
     let (_, token) = new_user(&pool).await;
 
-    // 未配置：config 不设置
     assert!(get(&s, &token).await.config.as_option().is_none());
 
     let saved = update(
@@ -161,7 +158,6 @@ async fn first_save_masks_secrets(pool: PgPool) {
     .await
     .unwrap();
     assert_eq!(saved.migration_total, 0);
-    // 首 3 + **** + 尾 4
     assert_eq!(saved.config.access_key, "AKI****h123");
     assert_eq!(saved.config.secret_key, "wJa****beef");
 }
@@ -181,7 +177,6 @@ async fn first_save_requires_core_fields(pool: PgPool) {
         Some(lemma_proto::lemma::v1::ErrorReason::StorageEndpointRequired)
     );
 
-    // endpoint/bucket 给了但密钥缺失
     let err = update(&s, &token, Some("http://x"), None, Some("b"), None, None)
         .await
         .err()
@@ -209,7 +204,6 @@ async fn patch_keeps_unset_fields_and_secrets(pool: PgPool) {
     .await
     .unwrap();
 
-    // 只改 endpoint：其余保持；密钥留空 = 沿用旧密文（write-only）
     let saved = update(&s, &token, Some("http://new:9000"), None, None, None, None)
         .await
         .unwrap();
@@ -217,7 +211,6 @@ async fn patch_keeps_unset_fields_and_secrets(pool: PgPool) {
     assert_eq!(saved.config.bucket, "b1");
     assert_eq!(saved.config.region, "us-east-1");
 
-    // DB 密文解出来还是旧明文
     let row = store::find_by_user(&pool, user).await.unwrap().unwrap();
     let key = derive_key(CRYPTO_SECRET);
     assert_eq!(open(&key, &row.access_key).unwrap(), "ak-old-key-12345");
@@ -242,7 +235,6 @@ async fn backend_change_snapshots_and_counts(pool: PgPool) {
     seed_archived(&pool, user, "archives/x.json").await;
     seed_archived(&pool, user, "archives/y.json").await;
 
-    // 换 endpoint：有存量 → 快照 + 计数
     let saved = update(&s, &token, Some("http://new:9000"), None, None, None, None)
         .await
         .unwrap();
@@ -250,13 +242,11 @@ async fn backend_change_snapshots_and_counts(pool: PgPool) {
     assert!(saved.config.pending_migration);
     assert!(get(&s, &token).await.config.pending_migration);
 
-    // 只改 region（非后端字段）：pending 快照保留不被覆盖
     let saved = update(&s, &token, None, Some("ap-northeast-1"), None, None, None)
         .await
         .unwrap();
     assert_eq!(saved.migration_total, 2);
 
-    // 换后端但没有存量（另一用户）：不建快照
     let (_, t2) = new_user(&pool).await;
     update(
         &s,
@@ -310,7 +300,6 @@ async fn delete_guarded_by_archives(pool: PgPool) {
         Some(lemma_proto::lemma::v1::ErrorReason::StorageHasArchives)
     );
 
-    // 无存量（新用户）：删除成功且 get 变回未配置
     let (_, t2) = new_user(&pool).await;
     update(
         &s,
@@ -334,18 +323,15 @@ async fn test_validation_paths(pool: PgPool) {
     let s = svc(&pool);
     let (_, token) = new_user(&pool).await;
 
-    // 全空且未配置
     let err = test_config(&s, &token, "", "", "", "").await.err().unwrap();
     assert_eq!(err.code, ErrorCode::InvalidArgument);
 
-    // 缺 endpoint
     let err = test_config(&s, &token, "", "b", "ak", "sk")
         .await
         .err()
         .unwrap();
     assert_eq!(err.code, ErrorCode::InvalidArgument);
 
-    // 缺凭证
     let err = test_config(&s, &token, "http://x", "b", "", "")
         .await
         .err()
@@ -358,13 +344,11 @@ async fn migrate_requires_config_and_snapshot(pool: PgPool) {
     let s = svc(&pool);
     let (_, token) = new_user(&pool).await;
 
-    // 未配置
     assert_eq!(
         migrate_err(&s, &token).await.code,
         ErrorCode::InvalidArgument
     );
 
-    // 配置了但没有 pending 快照
     update(
         &s,
         &token,
@@ -382,15 +366,12 @@ async fn migrate_requires_config_and_snapshot(pool: PgPool) {
     );
 }
 
-// ---- 迁移核心：Memory 对驱动（不碰 DB / 网络）----
-
 #[tokio::test]
 async fn copy_objects_core() {
     let from = MemoryArchiveStore::new();
     let to = MemoryArchiveStore::new();
     from.put("a", b"1".as_slice()).await.unwrap();
     from.put("b", b"2".as_slice()).await.unwrap();
-    // "c" 在旧后端不存在
 
     let keys = vec!["a".to_string(), "b".to_string(), "c".to_string()];
     let mut seen = Vec::new();

@@ -1,5 +1,3 @@
-//! 共享密封/解密：DB 中敏感列（api_key、S3 凭证）的 AES-256-GCM 加解密与脱敏
-
 use aes_gcm::Aes256Gcm;
 use aes_gcm::aead::{Aead, Generate, Key, KeyInit, Nonce};
 use base64::prelude::*;
@@ -22,7 +20,6 @@ impl std::fmt::Display for CryptoError {
 
 impl std::error::Error for CryptoError {}
 
-// 从 LEMMA_SECRET_KEY 派生 32 字节 AES 密钥
 pub fn derive_key(secret: &str) -> Key<Aes256Gcm> {
     let digest = Sha256::digest(secret.as_bytes());
     let mut key = [0u8; 32];
@@ -30,7 +27,6 @@ pub fn derive_key(secret: &str) -> Key<Aes256Gcm> {
     Key::<Aes256Gcm>::from(key)
 }
 
-// 加密为 base64(nonce(12B) || ciphertext)
 pub fn seal(key: &Key<Aes256Gcm>, plaintext: &str) -> Result<String, CryptoError> {
     let cipher = Aes256Gcm::new(key);
     let nonce = Nonce::<Aes256Gcm>::generate();
@@ -56,7 +52,6 @@ pub fn open(key: &Key<Aes256Gcm>, sealed: &str) -> Result<String, CryptoError> {
     String::from_utf8(pt).map_err(|_| CryptoError::Encoding)
 }
 
-// 脱敏：首 3 + **** + 尾 4，短 key 全遮
 pub fn mask(plain: &str) -> String {
     let len = plain.chars().count();
     if len <= 8 {
@@ -69,7 +64,6 @@ pub fn mask(plain: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    // 测试内允许 unwrap
     #![allow(clippy::unwrap_used)]
 
     use super::*;

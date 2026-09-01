@@ -2,7 +2,6 @@ use lemma_db::entity::{Message, TokenUsage};
 use sqlx::types::Json;
 use uuid::Uuid;
 
-// 发送事务先锁会话行：串行化同会话的 seq 取号，并发双发也得到确定顺序
 pub async fn lock_conversation<'e, E>(executor: E, conversation_id: Uuid) -> sqlx::Result<()>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -35,7 +34,6 @@ where
     .await
 }
 
-// client_msg_id 只挂 assistant 消息：幂等重放时客户端要的是它
 pub async fn insert_assistant_placeholder<'e, E>(
     executor: E,
     conversation_id: Uuid,
@@ -78,7 +76,6 @@ where
     .await
 }
 
-// 归属校验内置：JOIN conversations 限定 user
 pub async fn find_by_id_and_user<'e, E>(
     executor: E,
     id: Uuid,
@@ -100,7 +97,6 @@ where
     .await
 }
 
-// 模型上下文：只看完整轮次；新建的 user 消息是最后一条，streaming 占位天然排除
 pub async fn list_context<'e, E>(executor: E, conversation_id: Uuid) -> sqlx::Result<Vec<Message>>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -113,7 +109,6 @@ where
     .await
 }
 
-// 流式期间的节流落库，节奏由 service 控制
 pub async fn flush_content<'e, E>(
     executor: E,
     id: Uuid,
@@ -161,7 +156,6 @@ where
     .await
 }
 
-// aborted / error 都保留已生成的部分内容
 pub async fn mark_aborted<'e, E>(
     executor: E,
     id: Uuid,

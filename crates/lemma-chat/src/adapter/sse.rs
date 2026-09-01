@@ -1,5 +1,3 @@
-//! 共享的 SSE 切分与事件流装配：各家适配器只需实现 SseParser
-
 use std::pin::Pin;
 
 use futures::{Stream, StreamExt, stream};
@@ -8,25 +6,20 @@ use lemma_db::entity::TokenUsage;
 
 use super::{AdapterError, AdapterEvent, BoxEventStream, ByteStream};
 
-/// 解析一行 SSE data 载荷的结果
 #[derive(Debug)]
 pub enum Parsed {
     Skip,
     Delta(String),
-    /// 上游的显式结束信号（如 [DONE] / message_stop）
     Finish(Option<TokenUsage>),
 }
 
-/// 各家协议的 SSE 解析器：有状态（跨行累积 usage 等）
 pub trait SseParser: Send + 'static {
     fn parse_line(&mut self, data: &str) -> Result<Parsed, AdapterError>;
-    /// EOF 兜底：上游无显式结束标记时，补发 Done 用的 usage
     fn on_eof(&mut self) -> Option<TokenUsage> {
         None
     }
 }
 
-/// 字节流 → 行流：只产出完整行，EOF 时冲刷残余缓冲
 type ByteLines = Pin<Box<dyn Stream<Item = Result<String, AdapterError>> + Send>>;
 
 fn lines(bytes: ByteStream) -> ByteLines {
@@ -34,7 +27,6 @@ fn lines(bytes: ByteStream) -> ByteLines {
         (bytes, Vec::<u8>::new()),
         |(mut bytes, mut buf)| async move {
             loop {
-                // \n 不会出现在 UTF-8 多字节序列内，按字节切安全
                 if let Some(pos) = buf.iter().position(|b| *b == b'\n') {
                     let raw: Vec<u8> = buf.drain(..=pos).collect();
                     let line = String::from_utf8_lossy(&raw)
@@ -57,7 +49,6 @@ fn lines(bytes: ByteStream) -> ByteLines {
     ))
 }
 
-/// SSE 字节流 → 统一事件流；EOF 且无显式结束时补 Done(on_eof())
 pub fn events_from_sse(bytes: ByteStream, parser: impl SseParser) -> BoxEventStream {
     let s = stream::try_unfold(
         (lines(bytes), parser, false),
@@ -68,7 +59,6 @@ pub fn events_from_sse(bytes: ByteStream, parser: impl SseParser) -> BoxEventStr
             loop {
                 match lines.next().await {
                     Some(Ok(line)) => {
-                        // 只看 data: 载荷；event:/注释/空行一律跳过
                         let data = match line.strip_prefix("data:") {
                             Some(d) => d.trim(),
                             None => continue,

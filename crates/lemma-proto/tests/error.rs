@@ -6,7 +6,6 @@ use connectrpc::ErrorCode;
 use lemma_proto::lemma::v1::{ErrorInfo, ErrorReason};
 use lemma_proto::{app_error, app_error_with};
 
-// 从 details 解回 ErrorInfo，模拟前端 findDetails 的解码路径
 fn error_info(e: &connectrpc::ConnectError) -> ErrorInfo {
     let d = e.details.first().unwrap();
     assert_eq!(d.type_url, "lemma.v1.ErrorInfo");
@@ -63,7 +62,6 @@ fn error_reason_decodes_from_detail() {
         lemma_proto::error_reason(&e),
         Some(ErrorReason::StorageHasArchives)
     );
-    // 运维错误无 detail
     assert_eq!(
         lemma_proto::error_reason(&connectrpc::ConnectError::internal("db: boom")),
         None

@@ -40,7 +40,6 @@ async fn upsert_replaces_same_user_row(pool: PgPool) {
         .await
         .unwrap();
 
-    // 单套语义：同一用户反复 upsert 不换行，字段替换
     assert_eq!(first.id, second.id);
     assert_eq!(second.endpoint, "http://new:9000");
     assert_eq!(second.bucket, "b2");
@@ -68,7 +67,6 @@ async fn clear_migration_wipes_snapshot(pool: PgPool) {
     assert!(cleared.migration_from.is_none());
     assert!(cleared.migrated_at.is_some());
 
-    // 无快照再清返回 false
     assert!(!store::clear_migration(&pool, user).await.unwrap());
 }
 

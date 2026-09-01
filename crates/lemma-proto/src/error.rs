@@ -1,16 +1,11 @@
-//! 业务错误构造：码进 proto 闭集，英文文案兜底，前端按 reason 出 i18n 文案。
-//! 运维错误（internal + 原文）不经过这里。
-
 use base64::Engine as _;
 use buffa::Message;
 use connectrpc::{ConnectError, ErrorCode, ErrorDetail};
 
 use crate::lemma::v1::{ErrorInfo, ErrorReason};
 
-// type_url 用裸名：Connect-JSON 通道原样透传，connect-es findDetails 按全名精确匹配
 const ERROR_INFO_TYPE: &str = "lemma.v1.ErrorInfo";
 
-// reason → connect 传输层错误码（HTTP 语义，与既有行为一致）
 fn transport_code(reason: ErrorReason) -> ErrorCode {
     match reason {
         ErrorReason::CredentialsInvalid | ErrorReason::TokenInvalid => ErrorCode::Unauthenticated,
@@ -27,7 +22,6 @@ fn transport_code(reason: ErrorReason) -> ErrorCode {
     }
 }
 
-// reason → 英文兜底文案（curl / 日志 / 前端未知码时的展示）
 fn message(reason: ErrorReason) -> &'static str {
     match reason {
         ErrorReason::CredentialsInvalid => "invalid credentials",
@@ -66,12 +60,10 @@ fn message(reason: ErrorReason) -> &'static str {
     }
 }
 
-/// 造一个带 ErrorInfo detail 的业务错误
 pub fn app_error(reason: ErrorReason) -> ConnectError {
     app_error_with(reason, &[])
 }
 
-/// 同上，携带 i18n 插值参数（如桶名）
 pub fn app_error_with(reason: ErrorReason, attrs: &[(&str, &str)]) -> ConnectError {
     let info = ErrorInfo {
         reason: reason.into(),
@@ -85,7 +77,6 @@ pub fn app_error_with(reason: ErrorReason, attrs: &[(&str, &str)]) -> ConnectErr
         .with_detail(ErrorDetail::from_message(ERROR_INFO_TYPE, &info))
 }
 
-/// 解出错误携带的业务码（无 detail 或解码失败返回 None）
 pub fn error_reason(e: &ConnectError) -> Option<ErrorReason> {
     let d = e.details.iter().find(|d| d.type_url == ERROR_INFO_TYPE)?;
     let value = d.value.as_deref()?;

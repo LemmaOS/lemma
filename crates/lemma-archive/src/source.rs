@@ -7,8 +7,6 @@ use uuid::Uuid;
 use crate::store;
 use crate::{ArchiveError, ArchiveStore, S3ArchiveStore, S3Config};
 
-/// 按用户解析归档存储：返回 None = 未配置（就地归档）。
-/// 每次 DB 直查、不缓存——配置改动运行时天然生效（与 providers 每次查库同哲学）
 pub trait ArchiveSource: Send + Sync + 'static {
     type Store: ArchiveStore;
     fn store_for(
@@ -17,7 +15,6 @@ pub trait ArchiveSource: Send + Sync + 'static {
     ) -> impl Future<Output = Result<Option<Arc<Self::Store>>, ArchiveError>> + Send;
 }
 
-/// 生产实现：查 s3_configs、解密凭证、现场构造 S3 客户端
 pub struct DbArchiveSource {
     pool: PgPool,
     secret_key: String,

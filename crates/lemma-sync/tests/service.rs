@@ -34,8 +34,6 @@ fn bearer_ctx(token: &str) -> RequestContext {
     RequestContext::new(headers)
 }
 
-// 经 wire 编解码还原具体消息：rustc 走 M: Encodable<M> 自反实现，rust-analyzer 走
-// 不透明类型的 Encodable<M> 参数化，两侧推导一致，绕开 RA 对 RPITIT 精化的误报
 fn owned_body<M>(body: &impl Encodable<M>) -> M
 where
     M: Message + JsonSerialize,
@@ -83,13 +81,12 @@ async fn pull_assembles_changes_and_archived(pool: PgPool) {
         .unwrap();
 
     let r = pull(&svc, &token, 0).await.unwrap();
-    assert_eq!(r.conversations.len(), 2); // active 创建 + 归档变更各产生一行
+    assert_eq!(r.conversations.len(), 2);
     assert_eq!(r.messages.len(), 1);
-    assert_eq!(r.archived.len(), 1); // 归档元数据全量
+    assert_eq!(r.archived.len(), 1);
     assert!(!r.has_more);
     assert!(r.next_after > 0);
 
-    // 游标推进后再拉：空页，has_more=false
     let r2 = pull(&svc, &token, r.next_after).await.unwrap();
     assert_eq!(r2.conversations.len(), 0);
     assert_eq!(r2.messages.len(), 0);
@@ -101,7 +98,6 @@ async fn pull_assembles_changes_and_archived(pool: PgPool) {
 async fn pull_paginates_without_loss(pool: PgPool) {
     let (uid, token) = new_user_token(&pool, "alice").await;
     let svc = SyncService::new(pool.clone(), JWT_SECRET);
-    // 一次插入 501 行，超过单页 500
     sqlx::query("INSERT INTO conversations (user_id) SELECT $1 FROM generate_series(1, 501)")
         .bind(uid)
         .execute(&pool)
@@ -122,7 +118,6 @@ async fn pull_paginates_without_loss(pool: PgPool) {
             break;
         }
     }
-    // 501 行全部拉到，无丢失无重复
     seen.sort();
     seen.dedup();
     assert_eq!(seen.len(), 501);
@@ -145,7 +140,6 @@ async fn watch_emits_initial_hint(pool: PgPool) {
         .unwrap()
         .body;
 
-    // 首个轮询周期（3s）内应收到 hint；留 8s 余量
     let first = tokio::time::timeout(std::time::Duration::from_secs(8), stream.next())
         .await
         .unwrap()
@@ -157,13 +151,10 @@ async fn watch_emits_initial_hint(pool: PgPool) {
     ));
 }
 
-// 双表都截断：边界取两表较小者，边界外的行丢弃等下轮（跨表不丢变更）
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn pull_truncation_boundary_uses_min_across_tables(pool: PgPool) {
     let (uid, token) = new_user_token(&pool, "alice").await;
     let svc = SyncService::new(pool.clone(), JWT_SECRET);
-    // 锚点会话先建，随后 501 条消息（sync_seq 靠前）、501 条会话（sync_seq 靠后）：
-    // 首页双表截断，边界被消息侧压低，靠后的会话全部越界
     let anchor = lemma_conversations::store::insert(&pool, uid)
         .await
         .unwrap();
@@ -181,13 +172,11 @@ async fn pull_truncation_boundary_uses_min_across_tables(pool: PgPool) {
         .await
         .unwrap();
 
-    // 首页：会话只剩锚点（其余越界丢弃），消息截到 500
     let first = pull(&svc, &token, 0).await.unwrap();
     assert_eq!(first.conversations.len(), 1);
     assert_eq!(first.messages.len(), 500);
     assert!(first.has_more);
 
-    // 拉完整轮：502 会话 + 501 消息一条不少、一条不重
     let mut conv_ids: Vec<String> = first
         .conversations
         .iter()
@@ -224,7 +213,6 @@ async fn pull_truncation_boundary_uses_min_across_tables(pool: PgPool) {
     assert_eq!(msg_ids.len(), 501);
 }
 
-// 只有消息侧超页限：边界取消息末行，会话原样带回
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn pull_msg_only_truncation_paginates(pool: PgPool) {
     let (uid, token) = new_user_token(&pool, "alice").await;
@@ -242,8 +230,8 @@ async fn pull_msg_only_truncation_paginates(pool: PgPool) {
     .unwrap();
 
     let first = pull(&svc, &token, 0).await.unwrap();
-    assert_eq!(first.conversations.len(), 1); // 会话不截断
-    assert_eq!(first.messages.len(), 500); // 消息截断 + 丢弃探测行
+    assert_eq!(first.conversations.len(), 1);
+    assert_eq!(first.messages.len(), 500);
     assert!(first.has_more);
 
     let rest = pull(&svc, &token, first.next_after).await.unwrap();

@@ -1,5 +1,3 @@
-//! 归档存储抽象：归档时消息内容迁出 PG，落到 S3 兼容对象存储
-
 mod envelope;
 mod memory;
 mod s3;
@@ -27,7 +25,6 @@ impl std::fmt::Display for ArchiveError {
 
 impl std::error::Error for ArchiveError {}
 
-/// 对象存储最小抽象：put 同键覆盖（幂等）；get 不存在返回 None；delete 幂等
 pub trait ArchiveStore: Send + Sync + 'static {
     fn put(
         &self,
@@ -38,7 +35,6 @@ pub trait ArchiveStore: Send + Sync + 'static {
     fn delete(&self, key: &str) -> impl Future<Output = Result<(), ArchiveError>> + Send;
 }
 
-/// 对象键：会话 UUID 全局唯一，直接作键
 pub fn object_key(conversation_id: uuid::Uuid) -> String {
     format!("archives/{conversation_id}.json")
 }

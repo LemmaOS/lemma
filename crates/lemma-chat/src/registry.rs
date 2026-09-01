@@ -1,5 +1,3 @@
-//! 进行中流的进程内注册表：SendMessage / ResumeStream / AbortMessage 的共享状态
-
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use dashmap::DashMap;
@@ -8,7 +6,6 @@ use uuid::Uuid;
 
 use lemma_db::entity::TokenUsage;
 
-/// 广播给所有订阅者的事件
 #[derive(Debug, Clone)]
 pub enum StreamEvent {
     Delta(String),
@@ -43,8 +40,6 @@ impl StreamHandle {
         }
     }
 
-    /// 追加增量并广播。必须先改 buffer 再广播：
-    /// 与 snapshot_and_subscribe 配合保证订阅者不丢不重
     pub fn push_delta(&self, chunk: &str) {
         self.lock_content().push_str(chunk);
         let _ = self.tx.send(StreamEvent::Delta(chunk.to_owned()));
@@ -65,8 +60,6 @@ impl StreamHandle {
         let _ = self.tx.send(StreamEvent::Failed(message.to_owned()));
     }
 
-    /// 请求中断；返回 false 表示流已终结（幂等）。
-    /// Notify 会存住一个 permit，即使此刻没人在等，稍后的 aborted() 也立即返回
     pub fn abort(&self) -> bool {
         if *self.lock_status() != StreamStatus::Live {
             return false;
@@ -75,13 +68,10 @@ impl StreamHandle {
         true
     }
 
-    /// 等待中断信号
     pub async fn aborted(&self) {
         self.abort.notified().await;
     }
 
-    /// 按字符 offset 取内容快照并订阅后续事件。
-    /// 持锁期间完成订阅，保证与 push_delta 之间没有缝隙
     pub fn snapshot_and_subscribe(
         &self,
         offset: usize,
@@ -109,7 +99,6 @@ impl StreamHandle {
     }
 }
 
-/// key = assistant 消息 id
 #[derive(Clone, Default)]
 pub struct StreamRegistry {
     inner: Arc<DashMap<Uuid, Arc<StreamHandle>>>,
@@ -130,7 +119,6 @@ impl StreamRegistry {
         self.inner.get(message_id).map(|h| h.value().clone())
     }
 
-    /// 终结落库后移除；迟到的 ResumeStream 改从数据库重放
     pub fn remove(&self, message_id: &Uuid) {
         self.inner.remove(message_id);
     }
@@ -166,7 +154,6 @@ mod tests {
         assert!(h.abort());
         h.mark_aborted();
         assert!(!h.abort());
-        // notify_one 存的 permit 还在，即使先触发后等待也立即返回
         h.aborted().await;
     }
 }

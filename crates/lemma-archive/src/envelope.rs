@@ -5,7 +5,6 @@ use uuid::Uuid;
 
 use crate::ArchiveError;
 
-/// 归档对象信封：version 字段留向前兼容余地
 #[derive(Serialize, Deserialize)]
 pub struct ArchiveEnvelope {
     pub version: u32,
@@ -14,7 +13,6 @@ pub struct ArchiveEnvelope {
     pub messages: Vec<ArchivedMessage>,
 }
 
-/// 消息的纯数据快照（id 用 String：信封不依赖 uuid 的 serde feature）
 #[derive(Serialize, Deserialize)]
 pub struct ArchivedMessage {
     pub id: String,
@@ -66,7 +64,6 @@ pub fn deserialize_envelope(bytes: &[u8]) -> Result<ArchiveEnvelope, ArchiveErro
     serde_json::from_slice(bytes).map_err(|e| ArchiveError(format!("deserialize: {e}")))
 }
 
-/// 信封还原为 DB 实体；sync_seq 填 0（回灌 INSERT 走列默认取新号）
 pub fn messages_from_envelope(envelope: &ArchiveEnvelope) -> Result<Vec<Message>, ArchiveError> {
     envelope
         .messages

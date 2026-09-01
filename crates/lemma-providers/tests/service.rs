@@ -27,8 +27,6 @@ use uuid::Uuid;
 const SECRET: &str = "test-secret";
 const KEY_SECRET: &str = "key-secret";
 
-// 经 wire 编解码还原具体消息：rustc 走 M: Encodable<M> 自反实现，rust-analyzer 走
-// 不透明类型的 Encodable<M> 参数化，两侧推导一致，绕开 RA 对 RPITIT 精化的误报
 fn owned_body<M>(body: &impl Encodable<M>) -> M
 where
     M: Message + JsonSerialize,
@@ -37,7 +35,6 @@ where
     M::decode(&mut &bytes[..]).unwrap()
 }
 
-// 直签 access token 注入 Bearer 头，省去走注册流程
 fn auth_ctx(user_id: Uuid) -> RequestContext {
     let mut headers = HeaderMap::new();
     let token = sign_access_token(SECRET, user_id).unwrap();
@@ -123,14 +120,12 @@ fn provider_msg() -> CreateProviderRequest {
     CreateProviderRequest {
         kind: ProviderKind::Openai.into(),
         name: "deepseek".into(),
-        // 故意带尾斜杠：顺带断言入库前被剪掉
         base_url: "https://api.example.com/v1/".into(),
         api_key: "sk-abcdef123456".into(),
         ..Default::default()
     }
 }
 
-// 记录假供应商收到的请求：路径 + 三种鉴权头
 #[derive(Default)]
 struct Hits {
     paths: Vec<String>,
@@ -148,7 +143,6 @@ fn header_str(headers: &http::HeaderMap, name: &str) -> String {
         .to_string()
 }
 
-// 单个 handler 打满所有路由：先记账，再按路径回不同形状
 async fn fake_upstream(
     State(hits): State<SharedHits>,
     headers: http::HeaderMap,
@@ -178,7 +172,6 @@ async fn fake_upstream(
     }
 }
 
-// 起在 127.0.0.1 随机端口：每个测试独享一个假供应商，并行互不干扰
 async fn spawn_fake() -> (String, SharedHits) {
     let hits: SharedHits = Arc::new(Mutex::new(Hits::default()));
     let app = Router::new()
@@ -229,7 +222,6 @@ async fn list_empty_for_fresh_user(pool: PgPool) {
     assert!(r.providers.is_empty());
 }
 
-// 创建：响应里是脱敏值，库里是密文，尾斜杠被剪
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn create_masks_response_and_seals_in_db(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;
@@ -245,7 +237,6 @@ async fn create_masks_response_and_seals_in_db(pool: PgPool) {
     assert_eq!(plain, "sk-abcdef123456");
 }
 
-// 创建：缺 name / 缺 base_url / 缺 api_key / 非法 kind 都是 InvalidArgument
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn create_rejects_missing_fields(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;
@@ -273,7 +264,6 @@ async fn create_rejects_missing_fields(pool: PgPool) {
     }
 }
 
-// 更新：改名生效；api_key 传空串视为不变更（密文保持原样）
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn update_renames_and_blank_key_keeps_sealed(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;
@@ -304,7 +294,6 @@ async fn update_renames_and_blank_key_keeps_sealed(pool: PgPool) {
     assert_eq!(sealed_before, sealed_after);
 }
 
-// 更新：动别人的 provider → NotFound；id 非法 → InvalidArgument
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn update_rejects_other_owner_and_bad_id(pool: PgPool) {
     let u1 = new_user(&pool, "alice").await;
@@ -345,7 +334,6 @@ async fn update_rejects_other_owner_and_bad_id(pool: PgPool) {
     assert_eq!(err.code, ErrorCode::InvalidArgument);
 }
 
-// 删除：成功一次后再删 → NotFound
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn delete_once_then_not_found(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;
@@ -377,7 +365,6 @@ async fn delete_once_then_not_found(pool: PgPool) {
     assert_eq!(err.code, ErrorCode::NotFound);
 }
 
-// 列表：正常行脱敏；密文损坏的行回退 "****"，不让一条脏数据炸掉整个接口
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn list_masks_keys_and_garbage_falls_back(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;
@@ -416,7 +403,6 @@ async fn list_masks_keys_and_garbage_falls_back(pool: PgPool) {
     );
 }
 
-// 临时凭证模式：默认 /models 路径，明文 key 走 Bearer 头
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn fetch_models_temp_credentials_openai(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;
@@ -440,7 +426,6 @@ async fn fetch_models_temp_credentials_openai(pool: PgPool) {
     assert_eq!(h.bearer, vec!["Bearer sk-tmp-123456".to_string()]);
 }
 
-// 黄金场景：库里是密文，上游收到的是解密后的明文（anthropic 走 x-api-key）
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn fetch_models_saved_provider_decrypts_key(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;
@@ -476,7 +461,6 @@ async fn fetch_models_saved_provider_decrypts_key(pool: PgPool) {
     assert_eq!(h.x_api_key, vec!["sk-anthropic-987654321".to_string()]);
 }
 
-// gemini：models/ 前缀剥离 + 自定义 models_path 生效 + x-goog-api-key 头
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn fetch_models_gemini_strips_prefix_and_custom_path(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;
@@ -501,7 +485,6 @@ async fn fetch_models_gemini_strips_prefix_and_custom_path(pool: PgPool) {
     assert_eq!(h.goog_key, vec!["goog-key-123456".to_string()]);
 }
 
-// 错误映射：上游 500 → internal；非法 kind → InvalidArgument；不存在的 id → NotFound
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn fetch_models_maps_errors_and_bad_id(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;

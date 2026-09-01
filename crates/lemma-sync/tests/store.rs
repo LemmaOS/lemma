@@ -21,14 +21,12 @@ async fn pull_respects_cursor_and_order(pool: PgPool) {
     let c2 = lemma_conversations::store::insert(&pool, uid)
         .await
         .unwrap();
-    // rename 产生第二次变更（sync_seq 递增）
     let c1 = lemma_conversations::store::rename(&pool, c1.id, uid, "新标题")
         .await
         .unwrap()
         .unwrap();
 
     let all = store::pull_conversations(&pool, uid, 0, 10).await.unwrap();
-    // LWW：每实体一行，rename 只推高 c1 的 sync_seq 而非新增行
     assert_eq!(all.len(), 2);
     assert_eq!(all[0].id, c2.id);
     assert_eq!(all[1].id, c1.id);

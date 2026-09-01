@@ -30,7 +30,6 @@ impl ProviderService {
     }
 }
 
-/// DB 存的 kind 字符串 → proto 枚举（未知值宽松兜底为 openai）
 pub fn kind_to_proto(kind: &str) -> ProviderKind {
     match kind {
         "anthropic" => ProviderKind::Anthropic,
@@ -48,7 +47,6 @@ fn kind_from_proto(kind: &EnumValue<ProviderKind>) -> Result<&'static str, Conne
     }
 }
 
-// 脱敏需要真实 key 的首尾，所以先解密再遮
 fn to_proto(p: &DbProvider, secret_key: &str) -> Provider {
     let key = derive_key(secret_key);
     let api_key = open(&key, &p.api_key)
@@ -146,7 +144,6 @@ impl lemma_proto::lemma::v1::ProviderService for ProviderService {
     ) -> ServiceResult<UpdateProviderResponse> {
         let user_id = lemma_auth::require_user(&self.jwt_secret, &ctx)?;
         let id = parse_id(request.id)?;
-        // optional 标量：None = 不变更；api_key 额外把空串视为不变更
         let api_key = match request.api_key {
             Some(k) if !k.is_empty() => {
                 let key = derive_key(&self.secret_key);
@@ -201,7 +198,6 @@ impl lemma_proto::lemma::v1::ProviderService for ProviderService {
     ) -> ServiceResult<FetchModelsResponse> {
         let user_id = lemma_auth::require_user(&self.jwt_secret, &ctx)?;
         let (kind, base_url, api_key, models_path) = if !request.id.is_empty() {
-            // 已存配置模式：解密后调用
             let id = parse_id(request.id)?;
             let p = providers::find_by_id_and_user(&self.pool, id, user_id)
                 .await
@@ -217,7 +213,6 @@ impl lemma_proto::lemma::v1::ProviderService for ProviderService {
                 p.models_path.clone(),
             )
         } else {
-            // 临时凭证模式
             (
                 kind_to_proto(kind_from_proto(&request.kind)?),
                 request.base_url.trim().trim_end_matches('/').to_string(),

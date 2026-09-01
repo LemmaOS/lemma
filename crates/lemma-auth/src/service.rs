@@ -16,7 +16,6 @@ use crate::{
     generate_refresh_token, hash_password, hash_token, sign_access_token, verify_password,
 };
 
-// refresh token 寿命 30 天（滑动）
 const REFRESH_TTL_DAYS: i64 = 30;
 
 pub struct AuthService {
@@ -32,7 +31,6 @@ impl AuthService {
         }
     }
 
-    // 签发令牌对：access 走 JWT，refresh 落库存哈希；返回 refresh 行 id 供轮换关联
     async fn issue_tokens<'e, E>(
         &self,
         executor: E,
@@ -81,7 +79,6 @@ fn user_to_proto(u: &DbUser) -> User {
     }
 }
 
-// db 错误到 Connect 错误的统一映射
 fn map_db(e: sqlx::Error) -> ConnectError {
     match &e {
         sqlx::Error::Database(d) if d.is_unique_violation() => {
@@ -91,7 +88,6 @@ fn map_db(e: sqlx::Error) -> ConnectError {
     }
 }
 
-// 是否撞 owner 唯一索引（并发注册竞态）
 fn is_owner_conflict(e: &sqlx::Error) -> bool {
     e.as_database_error()
         .and_then(|d| d.constraint())
@@ -115,7 +111,6 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
             .map_err(|e| ConnectError::internal(format!("hash password: {e}")))?;
         let user = match users::insert(&self.pool, username, email, &hash).await {
             Ok(u) => u,
-            // 并发首批注册撞 owner 索引：按 normal 重试一次
             Err(e) if is_owner_conflict(&e) => users::insert(&self.pool, username, email, &hash)
                 .await
                 .map_err(map_db)?,
@@ -168,7 +163,6 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
             .await
             .map_err(map_db)?
             .ok_or_else(|| app_error(ErrorReason::TokenInvalid))?;
-        // 已吊销/已轮换的 token 再出现 = 泄露，整链吊销
         if row.revoked_at.is_some() || row.replaced_by.is_some() {
             let _ = tokens::revoke_chain(&self.pool, row.id).await;
             return Err(app_error(ErrorReason::TokenInvalid));
@@ -176,7 +170,6 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
         if row.expires_at <= Utc::now() {
             return Err(app_error(ErrorReason::TokenInvalid));
         }
-        // 事务内轮换：插新 token + 标记旧 token
         let mut tx = self.pool.begin().await.map_err(map_db)?;
         let (new_tokens, new_id) = self.issue_tokens(&mut *tx, row.user_id).await?;
         tokens::mark_replaced(&mut *tx, row.id, new_id)

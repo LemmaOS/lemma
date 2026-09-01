@@ -1,5 +1,3 @@
-//! 存储内核：连接池、迁移、共享实体；领域查询住在各领域 crate
-
 pub mod entity;
 
 use sqlx::PgPool;
@@ -9,7 +7,6 @@ pub async fn connect(url: &str) -> sqlx::Result<PgPool> {
     PgPoolOptions::new().connect(url).await
 }
 
-// 启动时执行迁移（嵌入编译产物）
 pub async fn migrate(pool: &PgPool) -> Result<(), sqlx::migrate::MigrateError> {
     sqlx::migrate!("./migrations").run(pool).await
 }

@@ -5,7 +5,6 @@ use lemma_auth::{tokens, users};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-// 每个测试独立建库，用户名可任意
 async fn new_user(pool: &PgPool) -> Uuid {
     let name = format!("u-{}", Uuid::new_v4());
     users::insert(pool, &name, &format!("{name}@example.com"), "hash")
@@ -61,11 +60,9 @@ async fn revoke_is_guarded_by_revoked_at(pool: PgPool) {
         .await
         .unwrap();
     assert_eq!(tokens::revoke(&pool, id).await.unwrap(), 1);
-    // 已吊销的再吊销是幂等 no-op
     assert_eq!(tokens::revoke(&pool, id).await.unwrap(), 0);
 }
 
-// 回归：链式吊销必须覆盖全部后代（曾只吊销链首）
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn revoke_chain_revokes_all_descendants(pool: PgPool) {
     let uid = new_user(&pool).await;
@@ -75,7 +72,6 @@ async fn revoke_chain_revokes_all_descendants(pool: PgPool) {
             .await
             .unwrap();
     }
-    // a→b→c 轮换链
     tokens::mark_replaced(&pool, a, b).await.unwrap();
     tokens::mark_replaced(&pool, b, c).await.unwrap();
 

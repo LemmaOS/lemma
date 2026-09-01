@@ -56,7 +56,6 @@ where
         .await
 }
 
-// 所有 UPDATE 显式取新 sync_seq：列默认值只作用于 INSERT
 pub async fn rename<'e, E>(
     executor: E,
     id: Uuid,
@@ -81,7 +80,6 @@ where
     .await
 }
 
-// 单向迁移：仅 active 可归档；message_count 就地统计
 pub async fn archive<'e, E>(
     executor: E,
     id: Uuid,
@@ -131,7 +129,6 @@ where
     .await
 }
 
-// 仅归档可彻底删除；messages 级联
 pub async fn delete_archived<'e, E>(executor: E, id: Uuid, user_id: Uuid) -> sqlx::Result<bool>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -144,7 +141,6 @@ where
         .map(|r| r.rows_affected() > 0)
 }
 
-// keyset 分页：(created_at, id) 递减取最新一页；before 也须属于同一会话
 pub async fn list_messages<'e, E>(
     executor: E,
     conversation_id: Uuid,
@@ -179,7 +175,6 @@ where
         .fetch_all(executor)
         .await?
     };
-    // limit+1 探测下一页
     let has_more = rows.len() as i64 > limit;
     let messages = if has_more {
         rows[..rows.len() - 1].to_vec()
@@ -189,9 +184,6 @@ where
     Ok((messages, has_more))
 }
 
-// 以下函数只参与事务，直接收连接
-
-// 行锁 + 归属 + 状态校验；与发送事务互斥，归档快照不缺在途消息
 pub async fn lock_active(
     conn: &mut sqlx::PgConnection,
     id: Uuid,
@@ -220,7 +212,6 @@ pub async fn lock_archived(
     .await
 }
 
-/// 归档快照：全量消息按 seq 正序 */
 pub async fn list_all_messages(
     conn: &mut sqlx::PgConnection,
     conversation_id: Uuid,
@@ -231,7 +222,6 @@ pub async fn list_all_messages(
         .await
 }
 
-/// 归档落位（含对象键）；message_count 先算后删 */
 pub async fn mark_archived_with_key(
     conn: &mut sqlx::PgConnection,
     id: Uuid,
@@ -253,7 +243,6 @@ pub async fn mark_archived_with_key(
     .await
 }
 
-/// 内容已落对象，清空 PG 消息 */
 pub async fn delete_all_messages(
     conn: &mut sqlx::PgConnection,
     conversation_id: Uuid,
@@ -265,7 +254,6 @@ pub async fn delete_all_messages(
         .map(|r| r.rows_affected())
 }
 
-/// 解档回灌：seq/时间戳取对象里的原值；sync_seq 走列默认取新号 */
 pub async fn insert_restored(
     conn: &mut sqlx::PgConnection,
     messages: &[Message],
@@ -296,7 +284,6 @@ pub async fn insert_restored(
     Ok(())
 }
 
-/// 删除前取对象键：Some(Some(key))=有对象，Some(None)=就地归档，None=行不存在
 pub async fn find_archive_key<'e, E>(
     executor: E,
     id: Uuid,

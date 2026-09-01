@@ -21,7 +21,6 @@ use crate::adapter::{AdapterEvent, BoxEventStream, ChatMessage, ChatRequest, Llm
 use crate::registry::{StreamEvent, StreamHandle, StreamRegistry, StreamStatus};
 use crate::store;
 
-// 落库节流：间隔或增量字节先到先触发
 const FLUSH_INTERVAL: Duration = Duration::from_millis(500);
 const FLUSH_BYTES: usize = 2048;
 
@@ -49,7 +48,6 @@ impl ChatService {
         }
     }
 
-    // 幂等重放 / 断线续传共用：按字符 offset 组装事件流
     async fn chat_event_stream(
         &self,
         mut msg: DbMessage,
@@ -61,7 +59,6 @@ impl ChatService {
                 Some(handle) => {
                     let (replay, rx) = handle.snapshot_and_subscribe(offset);
                     if handle.status() == StreamStatus::Live {
-                        // 进行中：补差额 + 挂广播续播
                         let prefix: Vec<Result<ChatEvent, ConnectError>> = if replay.is_empty() {
                             Vec::new()
                         } else {
@@ -69,14 +66,12 @@ impl ChatService {
                         };
                         return Ok(Box::pin(stream::iter(prefix).chain(live_event_stream(rx))));
                     }
-                    // drive 先落库再置终态；重读库拿最终内容
                     msg = store::find_by_id_and_user(&self.pool, msg.id, user_id)
                         .await
                         .map_err(map_db)?
                         .ok_or_else(|| ConnectError::internal("message vanished"))?;
                 }
                 None => {
-                    // 孤儿 streaming（服务重启）：按中断收尾
                     msg = store::mark_aborted(&self.pool, msg.id, &msg.content)
                         .await
                         .map_err(map_db)?
@@ -110,7 +105,6 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
         }
         let client_msg_id = request.client_msg_id;
 
-        // 归属校验
         lemma_conversations::store::find_by_id_and_user(&self.pool, conversation_id, user_id)
             .await
             .map_err(map_db)?
@@ -124,7 +118,6 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
             return Err(app_error(ErrorReason::ProviderDisabled));
         }
 
-        // 幂等：同一 client_msg_id 重发 → 重放已有 assistant 消息
         if !client_msg_id.is_empty()
             && let Some(existing) =
                 store::find_assistant_by_client_msg_id(&self.pool, conversation_id, client_msg_id)
@@ -143,12 +136,10 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
             )));
         }
 
-        // 解密 api key
         let key = lemma_crypto::derive_key(&self.secret_key);
         let api_key = lemma_crypto::open(&key, &provider.api_key)
             .map_err(|_| ConnectError::internal("decrypt api key"))?;
 
-        // 事务：user 消息 + assistant 占位
         let mut tx = self.pool.begin().await.map_err(map_db)?;
         store::lock_conversation(&mut *tx, conversation_id)
             .await
@@ -171,7 +162,6 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
         .await
         {
             Ok(m) => m,
-            // 并发双发撞唯一索引：回滚后按幂等重放处理
             Err(e) if is_unique_violation(&e) && !client_msg_id.is_empty() => {
                 drop(tx);
                 let existing = store::find_assistant_by_client_msg_id(
@@ -197,7 +187,6 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
         };
         tx.commit().await.map_err(map_db)?;
 
-        // 上下文：含刚插入的 user 消息，排除 streaming 占位
         let history = store::list_context(&self.pool, conversation_id)
             .await
             .map_err(map_db)?;
@@ -218,7 +207,6 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
         };
         let started = started_response(assistant.id, client_msg_id);
 
-        // 建连失败：落 error + 返回 [started, error] 两事件流
         let upstream = match self.adapter.stream_chat(chat_req).await {
             Ok(s) => s,
             Err(e) => {
@@ -242,7 +230,6 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
             assistant.id,
             upstream,
         ));
-        // 自己这份先释放：producer 终结后频道关闭，响应流自然收尾
         drop(handle);
 
         let events = live_event_stream(rx).map(|r| {
@@ -265,16 +252,13 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
             .await
             .map_err(map_db)?
             .ok_or_else(|| app_error(ErrorReason::MessageNotFound))?;
-        // 幂等：非 streaming 无需处理
         if msg.status != "streaming" {
             return Response::ok(AbortMessageResponse::default());
         }
         match self.registry.get(&id) {
-            // producer 监听中断信号，负责落库与广播
             Some(handle) => {
                 handle.abort();
             }
-            // 孤儿 streaming（服务重启）：直接落库
             None => {
                 store::mark_aborted(&self.pool, id, &msg.content)
                     .await
@@ -309,7 +293,6 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
     }
 }
 
-// 生产者：消费上游流推 registry，节流落库；终结落库后移除注册表项
 async fn drive(
     pool: PgPool,
     registry: StreamRegistry,
@@ -351,7 +334,6 @@ async fn drive(
                     handle.fail(&e.message);
                     break;
                 }
-                // 上游静默结束按 done 处理（usage 未知）
                 None => {
                     let content = handle.content();
                     let _ = store::finalize(&pool, message_id, &content, None).await;
@@ -369,7 +351,6 @@ fn live_event_stream(
 ) -> ServiceStream<ChatEvent> {
     Box::pin(BroadcastStream::new(rx).map(|item| match item {
         Ok(ev) => Ok(stream_event_to_chat_event(ev)),
-        // 客户端消费太慢溢出广播缓冲：本 RPC 报错，流本身不受影响
         Err(_) => Err(ConnectError::internal("stream lagged")),
     }))
 }
@@ -382,7 +363,6 @@ fn replay_events(msg: &DbMessage, offset: usize) -> Vec<ChatEvent> {
     }
     match msg.status.as_str() {
         "aborted" => out.push(aborted_event()),
-        // 原始错误消息没落库，用通用文案
         "error" => out.push(error_event("generation failed")),
         _ => out.push(done_event(msg.token_usage.as_ref().map(|u| u.0.clone()))),
     }

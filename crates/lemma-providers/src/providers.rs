@@ -9,7 +9,7 @@ pub struct NewProvider<'a> {
     pub kind: &'a str,
     pub name: &'a str,
     pub base_url: &'a str,
-    pub api_key: &'a str, // 已加密
+    pub api_key: &'a str,
     pub api_path: &'a str,
     pub models_path: &'a str,
     pub models: &'a [String],
@@ -19,7 +19,7 @@ pub struct NewProvider<'a> {
 pub struct ProviderPatch {
     pub name: Option<String>,
     pub base_url: Option<String>,
-    pub api_key: Option<String>, // 已加密
+    pub api_key: Option<String>,
     pub api_path: Option<String>,
     pub models_path: Option<String>,
     pub enabled: Option<bool>,
@@ -60,7 +60,6 @@ where
         .await
 }
 
-// 归属校验内置：id 存在但不属于该用户时同样返回 None
 pub async fn find_by_id_and_user<'e, E>(
     executor: E,
     id: Uuid,
@@ -76,7 +75,6 @@ where
         .await
 }
 
-// 动态 SET；updated_at 恒更新，空 patch 也是合法 SQL
 pub async fn update<'e, E>(
     executor: E,
     id: Uuid,

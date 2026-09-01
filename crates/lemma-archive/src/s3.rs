@@ -5,7 +5,6 @@ use aws_sdk_s3::primitives::ByteStream;
 
 use crate::{ArchiveError, ArchiveStore};
 
-/// S3 连接参数（服务端从环境变量读出后传入）
 #[derive(Clone)]
 pub struct S3Config {
     pub endpoint: String,
@@ -34,7 +33,6 @@ impl S3ArchiveStore {
             .region(Region::new(cfg.region.clone()))
             .endpoint_url(&cfg.endpoint)
             .credentials_provider(creds)
-            // MinIO / R2 均为 path-style；AWS 旧区兼容
             .force_path_style(true)
             .build();
         Self {
@@ -43,12 +41,10 @@ impl S3ArchiveStore {
         }
     }
 
-    // 桶探测：Ok(false) = 桶不存在（HeadBucket 对缺失桶建模为 NotFound）
     pub async fn bucket_exists(&self) -> Result<bool, ArchiveError> {
         match self.client.head_bucket().bucket(&self.bucket).send().await {
             Ok(_) => Ok(true),
             Err(e) => {
-                // HEAD 响应无 body：服务端拒绝时 SDK 解析不到错误码，用 HTTP 状态兜底
                 let status = e.raw_response().map(|r| r.status().as_u16());
                 let svc = e.into_service_error();
                 if svc.is_not_found() {

@@ -64,7 +64,6 @@ async fn find_by_id_and_user_isolation(pool: PgPool) {
     );
 }
 
-// 回归：动态 update 只动指定字段（曾因 push_bind 分隔符产生非法 SQL）
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn update_partial_keeps_other_fields(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;
@@ -93,7 +92,6 @@ async fn update_partial_keeps_other_fields(pool: PgPool) {
     .unwrap();
     assert_eq!(updated.name, "renamed");
     assert!(!updated.enabled);
-    // 未涉及字段保持原值
     assert_eq!(updated.base_url, p.base_url);
     assert_eq!(updated.models.0, p.models.0);
     assert_eq!(updated.api_key, p.api_key);

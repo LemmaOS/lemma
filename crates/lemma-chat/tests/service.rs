@@ -31,14 +31,9 @@ use uuid::Uuid;
 const JWT_SECRET: &str = "jwt-test";
 const SECRET_KEY: &str = "key-test";
 
-// ---------- 假适配器：脚本驱动 ----------
-
 enum Script {
-    /// 依次吐 delta，最后 Done（带 usage）
     Done(Vec<String>),
-    /// 吐一条后永久挂起（测 abort）
     Hang(String),
-    /// 建连即失败
     Fail(String),
 }
 
@@ -93,8 +88,6 @@ impl LlmAdapter for FakeAdapter {
     }
 }
 
-// ---------- 夹具与请求助手 ----------
-
 struct Fixture {
     user_id: Uuid,
     token: String,
@@ -144,8 +137,6 @@ fn bearer_ctx(token: &str) -> RequestContext {
     RequestContext::new(headers)
 }
 
-// 经 wire 编解码还原具体消息：rustc 走 M: Encodable<M> 自反实现，rust-analyzer 走
-// 不透明类型的 Encodable<M> 参数化，两侧推导一致，绕开 RA 对 RPITIT 精化的误报
 fn owned_body<M>(body: &impl Encodable<M>) -> M
 where
     M: Message + JsonSerialize,
@@ -176,7 +167,6 @@ async fn send(
         .send_message(bearer_ctx(token), ServiceRequest::from_parts(&view, &bytes))
         .await
     {
-        // 流元素在 RA 眼里也是不透明类型，逐个过 owned_body 再重新装箱
         Ok(resp) => Ok(resp.body.map(|item| item.map(|m| owned_body(&m))).boxed()),
         Err(e) => Err(e),
     }
@@ -240,7 +230,6 @@ fn revent_of(r: &ResumeStreamResponse) -> &ChatEvent {
     r.event.as_option().unwrap()
 }
 
-// 直插 streaming 状态的孤儿 assistant 消息（不经 registry，测服务重启场景）
 async fn insert_orphan_streaming(pool: &PgPool, conv: Uuid, content: &str) -> Uuid {
     let id = Uuid::new_v4();
     sqlx::query(
@@ -256,8 +245,6 @@ async fn insert_orphan_streaming(pool: &PgPool, conv: Uuid, content: &str) -> Uu
     .unwrap();
     id
 }
-
-// ---------- 测试 ----------
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn send_streams_deltas_and_finalizes(pool: PgPool) {
@@ -298,7 +285,6 @@ async fn send_streams_deltas_and_finalizes(pool: PgPool) {
         Kind::Done(d) if d.usage.as_option().unwrap().total_tokens == 3
     ));
 
-    // 落库终态
     let mid = Uuid::parse_str(&message_id).unwrap();
     let msg = store::find_by_id_and_user(&pool, mid, f.user_id)
         .await
@@ -333,7 +319,6 @@ async fn send_idempotent_replay_skips_upstream(pool: PgPool) {
         other => panic!("expected started, got {other:?}"),
     };
 
-    // 同 client_msg_id 重发：重放，不再调上游
     let second = collect_send(
         send(
             &svc,
@@ -355,7 +340,6 @@ async fn send_idempotent_replay_skips_upstream(pool: PgPool) {
     assert!(matches!(kind_of(event_of(&second[1])), Kind::Delta(d) if d.content == "好"));
     assert!(matches!(kind_of(event_of(&second[2])), Kind::Done(_)));
 
-    // 库里只有一条 assistant 消息
     let count: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM messages WHERE conversation_id = $1 AND role = 'assistant'",
     )
@@ -391,7 +375,6 @@ async fn abort_mid_stream_keeps_partial(pool: PgPool) {
 
     let aborted = stream.next().await.unwrap().unwrap();
     assert!(matches!(kind_of(event_of(&aborted)), Kind::Aborted(_)));
-    // producer 终结后频道关闭，流自然收尾
     assert!(stream.next().await.is_none());
 
     let mid = Uuid::parse_str(&message_id).unwrap();
@@ -402,7 +385,6 @@ async fn abort_mid_stream_keeps_partial(pool: PgPool) {
     assert_eq!(msg.status, "aborted");
     assert_eq!(msg.content, "半");
 
-    // 幂等：再 abort 一次也成功
     abort(&svc, &f.token, &message_id).await.unwrap();
 }
 
@@ -426,7 +408,6 @@ async fn resume_replays_from_char_offset(pool: PgPool) {
         other => panic!("expected started, got {other:?}"),
     };
 
-    // 已终结：从库重放，offset=1 跳过"你"
     let events: Vec<ResumeStreamResponse> = resume(&svc, &f.token, &message_id, 1)
         .await
         .unwrap()
@@ -481,7 +462,6 @@ async fn send_rejects_foreign_conversation(pool: PgPool) {
         SECRET_KEY,
         Arc::new(FakeAdapter::new(Script::Done(vec![]))),
     );
-    // alice 的 token + erin 的会话
     let err = send(
         &svc,
         &f.token,
@@ -496,7 +476,6 @@ async fn send_rejects_foreign_conversation(pool: PgPool) {
     assert_eq!(err.code, ErrorCode::NotFound);
 }
 
-// 断线重连：活流先补快照差额，再挂广播续播（abort 一声，两条流都收到）
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn resume_live_stream_replays_snapshot_then_follows(pool: PgPool) {
     let f = fixture(&pool, "alice").await;
@@ -517,7 +496,6 @@ async fn resume_live_stream_replays_snapshot_then_follows(pool: PgPool) {
     let delta = stream.next().await.unwrap().unwrap();
     assert!(matches!(kind_of(event_of(&delta)), Kind::Delta(d) if d.content == "半"));
 
-    // 断线重连：offset 0 → 快照重放 Delta("半")，随后进入广播
     let mut resumed = resume(&svc, &f.token, &message_id, 0).await.unwrap();
     let replay = tokio::time::timeout(std::time::Duration::from_secs(5), resumed.next())
         .await
@@ -526,7 +504,6 @@ async fn resume_live_stream_replays_snapshot_then_follows(pool: PgPool) {
         .unwrap();
     assert!(matches!(kind_of(revent_of(&replay)), Kind::Delta(d) if d.content == "半"));
 
-    // 中止：广播把 Aborted 送到重连流
     abort(&svc, &f.token, &message_id).await.unwrap();
     let aborted = tokio::time::timeout(std::time::Duration::from_secs(5), resumed.next())
         .await
@@ -536,7 +513,6 @@ async fn resume_live_stream_replays_snapshot_then_follows(pool: PgPool) {
     assert!(matches!(kind_of(revent_of(&aborted)), Kind::Aborted(_)));
 }
 
-// 已中止的消息重连：registry 句柄已终态 → 重读库回放，Delta + Aborted
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn resume_after_abort_replays_from_db(pool: PgPool) {
     let f = fixture(&pool, "alice").await;
@@ -554,7 +530,7 @@ async fn resume_after_abort_replays_from_db(pool: PgPool) {
         Kind::Started(s) => s.message_id.clone(),
         other => panic!("expected started, got {other:?}"),
     };
-    stream.next().await.unwrap().unwrap(); // delta
+    stream.next().await.unwrap().unwrap();
     abort(&svc, &f.token, &message_id).await.unwrap();
 
     let events: Vec<ResumeStreamResponse> = resume(&svc, &f.token, &message_id, 0)
@@ -568,7 +544,6 @@ async fn resume_after_abort_replays_from_db(pool: PgPool) {
     assert!(matches!(kind_of(revent_of(&events[1])), Kind::Aborted(_)));
 }
 
-// 孤儿 streaming（服务重启丢 registry）：按中断收尾，不炸不挂
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn resume_orphan_streaming_marks_aborted(pool: PgPool) {
     let f = fixture(&pool, "alice").await;
@@ -598,7 +573,6 @@ async fn resume_orphan_streaming_marks_aborted(pool: PgPool) {
     assert_eq!(status, "aborted");
 }
 
-// 三条参数校验：空 content / 空 model / provider 被禁用
 #[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn send_rejects_bad_requests(pool: PgPool) {
     let f = fixture(&pool, "alice").await;
@@ -609,7 +583,6 @@ async fn send_rejects_bad_requests(pool: PgPool) {
         Arc::new(FakeAdapter::new(Script::Done(vec![]))),
     );
 
-    // send helper 写死了 model，这里内联构造请求（同 conversations 测试惯例）
     async fn raw_send(
         svc: &ChatService,
         token: &str,

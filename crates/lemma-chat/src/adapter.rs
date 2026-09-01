@@ -1,5 +1,3 @@
-//! 供应商协议适配层：把各家 API 的流式响应统一成 AdapterEvent 流
-
 mod anthropic;
 mod gemini;
 mod openai;
@@ -23,7 +21,6 @@ pub type BoxChatFuture = Pin<Box<dyn Future<Output = Result<BoxEventStream, Adap
 
 pub(crate) type ByteStream = Pin<Box<dyn Stream<Item = Result<Vec<u8>, AdapterError>> + Send>>;
 
-/// 一次流式对话的输入
 pub struct ChatRequest {
     pub kind: ProviderKind,
     pub base_url: String,
@@ -38,11 +35,9 @@ pub struct ChatMessage {
     pub content: String,
 }
 
-/// 适配层产出的统一事件
 #[derive(Debug)]
 pub enum AdapterEvent {
     Delta(String),
-    /// usage 为 None = 上游不支持或未返回 token 统计
     Done(Option<TokenUsage>),
 }
 
@@ -73,7 +68,6 @@ pub trait LlmAdapter: Send + Sync {
     fn stream_chat(&self, req: ChatRequest) -> BoxChatFuture;
 }
 
-/// 按供应商类型分发到具体协议适配器；未知/未指定按 OpenAI 兼容兜底
 pub struct DispatchAdapter {
     openai: OpenAiCompatible,
     anthropic: AnthropicMessages,
@@ -110,7 +104,6 @@ impl LlmAdapter for DispatchAdapter {
     }
 }
 
-/// 非 2xx 收全量 body 报错（不进入流式）；2xx 转字节流
 pub(crate) async fn bytes_of(resp: reqwest::Response) -> Result<ByteStream, AdapterError> {
     if !resp.status().is_success() {
         let status = resp.status();
@@ -126,7 +119,6 @@ pub(crate) async fn bytes_of(resp: reqwest::Response) -> Result<ByteStream, Adap
 mod tests {
     use super::*;
 
-    // 胖指针的 vtable 可能按转换点去重失败，只比数据指针
     fn same_data(a: &dyn LlmAdapter, b: &dyn LlmAdapter) -> bool {
         std::ptr::from_ref(a).cast::<()>() == std::ptr::from_ref(b).cast::<()>()
     }

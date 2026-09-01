@@ -29,7 +29,6 @@ where
     .await
 }
 
-// 不做有效性过滤，状态判定留给 auth 层（区分过期/吊销/重放）
 pub async fn find_by_hash<'e, E>(
     executor: E,
     token_hash: &str,
@@ -66,7 +65,6 @@ where
         .map(|r| r.rows_affected())
 }
 
-// 重放检测：吊销整条轮换链
 pub async fn revoke_chain<'e, E>(executor: E, id: Uuid) -> sqlx::Result<u64>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,

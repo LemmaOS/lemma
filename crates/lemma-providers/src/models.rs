@@ -21,7 +21,6 @@ struct NameOnly {
     name: String,
 }
 
-// 拉取供应商模型列表；models_path 留空用默认 /models
 pub async fn fetch_models(
     kind: ProviderKind,
     base_url: &str,

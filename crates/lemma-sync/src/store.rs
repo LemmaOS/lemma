@@ -1,7 +1,6 @@
 use lemma_db::entity::{Conversation, Message};
 use uuid::Uuid;
 
-// 多拉一条供调用方探测截断
 pub async fn pull_conversations<'e, E>(
     executor: E,
     user_id: Uuid,
@@ -21,7 +20,6 @@ where
     .await
 }
 
-// 归属校验内置：JOIN conversations 限定 user
 pub async fn pull_messages<'e, E>(
     executor: E,
     user_id: Uuid,
@@ -47,7 +45,6 @@ where
     .await
 }
 
-// 序列头部 = 全局最新变更序号。hint 语义允许跨用户（客户端自行比对游标，空了无害）
 pub async fn head_sync_seq<'e, E>(executor: E) -> sqlx::Result<i64>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
