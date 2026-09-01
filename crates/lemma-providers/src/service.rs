@@ -1,3 +1,5 @@
+//! Handler for the ProviderService RPCs.
+
 use crate::providers::{self, NewProvider, ProviderPatch};
 use buffa::EnumValue;
 use buffa_types::google::protobuf::Timestamp;
@@ -14,6 +16,10 @@ use uuid::Uuid;
 use crate::fetch_models;
 use lemma_crypto::{derive_key, mask, open, seal};
 
+/// Connect handler implementing the ProviderService RPCs.
+///
+/// Holds two secrets: `jwt_secret` authenticates requests, `secret_key`
+/// derives the key that seals provider API keys at rest.
 pub struct ProviderService {
     pool: PgPool,
     jwt_secret: String,
@@ -30,6 +36,8 @@ impl ProviderService {
     }
 }
 
+/// Maps a stored kind string to its proto enum. Unrecognized strings
+/// fall back to Openai, the most common shape.
 pub fn kind_to_proto(kind: &str) -> ProviderKind {
     match kind {
         "anthropic" => ProviderKind::Anthropic,
@@ -49,6 +57,8 @@ fn kind_from_proto(kind: &EnumValue<ProviderKind>) -> Result<&'static str, Conne
 
 fn to_proto(p: &DbProvider, secret_key: &str) -> Provider {
     let key = derive_key(secret_key);
+    // A key that fails to open (e.g. master-secret rotation) degrades to
+    // a fully masked placeholder instead of failing the whole request.
     let api_key = open(&key, &p.api_key)
         .map(|k| mask(&k))
         .unwrap_or_else(|_| "****".to_string());
@@ -144,6 +154,9 @@ impl lemma_proto::lemma::v1::ProviderService for ProviderService {
     ) -> ServiceResult<UpdateProviderResponse> {
         let user_id = lemma_auth::require_user(&self.jwt_secret, &ctx)?;
         let id = parse_id(request.id)?;
+        // An absent or empty api_key means "keep the current key". The
+        // frontend never resubmits the masked display value, so whatever
+        // arrives here is a real new key to seal.
         let api_key = match request.api_key {
             Some(k) if !k.is_empty() => {
                 let key = derive_key(&self.secret_key);

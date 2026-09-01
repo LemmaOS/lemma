@@ -1,3 +1,5 @@
+//! Fetches the live model list from a provider's API.
+
 use lemma_proto::lemma::v1::ProviderKind;
 use std::time::Duration;
 
@@ -21,6 +23,12 @@ struct NameOnly {
     name: String,
 }
 
+/// Lists the models a provider exposes, using the auth scheme of its
+/// kind: bearer token for OpenAI-compatible APIs, `x-api-key` plus a
+/// pinned `anthropic-version` for Anthropic, `x-goog-api-key` for Gemini.
+///
+/// An empty `models_path` defaults to `/models`. Gemini returns names as
+/// `models/<id>`; the prefix is stripped.
 pub async fn fetch_models(
     kind: ProviderKind,
     base_url: &str,

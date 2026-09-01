@@ -1,24 +1,30 @@
+//! Queries for the providers table.
+
 use lemma_db::entity::Provider;
 use sqlx::QueryBuilder;
 use sqlx::types::Json;
 use uuid::Uuid;
 
+/// Fields for inserting a provider.
 pub struct NewProvider<'a> {
     pub id: Uuid,
     pub user_id: Uuid,
     pub kind: &'a str,
     pub name: &'a str,
     pub base_url: &'a str,
+    /// Must already be sealed with lemma-crypto.
     pub api_key: &'a str,
     pub api_path: &'a str,
     pub models_path: &'a str,
     pub models: &'a [String],
 }
 
+/// Partial update: `None` fields are left untouched.
 #[derive(Default)]
 pub struct ProviderPatch {
     pub name: Option<String>,
     pub base_url: Option<String>,
+    /// Must already be sealed with lemma-crypto.
     pub api_key: Option<String>,
     pub api_path: Option<String>,
     pub models_path: Option<String>,
@@ -26,6 +32,7 @@ pub struct ProviderPatch {
     pub models: Option<Vec<String>>,
 }
 
+/// Inserts a provider and returns it.
 pub async fn insert<'e, E>(executor: E, p: &NewProvider<'_>) -> sqlx::Result<Provider>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -50,6 +57,7 @@ where
     .await
 }
 
+/// Lists a user's providers in creation order.
 pub async fn list_by_user<'e, E>(executor: E, user_id: Uuid) -> sqlx::Result<Vec<Provider>>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -60,6 +68,7 @@ where
         .await
 }
 
+/// Finds a provider owned by the given user.
 pub async fn find_by_id_and_user<'e, E>(
     executor: E,
     id: Uuid,
@@ -75,6 +84,8 @@ where
         .await
 }
 
+/// Applies a patch to a provider owned by the given user, returning the
+/// updated row or `None` when it does not exist.
 pub async fn update<'e, E>(
     executor: E,
     id: Uuid,
@@ -118,6 +129,8 @@ where
         .await
 }
 
+/// Deletes a provider owned by the given user, returning whether a row
+/// was removed.
 pub async fn delete<'e, E>(executor: E, id: Uuid, user_id: Uuid) -> sqlx::Result<bool>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
