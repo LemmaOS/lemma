@@ -1,3 +1,10 @@
+//! Coded business errors carried as Connect error details.
+//!
+//! Every business error must go through [`app_error`]: the reason comes
+//! from the closed set in `errors.proto`, the English message here is only
+//! a fallback, and the frontend localizes by reason code. Internal
+//! operational errors stay code-free and are never localized.
+
 use base64::Engine as _;
 use buffa::Message;
 use connectrpc::{ConnectError, ErrorCode, ErrorDetail};
@@ -18,6 +25,7 @@ fn transport_code(reason: ErrorReason) -> ErrorCode {
         | ErrorReason::MessageNotFound
         | ErrorReason::BucketNotFound => ErrorCode::NotFound,
         ErrorReason::StorageHasArchives => ErrorCode::FailedPrecondition,
+        // Any reason not listed above maps to InvalidArgument by default.
         _ => ErrorCode::InvalidArgument,
     }
 }
@@ -60,10 +68,14 @@ fn message(reason: ErrorReason) -> &'static str {
     }
 }
 
+/// Builds a coded business error with the fallback message and no
+/// attributes.
 pub fn app_error(reason: ErrorReason) -> ConnectError {
     app_error_with(reason, &[])
 }
 
+/// Builds a coded business error, attaching `attrs` to the `ErrorInfo`
+/// detail for the frontend to interpolate into localized messages.
 pub fn app_error_with(reason: ErrorReason, attrs: &[(&str, &str)]) -> ConnectError {
     let info = ErrorInfo {
         reason: reason.into(),
@@ -77,6 +89,8 @@ pub fn app_error_with(reason: ErrorReason, attrs: &[(&str, &str)]) -> ConnectErr
         .with_detail(ErrorDetail::from_message(ERROR_INFO_TYPE, &info))
 }
 
+/// Extracts the business reason from an error, or `None` for code-free
+/// internal errors.
 pub fn error_reason(e: &ConnectError) -> Option<ErrorReason> {
     let d = e.details.iter().find(|d| d.type_url == ERROR_INFO_TYPE)?;
     let value = d.value.as_deref()?;
