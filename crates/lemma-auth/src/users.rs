@@ -1,5 +1,9 @@
+//! Queries for the users table.
+
 use lemma_db::entity::User;
 
+/// Inserts a user and returns it. The very first user becomes the owner;
+/// everyone after that is normal.
 pub async fn insert<'e, E>(
     executor: E,
     username: &str,
@@ -25,6 +29,7 @@ where
     .await
 }
 
+/// Finds a user by username or email; `login` matches either column.
 pub async fn find_by_login<'e, E>(executor: E, login: &str) -> sqlx::Result<Option<User>>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -35,6 +40,7 @@ where
         .await
 }
 
+/// Finds a user by id.
 pub async fn find_by_id<'e, E>(executor: E, id: uuid::Uuid) -> sqlx::Result<Option<User>>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,

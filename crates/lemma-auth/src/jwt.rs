@@ -1,15 +1,21 @@
+//! HS256 access-token signing and verification.
+
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
+/// Lifetime of an access token: 15 minutes.
 pub const ACCESS_TOKEN_TTL_SECS: i64 = 15 * 60;
 
+/// JWT claims. `sub` carries the user id.
 #[derive(Serialize, Deserialize)]
 pub struct Claims {
     pub sub: String,
     pub exp: usize,
 }
 
+/// Signs an access token for `user_id` expiring after
+/// [`ACCESS_TOKEN_TTL_SECS`].
 pub fn sign_access_token(
     secret: &str,
     user_id: Uuid,
@@ -27,6 +33,7 @@ pub fn sign_access_token(
     )
 }
 
+/// Verifies an access token's signature and expiry.
 pub fn verify_access_token(
     secret: &str,
     token: &str,

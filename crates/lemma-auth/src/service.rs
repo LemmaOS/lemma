@@ -1,3 +1,5 @@
+//! Handler for the AuthService RPCs.
+
 use crate::{tokens, users};
 use buffa_types::google::protobuf::Timestamp;
 use chrono::{Duration, Utc};
@@ -16,8 +18,10 @@ use crate::{
     generate_refresh_token, hash_password, hash_token, sign_access_token, verify_password,
 };
 
+/// Lifetime of a refresh token: 30 days.
 const REFRESH_TTL_DAYS: i64 = 30;
 
+/// Connect handler implementing the AuthService RPCs.
 pub struct AuthService {
     pool: PgPool,
     secret: String,
@@ -31,6 +35,8 @@ impl AuthService {
         }
     }
 
+    // Takes an executor rather than &PgPool so refresh() can issue the new
+    // token pair inside its rotation transaction.
     async fn issue_tokens<'e, E>(
         &self,
         executor: E,
@@ -111,6 +117,8 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
             .map_err(|e| ConnectError::internal(format!("hash password: {e}")))?;
         let user = match users::insert(&self.pool, username, email, &hash).await {
             Ok(u) => u,
+            // Lost a concurrent first-signup race for the single owner
+            // slot; retry, and the insert now lands as a normal user.
             Err(e) if is_owner_conflict(&e) => users::insert(&self.pool, username, email, &hash)
                 .await
                 .map_err(map_db)?,
@@ -163,6 +171,8 @@ impl lemma_proto::lemma::v1::AuthService for AuthService {
             .await
             .map_err(map_db)?
             .ok_or_else(|| app_error(ErrorReason::TokenInvalid))?;
+        // A rotated or revoked token being presented again means theft:
+        // revoke the whole rotation chain.
         if row.revoked_at.is_some() || row.replaced_by.is_some() {
             let _ = tokens::revoke_chain(&self.pool, row.id).await;
             return Err(app_error(ErrorReason::TokenInvalid));

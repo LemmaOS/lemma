@@ -1,7 +1,10 @@
+//! Queries for the refresh_tokens table.
+
 use chrono::{DateTime, Utc};
 use lemma_db::entity::RefreshToken;
 use uuid::Uuid;
 
+/// Inserts a refresh token row and returns it.
 pub async fn insert<'e, E>(
     executor: E,
     id: Uuid,
@@ -29,6 +32,7 @@ where
     .await
 }
 
+/// Looks up a token row by its SHA-256 hash.
 pub async fn find_by_hash<'e, E>(
     executor: E,
     token_hash: &str,
@@ -42,6 +46,7 @@ where
         .await
 }
 
+/// Links a consumed token to its rotation successor.
 pub async fn mark_replaced<'e, E>(executor: E, id: Uuid, replaced_by: Uuid) -> sqlx::Result<u64>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -54,6 +59,7 @@ where
         .map(|r| r.rows_affected())
 }
 
+/// Revokes a single token. Idempotent.
 pub async fn revoke<'e, E>(executor: E, id: Uuid) -> sqlx::Result<u64>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -65,6 +71,8 @@ where
         .map(|r| r.rows_affected())
 }
 
+/// Revokes a token and every successor in its rotation chain, following
+/// `replaced_by` recursively.
 pub async fn revoke_chain<'e, E>(executor: E, id: Uuid) -> sqlx::Result<u64>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
