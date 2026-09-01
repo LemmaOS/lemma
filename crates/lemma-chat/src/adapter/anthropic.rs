@@ -1,3 +1,5 @@
+//! Adapter for the Anthropic Messages API.
+
 use serde::Deserialize;
 
 use lemma_db::entity::TokenUsage;
@@ -5,9 +7,13 @@ use lemma_db::entity::TokenUsage;
 use super::sse::{Parsed, SseParser, events_from_sse};
 use super::{AdapterError, BoxChatFuture, ChatRequest, LlmAdapter, bytes_of};
 
+/// Required by the API; acts as a fixed response-length ceiling.
 const MAX_TOKENS: u32 = 8192;
+/// Pinned API version header.
 const ANTHROPIC_VERSION: &str = "2023-06-01";
 
+/// Streams via `POST <base_url><api_path>/messages` with an `x-api-key`
+/// header.
 pub struct AnthropicMessages {
     client: reqwest::Client,
 }
@@ -57,6 +63,8 @@ struct ApiError {
     message: String,
 }
 
+// Usage arrives split across events: input tokens in message_start,
+// output tokens cumulative in message_delta.
 struct Parser {
     input: Option<i64>,
     output: Option<i64>,

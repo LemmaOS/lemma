@@ -1,3 +1,5 @@
+//! Adapter for the Gemini generateContent API.
+
 use serde::Deserialize;
 
 use lemma_db::entity::TokenUsage;
@@ -5,6 +7,9 @@ use lemma_db::entity::TokenUsage;
 use super::sse::{Parsed, SseParser, events_from_sse};
 use super::{AdapterError, BoxChatFuture, ChatRequest, LlmAdapter, bytes_of};
 
+/// Streams via `:streamGenerateContent?alt=sse` with an `x-goog-api-key`
+/// header. The stream has no `[DONE]` sentinel; usage rides the last
+/// chunk and is flushed at EOF.
 pub struct GeminiGenerate {
     client: reqwest::Client,
 }
@@ -108,6 +113,8 @@ impl LlmAdapter for GeminiGenerate {
     fn stream_chat(&self, req: ChatRequest) -> BoxChatFuture {
         let client = self.client.clone();
         Box::pin(async move {
+            // A custom api_path embeds the model via a {model}
+            // placeholder; the default path appends it directly.
             let path = if req.api_path.is_empty() {
                 format!("/models/{}:streamGenerateContent?alt=sse", req.model)
             } else {
@@ -115,6 +122,7 @@ impl LlmAdapter for GeminiGenerate {
             };
             let url = format!("{}{}", req.base_url.trim_end_matches('/'), path);
             let body = serde_json::json!({
+                // Gemini names the assistant role "model".
                 "contents": req.messages.iter().map(|m| serde_json::json!({
                     "role": if m.role == "assistant" { "model" } else { "user" },
                     "parts": [{ "text": m.content }],

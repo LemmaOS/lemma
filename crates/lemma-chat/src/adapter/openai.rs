@@ -1,3 +1,5 @@
+//! Adapter for OpenAI-compatible chat completions APIs.
+
 use serde::Deserialize;
 
 use lemma_db::entity::TokenUsage;
@@ -5,6 +7,8 @@ use lemma_db::entity::TokenUsage;
 use super::sse::{Parsed, SseParser, events_from_sse};
 use super::{BoxChatFuture, ChatRequest, LlmAdapter, bytes_of};
 
+/// Streams via `POST <base_url><api_path>/chat/completions` with a
+/// bearer token.
 pub struct OpenAiCompatible {
     client: reqwest::Client,
 }
@@ -57,6 +61,8 @@ impl From<Usage> for TokenUsage {
     }
 }
 
+// With stream_options.include_usage set, usage arrives in its own chunk
+// ahead of [DONE]; the parser holds it until the terminal event.
 struct Parser {
     usage: Option<Usage>,
 }

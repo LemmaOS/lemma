@@ -1,3 +1,5 @@
+//! Per-kind LLM adapters and the SSE plumbing they share.
+
 mod anthropic;
 mod gemini;
 mod openai;
@@ -15,16 +17,21 @@ pub use anthropic::AnthropicMessages;
 pub use gemini::GeminiGenerate;
 pub use openai::OpenAiCompatible;
 
+/// Stream of generation events produced by an adapter.
 pub type BoxEventStream = Pin<Box<dyn Stream<Item = Result<AdapterEvent, AdapterError>> + Send>>;
 
+/// Future that establishes the upstream connection and yields the event
+/// stream.
 pub type BoxChatFuture = Pin<Box<dyn Future<Output = Result<BoxEventStream, AdapterError>> + Send>>;
 
 pub(crate) type ByteStream = Pin<Box<dyn Stream<Item = Result<Vec<u8>, AdapterError>> + Send>>;
 
+/// One streaming chat call against a provider.
 pub struct ChatRequest {
     pub kind: ProviderKind,
     pub base_url: String,
     pub api_path: String,
+    /// Plaintext key, opened from its sealed form just before the call.
     pub api_key: String,
     pub model: String,
     pub messages: Vec<ChatMessage>,
@@ -35,12 +42,17 @@ pub struct ChatMessage {
     pub content: String,
 }
 
+/// One generation event from the upstream stream.
 #[derive(Debug)]
 pub enum AdapterEvent {
+    /// A chunk of generated text.
     Delta(String),
+    /// Generation finished, optionally with token usage.
     Done(Option<TokenUsage>),
 }
 
+/// Any adapter failure, reduced to a message. These surface to clients
+/// as in-band error events, not coded business errors.
 #[derive(Debug)]
 pub struct AdapterError {
     pub message: String,
@@ -64,10 +76,12 @@ impl AdapterError {
     }
 }
 
+/// A provider-specific streaming chat implementation.
 pub trait LlmAdapter: Send + Sync {
     fn stream_chat(&self, req: ChatRequest) -> BoxChatFuture;
 }
 
+/// Routes chat requests to the adapter for the provider kind.
 pub struct DispatchAdapter {
     openai: OpenAiCompatible,
     anthropic: AnthropicMessages,
@@ -83,6 +97,8 @@ impl DispatchAdapter {
         }
     }
 
+    // Unspecified and unrecognized kinds fall through to the
+    // OpenAI-compatible adapter, the most common API shape.
     fn select(&self, kind: ProviderKind) -> &dyn LlmAdapter {
         match kind {
             ProviderKind::PROVIDER_KIND_ANTHROPIC => &self.anthropic,
@@ -104,6 +120,8 @@ impl LlmAdapter for DispatchAdapter {
     }
 }
 
+/// Converts a response into a byte stream, turning non-2xx statuses into
+/// an error carrying the response body.
 pub(crate) async fn bytes_of(resp: reqwest::Response) -> Result<ByteStream, AdapterError> {
     if !resp.status().is_success() {
         let status = resp.status();

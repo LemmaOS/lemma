@@ -1,3 +1,5 @@
+//! SSE line decoding shared by the adapters.
+
 use std::pin::Pin;
 
 use futures::{Stream, StreamExt, stream};
@@ -6,15 +8,22 @@ use lemma_db::entity::TokenUsage;
 
 use super::{AdapterError, AdapterEvent, BoxEventStream, ByteStream};
 
+/// Outcome of parsing one `data:` payload.
 #[derive(Debug)]
 pub enum Parsed {
+    /// The payload carries no text for the client.
     Skip,
+    /// A chunk of generated text.
     Delta(String),
+    /// The terminal event, optionally with token usage.
     Finish(Option<TokenUsage>),
 }
 
+/// Parses a provider's SSE `data:` payloads into events.
 pub trait SseParser: Send + 'static {
     fn parse_line(&mut self, data: &str) -> Result<Parsed, AdapterError>;
+    /// Flushes pending state when the stream ends without a terminal
+    /// event; used for token usage on APIs with no `[DONE]` sentinel.
     fn on_eof(&mut self) -> Option<TokenUsage> {
         None
     }
@@ -49,6 +58,9 @@ fn lines(bytes: ByteStream) -> ByteLines {
     ))
 }
 
+/// Turns an upstream byte stream into adapter events. Only `data:` lines
+/// are considered; `Done` is emitted exactly once, at the terminal event
+/// or at EOF.
 pub fn events_from_sse(bytes: ByteStream, parser: impl SseParser) -> BoxEventStream {
     let s = stream::try_unfold(
         (lines(bytes), parser, false),
@@ -82,6 +94,8 @@ pub fn events_from_sse(bytes: ByteStream, parser: impl SseParser) -> BoxEventStr
                     }
                     Some(Err(e)) => return Err(e),
                     None => {
+                        // The stream ended without a terminal event;
+                        // synthesize Done from whatever the parser held.
                         return Ok(Some((
                             AdapterEvent::Done(parser.on_eof()),
                             (lines, parser, true),

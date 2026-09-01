@@ -1,3 +1,5 @@
+//! Handler for the ChatService RPCs.
+
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
@@ -21,9 +23,12 @@ use crate::adapter::{AdapterEvent, BoxEventStream, ChatMessage, ChatRequest, Llm
 use crate::registry::{StreamEvent, StreamHandle, StreamRegistry, StreamStatus};
 use crate::store;
 
+/// Throttles mid-stream content persistence: at most every 500 ms or
+/// every 2 KiB of new text, whichever comes first.
 const FLUSH_INTERVAL: Duration = Duration::from_millis(500);
 const FLUSH_BYTES: usize = 2048;
 
+/// Connect handler implementing the ChatService RPCs.
 pub struct ChatService {
     pool: PgPool,
     jwt_secret: String,
@@ -48,6 +53,9 @@ impl ChatService {
         }
     }
 
+    /// Builds the event stream for an assistant message, live or
+    /// finished. `offset` (in chars) skips already-rendered content on
+    /// resume.
     async fn chat_event_stream(
         &self,
         mut msg: DbMessage,
@@ -72,6 +80,9 @@ impl ChatService {
                         .ok_or_else(|| ConnectError::internal("message vanished"))?;
                 }
                 None => {
+                    // Status says streaming but no live handle exists:
+                    // the server restarted mid-stream. Finalize the row
+                    // as aborted with its persisted content.
                     msg = store::mark_aborted(&self.pool, msg.id, &msg.content)
                         .await
                         .map_err(map_db)?
@@ -118,6 +129,8 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
             return Err(app_error(ErrorReason::ProviderDisabled));
         }
 
+        // Idempotent resend: the client_msg_id already produced an
+        // assistant message, so attach to it instead of generating again.
         if !client_msg_id.is_empty()
             && let Some(existing) =
                 store::find_assistant_by_client_msg_id(&self.pool, conversation_id, client_msg_id)
@@ -162,6 +175,8 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
         .await
         {
             Ok(m) => m,
+            // Lost the resend race: another request inserted the
+            // placeholder for this client_msg_id first. Attach to it.
             Err(e) if is_unique_violation(&e) && !client_msg_id.is_empty() => {
                 drop(tx);
                 let existing = store::find_assistant_by_client_msg_id(
@@ -209,6 +224,8 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
 
         let upstream = match self.adapter.stream_chat(chat_req).await {
             Ok(s) => s,
+            // The upstream call never started: report in-band as an error
+            // event so the client still gets ChatStarted first.
             Err(e) => {
                 let _ = store::mark_error(&self.pool, assistant.id, "").await;
                 return Response::stream_ok(stream::iter(vec![
@@ -293,6 +310,9 @@ impl lemma_proto::lemma::v1::ChatService for ChatService {
     }
 }
 
+/// Drives one upstream stream to completion: fans deltas out through the
+/// handle, persists content on a throttle, and finalizes the row on
+/// completion, abort, or failure. Always deregisters at the end.
 async fn drive(
     pool: PgPool,
     registry: StreamRegistry,
@@ -335,6 +355,8 @@ async fn drive(
                     break;
                 }
                 None => {
+                    // The upstream stream ended without a Done event;
+                    // treat it as a normal completion without usage.
                     let content = handle.content();
                     let _ = store::finalize(&pool, message_id, &content, None).await;
                     handle.finish(None);
@@ -349,12 +371,17 @@ async fn drive(
 fn live_event_stream(
     rx: tokio::sync::broadcast::Receiver<StreamEvent>,
 ) -> ServiceStream<ChatEvent> {
+    // A lagged receiver fell more than 128 events behind and missed
+    // content; fail the stream rather than serve a gapped reply.
     Box::pin(BroadcastStream::new(rx).map(|item| match item {
         Ok(ev) => Ok(stream_event_to_chat_event(ev)),
         Err(_) => Err(ConnectError::internal("stream lagged")),
     }))
 }
 
+/// Rebuilds the event sequence of a finalized message for resume: the
+/// content past `offset` as one delta, then the terminal event matching
+/// its status.
 fn replay_events(msg: &DbMessage, offset: usize) -> Vec<ChatEvent> {
     let mut out = Vec::new();
     let replay: String = msg.content.chars().skip(offset).collect();

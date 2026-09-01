@@ -1,7 +1,11 @@
+//! Queries for chat-time reads and writes on the messages table.
+
 use lemma_db::entity::{Message, TokenUsage};
 use sqlx::types::Json;
 use uuid::Uuid;
 
+/// Takes the conversation row lock, serializing concurrent sends so the
+/// seq assignment below stays gapless.
 pub async fn lock_conversation<'e, E>(executor: E, conversation_id: Uuid) -> sqlx::Result<()>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -13,6 +17,8 @@ where
     Ok(())
 }
 
+/// Appends a user message with the next seq in the conversation. Must be
+/// called under [`lock_conversation`].
 pub async fn insert_user_message<'e, E>(
     executor: E,
     conversation_id: Uuid,
@@ -34,6 +40,8 @@ where
     .await
 }
 
+/// Appends the streaming placeholder for the assistant reply. Must be
+/// called under [`lock_conversation`].
 pub async fn insert_assistant_placeholder<'e, E>(
     executor: E,
     conversation_id: Uuid,
@@ -59,6 +67,7 @@ where
     .await
 }
 
+/// Finds the assistant message created for an idempotency key.
 pub async fn find_assistant_by_client_msg_id<'e, E>(
     executor: E,
     conversation_id: Uuid,
@@ -76,6 +85,7 @@ where
     .await
 }
 
+/// Finds a message in a conversation owned by the given user.
 pub async fn find_by_id_and_user<'e, E>(
     executor: E,
     id: Uuid,
@@ -97,6 +107,8 @@ where
     .await
 }
 
+/// Lists the messages sent as model context. Only completed messages
+/// count; streaming, aborted, and failed ones are excluded.
 pub async fn list_context<'e, E>(executor: E, conversation_id: Uuid) -> sqlx::Result<Vec<Message>>
 where
     E: sqlx::Executor<'e, Database = sqlx::Postgres>,
@@ -109,6 +121,7 @@ where
     .await
 }
 
+/// Persists a mid-stream content snapshot.
 pub async fn flush_content<'e, E>(
     executor: E,
     id: Uuid,
@@ -131,6 +144,7 @@ where
     .await
 }
 
+/// Finalizes a message as done with its content and token usage.
 pub async fn finalize<'e, E>(
     executor: E,
     id: Uuid,
@@ -156,6 +170,7 @@ where
     .await
 }
 
+/// Finalizes a message as aborted, keeping the content generated so far.
 pub async fn mark_aborted<'e, E>(
     executor: E,
     id: Uuid,
@@ -178,6 +193,7 @@ where
     .await
 }
 
+/// Finalizes a message as failed, keeping the content generated so far.
 pub async fn mark_error<'e, E>(
     executor: E,
     id: Uuid,

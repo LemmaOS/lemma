@@ -1,3 +1,10 @@
+//! In-process registry of live generation streams.
+//!
+//! Each streaming assistant message gets a [`StreamHandle`] that
+//! accumulates content, fans events out to any number of subscribers,
+//! and accepts aborts. Handles live only in this process: a server
+//! restart mid-stream is detected and finalized by the chat service.
+
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use dashmap::DashMap;
@@ -6,6 +13,7 @@ use uuid::Uuid;
 
 use lemma_db::entity::TokenUsage;
 
+/// An event broadcast to the subscribers of a live stream.
 #[derive(Debug, Clone)]
 pub enum StreamEvent {
     Delta(String),
@@ -14,6 +22,7 @@ pub enum StreamEvent {
     Failed(String),
 }
 
+/// Lifecycle state of a stream. Terminal states are sticky.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StreamStatus {
     Live,
@@ -22,6 +31,7 @@ pub enum StreamStatus {
     Failed,
 }
 
+/// Shared state of one streaming message.
 pub struct StreamHandle {
     content: Mutex<String>,
     status: Mutex<StreamStatus>,
@@ -40,26 +50,32 @@ impl StreamHandle {
         }
     }
 
+    /// Appends generated text and broadcasts it.
     pub fn push_delta(&self, chunk: &str) {
         self.lock_content().push_str(chunk);
         let _ = self.tx.send(StreamEvent::Delta(chunk.to_owned()));
     }
 
+    /// Marks the stream finished and broadcasts the final usage.
     pub fn finish(&self, usage: Option<TokenUsage>) {
         *self.lock_status() = StreamStatus::Done;
         let _ = self.tx.send(StreamEvent::Done(usage));
     }
 
+    /// Marks the stream aborted by the client.
     pub fn mark_aborted(&self) {
         *self.lock_status() = StreamStatus::Aborted;
         let _ = self.tx.send(StreamEvent::Aborted);
     }
 
+    /// Marks the stream failed with an upstream or internal error.
     pub fn fail(&self, message: &str) {
         *self.lock_status() = StreamStatus::Failed;
         let _ = self.tx.send(StreamEvent::Failed(message.to_owned()));
     }
 
+    /// Requests abort. Returns false once the stream reached a terminal
+    /// state, so a late abort cannot clobber a finished message.
     pub fn abort(&self) -> bool {
         if *self.lock_status() != StreamStatus::Live {
             return false;
@@ -68,10 +84,14 @@ impl StreamHandle {
         true
     }
 
+    /// Resolves when an abort is requested.
     pub async fn aborted(&self) {
         self.abort.notified().await;
     }
 
+    /// Returns the content accumulated past `offset` (in chars) plus a
+    /// live subscription. The content lock is held while subscribing, so
+    /// no delta can fall between the replay and the live feed.
     pub fn snapshot_and_subscribe(
         &self,
         offset: usize,
@@ -90,6 +110,8 @@ impl StreamHandle {
         self.lock_content().clone()
     }
 
+    // A poisoned lock still holds valid content here; recover it instead
+    // of panicking the whole stream.
     fn lock_content(&self) -> MutexGuard<'_, String> {
         self.content.lock().unwrap_or_else(|e| e.into_inner())
     }
@@ -99,6 +121,8 @@ impl StreamHandle {
     }
 }
 
+/// Maps message ids to their live stream handles. Entries are removed
+/// when the driving task ends.
 #[derive(Clone, Default)]
 pub struct StreamRegistry {
     inner: Arc<DashMap<Uuid, Arc<StreamHandle>>>,
