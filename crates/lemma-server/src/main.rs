@@ -1,3 +1,6 @@
+//! The Lemma server binary: wires the domain services into a Connect
+//! router and serves the embedded web build.
+
 mod config;
 mod web;
 
@@ -52,6 +55,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let connect_service = connect.into_axum_service();
     let mut app = axum::Router::new().fallback(web::handler);
+    // Connect RPC paths are /<package>.<Service>/<Method>; each service
+    // gets an explicit prefix route, and everything else falls through
+    // to the web app.
     for svc in [
         "AuthService",
         "ProviderService",
