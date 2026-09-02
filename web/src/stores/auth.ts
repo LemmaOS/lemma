@@ -27,6 +27,8 @@ export const useAuth = create<AuthState>()((set) => ({
     ready: false,
 
     bootstrap: async () => {
+        // A stored token restores the session via me(); any failure means
+        // the session is gone and the tokens are dropped.
         if (getAccessToken()) {
             try {
                 const res = await authClient.me({});
@@ -39,6 +41,7 @@ export const useAuth = create<AuthState>()((set) => ({
     },
 
     login: async (identifier, password) => {
+        // The login target is an email when it contains @, else a username.
         const req = identifier.includes("@")
             ? { email: identifier, password }
             : { username: identifier, password };
@@ -60,7 +63,8 @@ export const useAuth = create<AuthState>()((set) => ({
             const refreshToken = getRefreshToken();
             if (refreshToken) await authClient.logout({ refreshToken });
         } catch {
-            // Intentionally empty.
+            // Revoking the refresh token is best-effort: local logout must
+            // succeed even when the server is unreachable.
         }
         clearTokens();
         set({ user: null });

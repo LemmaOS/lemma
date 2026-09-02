@@ -6,6 +6,8 @@ import { providerClient } from "@/lib/clients";
 export interface ProviderPatch {
     name?: string;
     baseUrl?: string;
+    // Left empty to keep the current key. Never prefill the masked display
+    // value: the backend would seal it as if it were the real key.
     apiKey?: string;
     enabled?: boolean;
     models?: string[];
@@ -30,6 +32,8 @@ interface ProvidersState {
     create: (input: NewProvider) => Promise<Provider>;
     update: (id: string, patch: ProviderPatch) => Promise<void>;
     remove: (id: string) => Promise<void>;
+    // Accepts either a saved provider id or a draft's raw fields, so the
+    // form can test credentials before anything is persisted.
     fetchModels: (req: {
         id?: string;
         kind?: ProviderKind;

@@ -71,6 +71,8 @@ export const useConversationsStore = create<ConversationsState>()(
         },
 
         refresh: async () => {
+            // Render the cache immediately, then converge it in the
+            // background; every mutation below ends with the same kick.
             await get().hydrateFromCache();
             void pullAll().catch(() => {});
         },
@@ -103,6 +105,8 @@ export const useConversationsStore = create<ConversationsState>()(
 
         archive: async (id) => {
             await conversationClient.archiveConversation({ id });
+            // Optimistic move: the response carries no conversation, so the
+            // cached item is reused for the archived list.
             const item = get().list.find((c) => c.id === id);
             set((s) => ({
                 list: s.list.filter((c) => c.id !== id),

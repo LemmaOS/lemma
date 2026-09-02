@@ -12,6 +12,7 @@ export interface ChatItem {
     id: string;
     role: "user" | "assistant";
     content: string;
+    // UI-facing vocabulary mapped from MessageStatus.
     status: "streaming" | "done" | "aborted" | "error";
     providerId: string;
     model: string;
@@ -30,10 +31,15 @@ interface ChatState {
     abort: () => Promise<void>;
 }
 
+// In-flight stream state lives outside the store: it is not render data,
+// and only one stream runs at a time.
 let controller: AbortController | null = null;
 let activeMessageId: string | null = null;
 let userAborted = false;
 
+// Counts code points, not UTF-16 code units: the server measures the
+// resume offset in chars (Rust chars().skip()), so a string containing
+// emoji would misalign the replay if measured by .length.
 const charLen = (s: string) => Array.from(s).length;
 
 const PAGE_SIZE = 50;
@@ -81,6 +87,8 @@ export const useChat = create<ChatState>()((set, get) => ({
     hasMore: false,
 
     open: async (conversationId) => {
+        // Prefer the local cache; without an open database, fall back to a
+        // server page (which comes newest-first and is reversed here).
         const db = getDb();
         if (db) {
             const rows = await listMessages(db, conversationId);
@@ -104,6 +112,7 @@ export const useChat = create<ChatState>()((set, get) => ({
 
     syncFromCache: async () => {
         const { conversationId, streaming } = get();
+        // Never clobber an in-flight stream's optimistic items.
         const db = getDb();
         if (!db || !conversationId || streaming) return;
         const rows = await listMessages(db, conversationId);
@@ -128,6 +137,10 @@ export const useChat = create<ChatState>()((set, get) => ({
         const { conversationId, streaming } = get();
         if (!conversationId || streaming) return;
 
+        // clientMsgId doubles as the idempotency key: a resend with the
+        // same id returns the already-created messages instead of
+        // duplicating them. The assistant placeholder derives its temporary
+        // id from it.
         const clientMsgId = crypto.randomUUID();
         const aiTempId = `${clientMsgId}:ai`;
         controller = new AbortController();
@@ -135,6 +148,8 @@ export const useChat = create<ChatState>()((set, get) => ({
         activeMessageId = null;
         userAborted = false;
 
+        // Optimistically render both messages under temporary ids; the
+        // post-send pull replaces them with the persisted rows.
         set((s) => ({
             streaming: true,
             items: [
@@ -197,6 +212,9 @@ export const useChat = create<ChatState>()((set, get) => ({
 
         try {
             let resumes = 0;
+            // Resume replays an in-flight message from the current content
+            // length; it needs the messageId from "started", so a send that
+            // failed before its first event is never retried.
             for (;;) {
                 try {
                     if (!activeMessageId) {
@@ -224,7 +242,8 @@ export const useChat = create<ChatState>()((set, get) => ({
                         );
                         for await (const res of stream) applyEvent(res.event);
                     }
-                    break; // 流正常结束
+                    // The stream ended normally; leave the resume loop.
+                    break;
                 } catch (e) {
                     if (userAborted || signal.aborted) throw e;
                     resumes += 1;
@@ -242,18 +261,23 @@ export const useChat = create<ChatState>()((set, get) => ({
             controller = null;
             activeMessageId = null;
             set({ streaming: false });
+            // The server has persisted the final message state; pull so the
+            // cache converges right away instead of waiting for a hint.
             void pullAll().catch(() => {});
         }
     },
 
     abort: async () => {
         userAborted = true;
+        // Tell the server to finalize the message as aborted before cutting
+        // the local stream; the database is the source of truth.
         const id = activeMessageId;
         if (id) {
             try {
                 await chatClient.abortMessage({ messageId: id });
             } catch {
-                // Intentionally empty.
+                // Persisting the abort is best-effort; the local stream is
+                // cut either way.
             }
         }
         controller?.abort();
