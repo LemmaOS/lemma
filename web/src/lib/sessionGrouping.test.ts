@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { groupSessions, type SessionSummary } from "./sessionGrouping";
 
@@ -12,6 +12,18 @@ const mk = (id: string, updatedAtMs: number): SessionSummary => ({
 });
 
 describe("groupSessions", () => {
+    // Pin the clock to noon: the buckets are calendar days, so a wall-clock
+    // run within minutes of midnight would spill "a minute ago" into
+    // yesterday.
+    beforeEach(() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date(2026, 5, 15, 12, 0, 0));
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
     it("按自然日分组且空组不出现", () => {
         const now = Date.now();
         const groups = groupSessions([
