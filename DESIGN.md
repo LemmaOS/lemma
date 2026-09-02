@@ -4,7 +4,7 @@ name: Lemma
 description: "Lemma's design system: a three-state (light / dark / system) self-hosted AI chat workbench. Sky blue #60b1ff is the single chromatic accent, with the focus ring derived from it and hovers expressed as opacity. Surfaces are role-based (canvas / sidebar / composer / card / popover) with hairline borders; shadows belong to overlays only. Dark mode pairs a pure-black sidebar with a viewport-fixed vertical gradient canvas. Fonts are self-hosted: Sarasa UI SC for UI text (CJK included) and Maple Mono NF CN for code (Nerd Font icons render). The rhythm is a workbench — 260px session sidebar, centered max-w-3xl conversation column, bottom composer."
 
 # Canonical flat schema: unprefixed tokens = light theme (mirrors :root in theme.css),
-# dark-* = dark override (mirrors [data-theme="dark"]). theme.css is the source of truth.
+# dark-* = dark override (mirrors `[data-theme="dark"]`). theme.css is the source of truth.
 colors:
   primary: "#60b1ff"
   primary-foreground: "#0b1220"
@@ -374,22 +374,22 @@ One sans family spans display to body; the family change is silent, hierarchy co
 
 ### Hierarchy
 
-| Token                     | Size | Weight | Line Height | Letter Spacing | Use                                        |
-| ------------------------- | ---- | ------ | ----------- | -------------- | ------------------------------------------ |
-| `{typography.display-xl}` | 80px | 600    | 1.05        | -3.0px         | Reserved: landing / marketing hero         |
-| `{typography.display-lg}` | 56px | 600    | 1.10        | -1.8px         | Reserved: landing section openers          |
-| `{typography.display-md}` | 40px | 600    | 1.15        | -1.0px         | Reserved: landing sub-sections             |
-| `{typography.headline}`   | 28px | 600    | 1.20        | -0.6px         | Page-level titles                          |
-| `{typography.card-title}` | 22px | 500    | 1.25        | -0.4px         | Card titles (auth card, settings panels)   |
-| `{typography.subhead}`    | 20px | 400    | 1.40        | -0.2px         | Lead paragraphs (empty state)              |
-| `{typography.body-lg}`    | 18px | 400    | 1.50        | -0.1px         | Emphasized body, section titles            |
-| `{typography.body}`       | 16px | 400    | 1.50        | -0.05px        | Default body                               |
-| `{typography.body-sm}`    | 14px | 400    | 1.60        | 0              | UI workhorse: lists, forms, chat body      |
-| `{typography.caption}`    | 12px | 400    | 1.40        | 0              | Captions, meta, group headers              |
-| `{typography.button}`     | 14px | 500    | 1.20        | 0              | All button and tab labels                  |
-| `{typography.eyebrow}`    | 13px | 500    | 1.30        | 0.4px          | Uppercase taxonomy labels                  |
-| `{typography.mono}`       | 13px | 400    | 1.50        | 0              | Code blocks                                |
-| `{typography.mono-sm}`    | 12px | 400    | 1.40        | 0              | Model IDs, inline code                     |
+| Token                     | Size | Weight | Line Height | Letter Spacing | Use                                      |
+| ------------------------- | ---- | ------ | ----------- | -------------- | ---------------------------------------- |
+| `{typography.display-xl}` | 80px | 600    | 1.05        | -3.0px         | Reserved: landing / marketing hero       |
+| `{typography.display-lg}` | 56px | 600    | 1.10        | -1.8px         | Reserved: landing section openers        |
+| `{typography.display-md}` | 40px | 600    | 1.15        | -1.0px         | Reserved: landing sub-sections           |
+| `{typography.headline}`   | 28px | 600    | 1.20        | -0.6px         | Page-level titles                        |
+| `{typography.card-title}` | 22px | 500    | 1.25        | -0.4px         | Card titles (auth card, settings panels) |
+| `{typography.subhead}`    | 20px | 400    | 1.40        | -0.2px         | Lead paragraphs (empty state)            |
+| `{typography.body-lg}`    | 18px | 400    | 1.50        | -0.1px         | Emphasized body, section titles          |
+| `{typography.body}`       | 16px | 400    | 1.50        | -0.05px        | Default body                             |
+| `{typography.body-sm}`    | 14px | 400    | 1.60        | 0              | UI workhorse: lists, forms, chat body    |
+| `{typography.caption}`    | 12px | 400    | 1.40        | 0              | Captions, meta, group headers            |
+| `{typography.button}`     | 14px | 500    | 1.20        | 0              | All button and tab labels                |
+| `{typography.eyebrow}`    | 13px | 500    | 1.30        | 0.4px          | Uppercase taxonomy labels                |
+| `{typography.mono}`       | 13px | 400    | 1.50        | 0              | Code blocks                              |
+| `{typography.mono-sm}`    | 12px | 400    | 1.40        | 0              | Model IDs, inline code                   |
 
 ### Principles
 
@@ -426,13 +426,13 @@ Density serves long reading and typing sessions. Separation comes from **surface
 
 ## Elevation & Depth
 
-| Level          | Treatment                                                        | Use                                       |
-| -------------- | ---------------------------------------------------------------- | ----------------------------------------- |
-| 0 (flat)       | No shadow, no border                                             | Body text, assistant messages, sidebar rows |
-| 1 (panel)      | `{colors.card}` background, 1px `{colors.border}`                | Cards, settings panels, auth card         |
-| 2 (fill shift) | `{colors.accent}` / `{colors.muted}` fill                        | Hovered rows, ghost buttons, selected tabs |
-| 3 (overlay)    | `{colors.popover}` background, 1px `{colors.border}`, shadow-md  | Dropdown menus, selects, tooltips         |
-| 4 (focus ring) | 3px `{colors.ring}`, derived from primary                        | Focused input, focused button             |
+| Level          | Treatment                                                       | Use                                         |
+| -------------- | --------------------------------------------------------------- | ------------------------------------------- |
+| 0 (flat)       | No shadow, no border                                            | Body text, assistant messages, sidebar rows |
+| 1 (panel)      | `{colors.card}` background, 1px `{colors.border}`               | Cards, settings panels, auth card           |
+| 2 (fill shift) | `{colors.accent}` / `{colors.muted}` fill                       | Hovered rows, ghost buttons, selected tabs  |
+| 3 (overlay)    | `{colors.popover}` background, 1px `{colors.border}`, shadow-md | Dropdown menus, selects, tooltips           |
+| 4 (focus ring) | 3px `{colors.ring}`, derived from primary                       | Focused input, focused button               |
 
 Depth is carried by surface roles + hairline borders. Components stay flat; drop shadows are granted to overlays only. The focus ring is the highest attention layer.
 
@@ -446,16 +446,16 @@ Depth is carried by surface roles + hairline borders. Components stay flat; drop
 
 ### Border Radius Scale
 
-| Token            | Value  | Use                                                   |
-| ---------------- | ------ | ----------------------------------------------------- |
-| `{rounded.xs}`   | 4px    | Inline code, sidebar inline action buttons            |
-| `{rounded.sm}`   | 6px    | Spare step — nothing assigned today                   |
+| Token            | Value  | Use                                                                 |
+| ---------------- | ------ | ------------------------------------------------------------------- |
+| `{rounded.xs}`   | 4px    | Inline code, sidebar inline action buttons                          |
+| `{rounded.sm}`   | 6px    | Spare step — nothing assigned today                                 |
 | `{rounded.md}`   | 8px    | All buttons, form inputs, session rows, code blocks, dropdown items |
-| `{rounded.lg}`   | 12px   | Tabs track, new-chat button, page canvas panels             |
-| `{rounded.xl}`   | 16px   | Cards, user bubbles, composer                         |
-| `{rounded.xxl}`  | 24px   | Reserved (landing banners)                            |
-| `{rounded.pill}` | 9999px | Status pills                                          |
-| `{rounded.full}` | 9999px | Avatars, switch, round icon buttons (send / stop)     |
+| `{rounded.lg}`   | 12px   | Tabs track, new-chat button, page canvas panels                     |
+| `{rounded.xl}`   | 16px   | Cards, user bubbles, composer                                       |
+| `{rounded.xxl}`  | 24px   | Reserved (landing banners)                                          |
+| `{rounded.pill}` | 9999px | Status pills                                                        |
+| `{rounded.full}` | 9999px | Avatars, switch, round icon buttons (send / stop)                   |
 
 Code currently derives radii from a 10px base (card at 14px); aligning the code to this scale is a pending change tracked outside this document.
 
@@ -575,11 +575,11 @@ Code currently derives radii from a 10px base (card at 14px); aligning the code 
 
 ### Breakpoints
 
-| Name    | Width   | Key Changes                                                  |
-| ------- | ------- | ------------------------------------------------------------ |
-| Desktop | ≥1024px | Default workbench: 260px sidebar + main canvas               |
-| Tablet  | 768px   | Content column shrinks; sidebar manually collapsible         |
-| Mobile  | <768px  | Not yet adapted (see Known Gaps)                             |
+| Name    | Width   | Key Changes                                          |
+| ------- | ------- | ---------------------------------------------------- |
+| Desktop | ≥1024px | Default workbench: 260px sidebar + main canvas       |
+| Tablet  | 768px   | Content column shrinks; sidebar manually collapsible |
+| Mobile  | <768px  | Not yet adapted (see Known Gaps)                     |
 
 ### Touch Targets
 
