@@ -566,3 +566,110 @@ async fn archive_generic<S: lemma_archive::ArchiveSource>(
         Err(e) => Err(e),
     }
 }
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn archive_and_restore_require_matching_status(pool: PgPool) {
+    let (_uid, token) = new_user(&pool).await;
+    let svc = svc_no_store(&pool);
+    let active = create(&svc, &token).await.conversation.id.clone();
+
+    let err = restore(&svc, &token, &active).await.err().unwrap();
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::ConversationNotArchived)
+    );
+    let err = delete_archived(&svc, &token, &active).await.err().unwrap();
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::ArchivedConversationNotFound)
+    );
+
+    archive(&svc, &token, &active).await.unwrap();
+    let err = archive(&svc, &token, &active).await.err().unwrap();
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::ConversationNotActive)
+    );
+}
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn malformed_ids_rejected(pool: PgPool) {
+    let (_uid, token) = new_user(&pool).await;
+    let svc = svc_no_store(&pool);
+
+    for err in [
+        rename(&svc, &token, "nope", "t").await.err().unwrap(),
+        archive(&svc, &token, "nope").await.err().unwrap(),
+        restore(&svc, &token, "nope").await.err().unwrap(),
+        delete_archived(&svc, &token, "nope").await.err().unwrap(),
+    ] {
+        assert_eq!(err.code, ErrorCode::InvalidArgument);
+        assert_eq!(
+            lemma_proto::error_reason(&err),
+            Some(lemma_proto::lemma::v1::ErrorReason::IdInvalid)
+        );
+    }
+}
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn handlers_require_bearer(pool: PgPool) {
+    let svc = svc_no_store(&pool);
+    use lemma_proto::lemma::v1;
+
+    macro_rules! unauth {
+        ($method:ident, $ty:ty, $msg:expr) => {{
+            let bytes = $msg.encode_to_bytes();
+            let view = <$ty>::decode_view(&bytes).unwrap();
+            let err = svc
+                .$method(
+                    RequestContext::new(HeaderMap::new()),
+                    ServiceRequest::from_parts(&view, &bytes),
+                )
+                .await
+                .err()
+                .unwrap();
+            assert_eq!(err.code, ErrorCode::Unauthenticated);
+        }};
+    }
+
+    unauth!(
+        list_conversations,
+        v1::ListConversationsRequest,
+        v1::ListConversationsRequest::default()
+    );
+    unauth!(
+        create_conversation,
+        v1::CreateConversationRequest,
+        v1::CreateConversationRequest::default()
+    );
+    unauth!(
+        rename_conversation,
+        v1::RenameConversationRequest,
+        v1::RenameConversationRequest::default()
+    );
+    unauth!(
+        list_messages,
+        v1::ListMessagesRequest,
+        v1::ListMessagesRequest::default()
+    );
+    unauth!(
+        archive_conversation,
+        v1::ArchiveConversationRequest,
+        v1::ArchiveConversationRequest::default()
+    );
+    unauth!(
+        restore_conversation,
+        v1::RestoreConversationRequest,
+        v1::RestoreConversationRequest::default()
+    );
+    unauth!(
+        delete_archived,
+        v1::DeleteArchivedRequest,
+        v1::DeleteArchivedRequest::default()
+    );
+    unauth!(
+        list_archived,
+        v1::ListArchivedRequest,
+        v1::ListArchivedRequest::default()
+    );
+}

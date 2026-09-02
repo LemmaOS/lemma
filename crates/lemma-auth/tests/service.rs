@@ -249,3 +249,57 @@ async fn me_requires_valid_bearer(pool: PgPool) {
     let err = me(&svc, Some("garbage")).await.err().unwrap();
     assert_eq!(err.code, ErrorCode::Unauthenticated);
 }
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn me_after_user_deleted_returns_not_found(pool: PgPool) {
+    let svc = AuthService::new(pool.clone(), SECRET);
+    let signed = signup(&svc, "alice", "alice@example.com", PASSWORD)
+        .await
+        .unwrap();
+    let access = signed.tokens.access_token.clone();
+    sqlx::query("DELETE FROM users WHERE id = $1")
+        .bind(uuid::Uuid::parse_str(&signed.user.id).unwrap())
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    let err = me(&svc, Some(&access)).await.err().unwrap();
+    assert_eq!(err.code, ErrorCode::NotFound);
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::UserNotFound)
+    );
+}
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn refresh_rejects_unknown_token(pool: PgPool) {
+    let svc = AuthService::new(pool, SECRET);
+    let err = refresh(&svc, "never-issued").await.err().unwrap();
+    assert_eq!(err.code, ErrorCode::Unauthenticated);
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::TokenInvalid)
+    );
+}
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn token_with_non_uuid_subject_rejected(pool: PgPool) {
+    let svc = AuthService::new(pool, SECRET);
+    let claims = lemma_auth::Claims {
+        sub: "not-a-uuid".into(),
+        exp: (chrono::Utc::now() + chrono::Duration::minutes(5)).timestamp() as usize,
+    };
+    let token = jsonwebtoken::encode(
+        &jsonwebtoken::Header::default(),
+        &claims,
+        &jsonwebtoken::EncodingKey::from_secret(SECRET.as_bytes()),
+    )
+    .unwrap();
+
+    let err = me(&svc, Some(&token)).await.err().unwrap();
+    assert_eq!(err.code, ErrorCode::Unauthenticated);
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::TokenInvalid)
+    );
+}

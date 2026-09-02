@@ -67,3 +67,27 @@ fn error_reason_decodes_from_detail() {
         None
     );
 }
+
+#[test]
+fn error_reason_none_on_bad_detail() {
+    use base64::Engine as _;
+    use connectrpc::ErrorDetail;
+
+    let detail = |value: Option<String>| {
+        let mut e = connectrpc::ConnectError::internal("boom");
+        e.details.push(ErrorDetail {
+            type_url: "lemma.v1.ErrorInfo".into(),
+            value,
+            debug: None,
+        });
+        e
+    };
+
+    // No value at all.
+    assert_eq!(lemma_proto::error_reason(&detail(None)), None);
+    // Value is not base64.
+    assert_eq!(lemma_proto::error_reason(&detail(Some("%%%".into()))), None);
+    // Valid base64 but not a decodable ErrorInfo.
+    let garbage = base64::engine::general_purpose::STANDARD_NO_PAD.encode(b"\xff\xff\xff");
+    assert_eq!(lemma_proto::error_reason(&detail(Some(garbage))), None);
+}

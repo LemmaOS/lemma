@@ -366,6 +366,29 @@ async fn delete_once_then_not_found(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn delete_rejects_malformed_id(pool: PgPool) {
+    let uid = new_user(&pool, "alice").await;
+    let svc = ProviderService::new(pool, SECRET, KEY_SECRET);
+
+    let err = delete(
+        &svc,
+        auth_ctx(uid),
+        DeleteProviderRequest {
+            id: "not-a-uuid".into(),
+            ..Default::default()
+        },
+    )
+    .await
+    .err()
+    .unwrap();
+    assert_eq!(err.code, ErrorCode::InvalidArgument);
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::IdInvalid)
+    );
+}
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
 async fn list_masks_keys_and_garbage_falls_back(pool: PgPool) {
     let uid = new_user(&pool, "alice").await;
     let svc = ProviderService::new(pool.clone(), SECRET, KEY_SECRET);

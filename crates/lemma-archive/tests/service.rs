@@ -409,3 +409,32 @@ async fn copy_objects_error_propagates() {
         .unwrap();
     assert!(err.0.contains("sink down"));
 }
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn handlers_require_bearer(pool: PgPool) {
+    let svc = svc(&pool);
+    use lemma_proto::lemma::v1;
+
+    macro_rules! unauth {
+        ($method:ident, $ty:ty) => {{
+            let msg = <$ty>::default();
+            let bytes = buffa::Message::encode_to_bytes(&msg);
+            let view = <$ty>::decode_view(&bytes).unwrap();
+            let err = svc
+                .$method(
+                    RequestContext::new(HeaderMap::new()),
+                    ServiceRequest::from_parts(&view, &bytes),
+                )
+                .await
+                .err()
+                .unwrap();
+            assert_eq!(err.code, ErrorCode::Unauthenticated);
+        }};
+    }
+
+    unauth!(get_storage_config, v1::GetStorageConfigRequest);
+    unauth!(update_storage_config, v1::UpdateStorageConfigRequest);
+    unauth!(delete_storage_config, v1::DeleteStorageConfigRequest);
+    unauth!(test_storage_config, v1::TestStorageConfigRequest);
+    unauth!(migrate_archives, v1::MigrateArchivesRequest);
+}

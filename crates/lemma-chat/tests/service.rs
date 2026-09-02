@@ -628,3 +628,76 @@ async fn send_rejects_bad_requests(pool: PgPool) {
         .unwrap();
     assert_eq!(err.code, ErrorCode::InvalidArgument);
 }
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn send_rejects_missing_provider(pool: PgPool) {
+    let f = fixture(&pool, "alice").await;
+    let svc = ChatService::new(
+        pool.clone(),
+        JWT_SECRET,
+        SECRET_KEY,
+        Arc::new(FakeAdapter::new(Script::Done(vec![]))),
+    );
+
+    let err = send(
+        &svc,
+        &f.token,
+        f.conversation_id,
+        Uuid::new_v4(),
+        "hi",
+        "c1",
+    )
+    .await
+    .err()
+    .unwrap();
+    assert_eq!(err.code, ErrorCode::NotFound);
+    assert_eq!(
+        lemma_proto::error_reason(&err),
+        Some(lemma_proto::lemma::v1::ErrorReason::ProviderNotFound)
+    );
+}
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn resume_and_abort_reject_missing_message(pool: PgPool) {
+    let f = fixture(&pool, "alice").await;
+    let svc = ChatService::new(
+        pool.clone(),
+        JWT_SECRET,
+        SECRET_KEY,
+        Arc::new(FakeAdapter::new(Script::Done(vec![]))),
+    );
+    let missing = Uuid::new_v4().to_string();
+
+    for err in [
+        resume(&svc, &f.token, &missing, 0).await.err().unwrap(),
+        abort(&svc, &f.token, &missing).await.err().unwrap(),
+    ] {
+        assert_eq!(err.code, ErrorCode::NotFound);
+        assert_eq!(
+            lemma_proto::error_reason(&err),
+            Some(lemma_proto::lemma::v1::ErrorReason::MessageNotFound)
+        );
+    }
+}
+
+#[sqlx::test(migrations = "../lemma-db/migrations")]
+async fn resume_and_abort_reject_malformed_id(pool: PgPool) {
+    let f = fixture(&pool, "alice").await;
+    let svc = ChatService::new(
+        pool.clone(),
+        JWT_SECRET,
+        SECRET_KEY,
+        Arc::new(FakeAdapter::new(Script::Done(vec![]))),
+    );
+
+    for err in [
+        resume(&svc, &f.token, "nope", 0).await.err().unwrap(),
+        abort(&svc, &f.token, "nope").await.err().unwrap(),
+    ] {
+        assert_eq!(err.code, ErrorCode::InvalidArgument);
+        assert_eq!(
+            lemma_proto::error_reason(&err),
+            Some(lemma_proto::lemma::v1::ErrorReason::IdInvalid)
+        );
+    }
+}
