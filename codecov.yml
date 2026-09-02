@@ -1,0 +1,19 @@
+# Codecov project configuration. The hard gates live in the CI workflow
+# itself (--fail-under-lines / vitest thresholds); these statuses only guard
+# against per-change regression.
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch: off
+
+flags:
+  rust:
+    paths:
+      - "crates/"
+  web:
+    paths:
+      - "web/"

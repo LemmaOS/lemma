@@ -34,13 +34,13 @@ rust-test:
 rust-fmt:
     cargo fmt --all
 
-# [rust] 服务端代码覆盖率（终端汇总）
+# [rust] 服务端代码覆盖率（终端汇总；豁免 lemma-server 接线代码，与 CI 口径一致）
 rust-cov:
-    cargo llvm-cov --workspace --summary-only
+    cargo llvm-cov --workspace --exclude lemma-server --summary-only
 
-# [rust] 服务端代码覆盖率（HTML 报告）
+# [rust] 服务端代码覆盖率（HTML 报告，口径同上）
 rust-cov-html:
-    cargo llvm-cov --workspace --html --open
+    cargo llvm-cov --workspace --exclude lemma-server --html --open
 
 # [web] 网页前端构建
 web-build:
@@ -53,6 +53,10 @@ web-dev:
 # [web] 网页前端测试
 web-test:
     cd web && npm test
+
+# [web] 网页前端覆盖率（阈值与 CI 一致）
+web-cov:
+    cd web && npm run test:cov
 
 # [web] 网页前端eslint 检查
 web-lint:

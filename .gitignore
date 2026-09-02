@@ -53,3 +53,7 @@ Thumbs.db
 
 # 临时文件
 /tmp/
+
+# 覆盖率报告
+lcov.info
+web/coverage/

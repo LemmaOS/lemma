@@ -1,0 +1,106 @@
+name: Coverage
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+concurrency:
+  group: coverage-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_INCREMENTAL: 0
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: paradedb/paradedb:pg18
+        env:
+          POSTGRES_DB: lemma-db
+          POSTGRES_USER: lemma
+          POSTGRES_PASSWORD: lemma
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -h 127.0.0.1 -U lemma -d lemma-db"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DATABASE_URL: postgres://lemma:lemma@127.0.0.1:5432/lemma-db
+    steps:
+      - uses: actions/checkout@v7
+
+      # lemma-server is process wiring with no tests; excluding it keeps
+      # the gate meaningful and drops the web/dist embed dependency.
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+
+      - name: Rust cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Setup protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          version: "36.0"
+
+      - name: Install nextest and cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest,cargo-llvm-cov
+
+      - name: Coverage
+        run: >
+          cargo llvm-cov nextest --workspace --exclude lemma-server
+          --lcov --output-path lcov.info
+          --fail-under-lines 85
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: lcov.info
+          flags: rust
+
+  web:
+    name: Web
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup buf
+        uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # 生成物不入 git，先重新生成
+      - name: Generate proto code
+        run: npm run gen:proto
+
+      - name: Coverage
+        run: npm run test:cov -w web
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: web/coverage/lcov.info
+          flags: web
