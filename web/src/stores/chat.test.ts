@@ -37,8 +37,19 @@ const delta = (content: string): SendMessageResponse =>
     ev({ case: "delta", value: { content } as never });
 const done: SendMessageResponse = ev({ case: "done", value: {} as never });
 
+// An async iterable that rejects on the first read, like a stream whose
+// connection drops before any event arrives.
+function throwStream(err: Error): AsyncIterable<never> {
+    return {
+        [Symbol.asyncIterator]() {
+            return { next: () => Promise.reject(err) };
+        },
+    };
+}
+
 beforeEach(() => {
     vi.clearAllMocks();
+    closeDb();
     useChat.setState({
         conversationId: "conv-1",
         items: [],
@@ -177,4 +188,220 @@ it("open 优先读本地缓存", async () => {
     expect(hasMore).toBe(false);
     expect(listMessages).not.toHaveBeenCalled();
     closeDb();
+});
+
+it("open 映射 streaming/aborted/error 状态", async () => {
+    const msg = (id: string, status: MessageStatus) => ({
+        id,
+        role: "assistant",
+        content: id,
+        status,
+        providerId: "p1",
+        model: "gpt-x",
+    });
+    listMessages.mockResolvedValue({
+        // Server pages come newest-first; open reverses them.
+        messages: [
+            msg("m3", MessageStatus.ERROR),
+            msg("m2", MessageStatus.ABORTED),
+            msg("m1", MessageStatus.STREAMING),
+        ],
+        hasMore: false,
+    } as never);
+
+    await useChat.getState().open("conv-1");
+
+    expect(useChat.getState().items.map((i) => i.status)).toEqual([
+        "streaming",
+        "aborted",
+        "error",
+    ]);
+});
+
+it("syncFromCache 非流式时从缓存刷新", async () => {
+    const db = openDb("chat-cache-test");
+    await db.delete();
+    await db.open();
+    await upsertMessages(db, [
+        {
+            id: "m1",
+            conversationId: "conv-1",
+            role: "user",
+            content: "cached",
+            providerId: "",
+            model: "",
+            status: MessageStatus.DONE,
+            createdAtMs: 1,
+            seq: 1,
+            syncSeq: "1",
+        },
+    ]);
+    useChat.setState({
+        items: [
+            {
+                id: "stale",
+                role: "user",
+                content: "",
+                status: "done",
+                providerId: "",
+                model: "",
+            },
+        ],
+    });
+
+    await useChat.getState().syncFromCache();
+
+    expect(useChat.getState().items.map((i) => i.id)).toEqual(["m1"]);
+    closeDb();
+});
+
+it("syncFromCache 流式中不动 optimistic 项", async () => {
+    useChat.setState({
+        streaming: true,
+        items: [
+            {
+                id: "live",
+                role: "assistant",
+                content: "半",
+                status: "streaming",
+                providerId: "p1",
+                model: "gpt-x",
+            },
+        ],
+    });
+
+    await useChat.getState().syncFromCache();
+
+    expect(useChat.getState().items.map((i) => i.id)).toEqual(["live"]);
+});
+
+it("loadMore 把更早的一页拼到前面", async () => {
+    useChat.setState({
+        hasMore: true,
+        items: [
+            {
+                id: "m2",
+                role: "user",
+                content: "二",
+                status: "done",
+                providerId: "",
+                model: "",
+            },
+        ],
+    });
+    listMessages.mockResolvedValue({
+        messages: [
+            {
+                id: "m1",
+                role: "user",
+                content: "一",
+                status: MessageStatus.DONE,
+                providerId: "",
+                model: "",
+            },
+        ],
+        hasMore: false,
+    } as never);
+
+    await useChat.getState().loadMore();
+
+    const s = useChat.getState();
+    expect(s.items.map((i) => i.id)).toEqual(["m1", "m2"]);
+    expect(s.hasMore).toBe(false);
+    expect(listMessages).toHaveBeenCalledWith({
+        conversationId: "conv-1",
+        beforeId: "m2",
+        limit: 50,
+    });
+});
+
+it("loadMore 无更多时直接返回", async () => {
+    await useChat.getState().loadMore();
+
+    expect(listMessages).not.toHaveBeenCalled();
+});
+
+it("send 在流式中或无会话时直接返回", async () => {
+    useChat.setState({ streaming: true });
+    await useChat.getState().send("p1", "gpt-x", "你好");
+    useChat.setState({ streaming: false, conversationId: null });
+    await useChat.getState().send("p1", "gpt-x", "你好");
+
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(useChat.getState().items).toHaveLength(0);
+});
+
+it("aborted 事件标记中止", async () => {
+    sendMessage.mockImplementation(async function* () {
+        yield started("m1");
+        yield ev({ case: "aborted", value: {} as never });
+    });
+
+    await useChat.getState().send("p1", "gpt-x", "你好");
+
+    expect(useChat.getState().items[1].status).toBe("aborted");
+});
+
+it("error 事件带出世态文案", async () => {
+    sendMessage.mockImplementation(async function* () {
+        yield started("m1");
+        yield ev({
+            case: "error",
+            value: { message: "model exploded" } as never,
+        });
+    });
+
+    await useChat.getState().send("p1", "gpt-x", "你好");
+
+    const item = useChat.getState().items[1];
+    expect(item.status).toBe("error");
+    expect(item.error).toBe("model exploded");
+});
+
+it("无 kind 的事件被忽略", async () => {
+    sendMessage.mockImplementation(async function* () {
+        yield started("m1");
+        yield { event: {} } as unknown as SendMessageResponse;
+        yield done;
+    });
+
+    await useChat.getState().send("p1", "gpt-x", "你好");
+
+    expect(useChat.getState().items[1].status).toBe("done");
+});
+
+it("首轮即失败不重试，标记 error", async () => {
+    sendMessage.mockImplementation(
+        () => throwStream(new Error("boom")) as never,
+    );
+
+    await useChat.getState().send("p1", "gpt-x", "你好");
+
+    expect(resumeStream).not.toHaveBeenCalled();
+    const item = useChat.getState().items[1];
+    expect(item.status).toBe("error");
+    expect(item.error).toContain("boom");
+});
+
+it("续传三次仍失败则放弃", async () => {
+    vi.useFakeTimers();
+    try {
+        sendMessage.mockImplementation(async function* () {
+            yield started("m1");
+            yield delta("半");
+            throw new Error("down");
+        });
+        resumeStream.mockImplementation(
+            () => throwStream(new Error("down")) as never,
+        );
+
+        const p = useChat.getState().send("p1", "gpt-x", "你好");
+        await vi.runAllTimersAsync();
+        await p;
+    } finally {
+        vi.useRealTimers();
+    }
+
+    expect(resumeStream).toHaveBeenCalledTimes(3);
+    expect(useChat.getState().items[1].status).toBe("error");
 });

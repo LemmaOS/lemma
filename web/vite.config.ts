@@ -19,10 +19,10 @@ export default defineConfig({
         coverage: {
             provider: "v8",
             reporter: ["text", "lcov"],
-            // Generated proto code and type-only modules carry no logic.
-            exclude: ["src/gen/**"],
+            // Generated proto code and locale dictionaries carry no logic.
+            exclude: ["src/gen/**", "src/i18n/locales/**"],
             thresholds: {
-                lines: 75,
+                lines: 90,
             },
         },
     },

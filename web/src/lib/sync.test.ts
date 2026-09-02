@@ -18,7 +18,7 @@ import {
     upsertConversations,
     upsertMessages,
 } from "@/lib/db";
-import { applyPull, pullAll, startSync, stopSync } from "@/lib/sync";
+import { applyPull, onSynced, pullAll, startSync, stopSync } from "@/lib/sync";
 import { useSyncStatus } from "@/stores/sync";
 
 const pullMock = syncClient.pull as unknown as ReturnType<typeof vi.fn>;
@@ -41,6 +41,26 @@ function convEntry(id: string, syncSeq: bigint, status: 1 | 2 = 1) {
     return {
         $typeName: "lemma.v1.SyncConversation" as const,
         conversation: convProto(id, status),
+        syncSeq,
+    };
+}
+
+function msgEntry(id: string, convId: string, syncSeq: bigint) {
+    return {
+        $typeName: "lemma.v1.SyncMessage" as const,
+        message: {
+            $typeName: "lemma.v1.Message" as const,
+            id,
+            conversationId: convId,
+            role: "assistant",
+            content: `c-${id}`,
+            providerId: "p1",
+            model: "m",
+            seq: 1n,
+            status: 4,
+            createdAt: undefined,
+            updatedAt: undefined,
+        },
         syncSeq,
     };
 }
@@ -244,6 +264,33 @@ describe("sync", () => {
         await waitFor(() => useSyncStatus.getState().online === true);
 
         expect(watchCalls).toBe(2);
+    });
+
+    it("applyPull 落库增量消息行", async () => {
+        await applyPull(
+            db,
+            pullRes({
+                conversations: [convEntry("c1", 1n)],
+                messages: [msgEntry("m1", "c1", 2n)] as never,
+                active: [convProto("c1")],
+            }),
+        );
+
+        const rows = await listMessages(db, "c1");
+        expect(rows.map((r) => r.id)).toEqual(["m1"]);
+        expect(rows[0].syncSeq).toBe("2");
+    });
+
+    it("onSynced 补拉完成后回调，退订即止", async () => {
+        pullMock.mockResolvedValue(pullRes({}));
+        const cb = vi.fn();
+        const off = onSynced(cb);
+
+        await pullAll();
+        off();
+        await pullAll();
+
+        expect(cb).toHaveBeenCalledTimes(1);
     });
 
     it("applyPull 按活跃名单清理僵尸会话及其消息", async () => {

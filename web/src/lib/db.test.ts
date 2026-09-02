@@ -1,4 +1,5 @@
 import "fake-indexeddb/auto";
+import Dexie from "dexie";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
@@ -157,5 +158,47 @@ describe("db", () => {
         expect(row.createdAtMs).toBe(1700000000000);
         expect(row.updatedAtMs).toBe(1700000001000);
         expect(row.syncSeq).toBe("9");
+    });
+
+    it("LWW：消息同样拒绝低 syncSeq 回滚", async () => {
+        await upsertMessages(db, [
+            msg("m1", "c1", { content: "新", syncSeq: "5" }),
+        ]);
+        await upsertMessages(db, [
+            msg("m1", "c1", { content: "旧", syncSeq: "3" }),
+        ]);
+        expect((await db.messages.get("m1"))?.content).toBe("新");
+    });
+
+    it("归档列表容忍缺失 archivedAtMs", async () => {
+        await upsertConversations(db, [
+            conv("a1", { status: 2, archivedAtMs: null }),
+            conv("a2", { status: 2, archivedAtMs: 1000 }),
+        ]);
+        const rows = await listArchived(db);
+        expect(rows.map((r) => r.id)).toEqual(["a2", "a1"]);
+    });
+
+    it("v2 升级清空旧索引下的消息和游标", async () => {
+        // Simulate a cache written before the v2 re-index shipped.
+        const legacy = new Dexie("lemma-upgrade-user");
+        legacy.version(1).stores({
+            conversations: "id, updatedAtMs",
+            messages: "id, [conversationId+createdAtMs]",
+            meta: "key",
+        });
+        await legacy.open();
+        await legacy
+            .table("messages")
+            .put({ id: "m1", conversationId: "c1", createdAtMs: 1 });
+        await legacy.table("meta").put({ key: "cursor", value: "9" });
+        legacy.close();
+
+        const upgraded = openDb("upgrade-user");
+        await upgraded.open();
+        expect(await upgraded.messages.count()).toBe(0);
+        expect(await getCursor(upgraded)).toBe(0n);
+        closeDb();
+        await Dexie.delete("lemma-upgrade-user");
     });
 });
