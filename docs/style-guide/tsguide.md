@@ -925,7 +925,7 @@ Why?
 
 When a property is `private`, you are declaring to both automated systems and humans that the property accesses are scoped to the methods of the declaring class, and they will rely on that. For example, a check for unused code will flag a private property that appears to be unused, even if some other file manages to bypass the visibility restriction.
 
-Though it might appear that `obj['foo']` can bypass visibility in the TypeScript compiler, this pattern can be broken by rearranging the build rules, and also violates [optimization compatibility](#optimization-compatibility).
+Though it might appear that `obj['foo']` can bypass visibility in the TypeScript compiler, this pattern can be broken by rearranging the build rules, and also violates optimization compatibility.
 
 ##### Getters and setters
 
@@ -987,7 +987,7 @@ Getters and setters *must not* be defined using `Object.defineProperty`, since t
 
 ##### Computed properties
 
-Computed properties may only be used in classes when the property is a symbol. Dict-style properties (that is, quoted or computed non-symbol keys) are not allowed (see [rationale for not mixing key types](#features-objects-mixing-keys). A `[Symbol.iterator]` method should be defined for any classes that are logically iterable. Beyond this, `Symbol` should be used sparingly.
+Computed properties may only be used in classes when the property is a symbol. Dict-style properties (that is, quoted or computed non-symbol keys) are not allowed (see rationale for not mixing key types). A `[Symbol.iterator]` method should be defined for any classes that are logically iterable. Beyond this, `Symbol` should be used sparingly.
 
 Tip: be careful of using any other built-in symbols (e.g. `Symbol.isConcatSpreadable`) as they are not polyfilled by the compiler and will therefore not work in older browsers.
 
@@ -1611,7 +1611,7 @@ for (const [i, x] of someArr.entries()) {
 }
 ```
 
-`for`-`in` loops may only be used on dict-style objects (see [below](#optimization-compatibility-for-property-access) for more info). Do not use `for (... in ...)` to iterate over arrays as it will counterintuitively give the array's indices (as strings!), not values:
+`for`-`in` loops may only be used on dict-style objects. Do not use `for (... in ...)` to iterate over arrays as it will counterintuitively give the array's indices (as strings!), not values:
 
 ``` {.ts .bad}
 for (const x in someArray) {
@@ -2054,7 +2054,7 @@ Some concrete examples of this rule:
 
 - Do not use trailing or leading underscores for private properties or methods.
 - Do not use the `opt_` prefix for optional parameters.
-  - For accessors, see [accessor rules](#getters-and-setters-accessors) below.
+  - For accessors, see [accessor rules](#getters-and-setters) below.
 - Do not mark interfaces specially (~~`IMyInterface`~~ or ~~`MyFooInterface`~~) unless it's idiomatic in its environment. When introducing an interface for a class, give it a name that expresses why the interface exists in the first place (e.g. `class TodoItem` and `interface TodoItemStorage` if the interface expresses the format used for storage/serialization in JSON).
 - Suffixing `Observable`s with `$` is a common external convention and can help resolve confusion regarding observable values vs concrete values. Judgement on whether this is a useful convention is left up to individual teams, but *should* be consistent within projects.
 
