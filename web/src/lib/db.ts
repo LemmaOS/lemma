@@ -57,7 +57,6 @@ export class LemmaDb extends Dexie {
     }
 }
 
-// 当前打开的库（模块级单例；切账号时换库）
 let current: LemmaDb | null = null;
 
 export function openDb(userId: string): LemmaDb {
@@ -121,18 +120,15 @@ export async function setCursor(db: LemmaDb, seq: bigint): Promise<void> {
     await db.meta.put({ key: CURSOR_KEY, value: seq.toString() });
 }
 
-/** 活跃会话列表，按更新时间倒序 */
 export async function listConversations(
     db: LemmaDb,
 ): Promise<ConversationRow[]> {
-    // status: 1=ACTIVE（0 是 UNSPECIFIED，2 是 ARCHIVED）
     const rows = await db.conversations.toArray();
     return rows
         .filter((r) => r.status !== 2)
         .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
 }
 
-/** 归档会话列表，按归档时间倒序 */
 export async function listArchived(db: LemmaDb): Promise<ConversationRow[]> {
     const rows = await db.conversations.toArray();
     return rows
@@ -140,7 +136,6 @@ export async function listArchived(db: LemmaDb): Promise<ConversationRow[]> {
         .sort((a, b) => (b.archivedAtMs ?? 0) - (a.archivedAtMs ?? 0));
 }
 
-/** 会话消息，按会话内序号正序 */
 export async function listMessages(
     db: LemmaDb,
     conversationId: string,
@@ -151,7 +146,6 @@ export async function listMessages(
         .toArray();
 }
 
-/** LWW 写入：只接受 syncSeq 更大或相等的行（相等允许写穿透后被同步覆盖语义外的重放） */
 export async function upsertConversations(
     db: LemmaDb,
     rows: ConversationRow[],
@@ -180,7 +174,6 @@ export async function upsertMessages(
     });
 }
 
-/** 归档全量刷新：删掉不在新列表里的归档行，返回被删的会话 id（调用方级联清消息） */
 export async function replaceArchived(
     db: LemmaDb,
     rows: ConversationRow[],
@@ -201,7 +194,6 @@ export async function replaceArchived(
     });
 }
 
-/** 活跃会话对账：删掉服务端活跃名单之外的 active 行，返回被删 id（调用方级联清消息） */
 export async function pruneActiveExcept(
     db: LemmaDb,
     keepIds: Set<string>,
@@ -215,7 +207,6 @@ export async function pruneActiveExcept(
     });
 }
 
-/** 彻底删除：会话连同消息一起清 */
 export async function deleteConversationCascade(
     db: LemmaDb,
     id: string,
@@ -226,7 +217,6 @@ export async function deleteConversationCascade(
     });
 }
 
-/** 归档会话的消息只存服务端：按会话 id 批量清空本地缓存（恢复时增量重拉） */
 export async function deleteMessagesOf(
     db: LemmaDb,
     conversationIds: string[],

@@ -51,7 +51,6 @@ it("离线时 refresh 仍能从缓存加载列表", async () => {
         conversationToRow(convProto("c1", 1), 5n),
         conversationToRow(convProto("c2", 2), 6n),
     ]);
-    // 补拉失败（断网）不影响缓存渲染
     vi.mocked(syncClient.pull).mockRejectedValue(new Error("offline"));
 
     await useConversationsStore.getState().refresh();

@@ -26,7 +26,6 @@ function autosize(el: HTMLTextAreaElement | null) {
     el.style.height = `${el.scrollHeight}px`;
 }
 
-/** 底部输入区：自适应高度、工具行、发送/停止 */
 export function ChatComposer({
     value,
     onChange,
@@ -60,7 +59,6 @@ export function ChatComposer({
                         if (
                             e.key === "Enter" &&
                             !e.shiftKey &&
-                            // 输入法组词中的回车不是发送
                             !e.nativeEvent.isComposing
                         ) {
                             e.preventDefault();

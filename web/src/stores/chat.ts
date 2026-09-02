@@ -135,7 +135,6 @@ export const useChat = create<ChatState>()((set, get) => ({
         activeMessageId = null;
         userAborted = false;
 
-        // 乐观渲染
         set((s) => ({
             streaming: true,
             items: [
@@ -198,7 +197,6 @@ export const useChat = create<ChatState>()((set, get) => ({
 
         try {
             let resumes = 0;
-            // 断线续传：拿到过 started（有 messageId）才能按 offset 重放
             for (;;) {
                 try {
                     if (!activeMessageId) {
@@ -244,20 +242,18 @@ export const useChat = create<ChatState>()((set, get) => ({
             controller = null;
             activeMessageId = null;
             set({ streaming: false });
-            // 发送落库后主动补拉，缓存即时收敛
             void pullAll().catch(() => {});
         }
     },
 
     abort: async () => {
         userAborted = true;
-        // 先通知服务端落库 aborted，再本地掐流
         const id = activeMessageId;
         if (id) {
             try {
                 await chatClient.abortMessage({ messageId: id });
             } catch {
-                // 忽略：本地照样掐断
+                // Intentionally empty.
             }
         }
         controller?.abort();

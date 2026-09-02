@@ -63,7 +63,6 @@ function hintRes(seq: bigint): WatchResponse {
     } as WatchResponse;
 }
 
-/** 产出若干事件后永远挂起（模拟常驻流） */
 function streamOf(events: WatchResponse[]): AsyncIterable<WatchResponse> {
     return (async function* () {
         for (const e of events) yield e;
@@ -72,7 +71,6 @@ function streamOf(events: WatchResponse[]): AsyncIterable<WatchResponse> {
 }
 
 function errorStream(): AsyncIterable<WatchResponse> {
-    // 手写异步迭代器：第一次 next 就 reject，模拟连接即断
     return {
         [Symbol.asyncIterator]() {
             return {
@@ -194,7 +192,6 @@ describe("sync", () => {
             );
         await upsertMessages(db, [msg("m1", "a1"), msg("m2", "live")]);
 
-        // 服务端归档 a1（消息已搬走）：增量条目带真实 sync_seq，archived 是全量名单
         await applyPull(
             db,
             pullRes({
@@ -213,7 +210,6 @@ describe("sync", () => {
         let calls = 0;
         pullMock.mockImplementation(() => {
             calls += 1;
-            // 第一次（连上补拉）是空页；hint 触发后返回新数据
             if (calls === 1) return Promise.resolve(pullRes({ nextAfter: 0n }));
             return Promise.resolve(
                 pullRes({
@@ -237,13 +233,11 @@ describe("sync", () => {
         let watchCalls = 0;
         watchMock.mockImplementation(() => {
             watchCalls += 1;
-            // 第一次直接断，第二次挂起（保持连接）
             return watchCalls === 1 ? errorStream() : streamOf([]);
         });
 
         startSync();
         await waitFor(() => useSyncStatus.getState().online === false);
-        // 退避起点 1s，等重连发生
         await waitFor(() => useSyncStatus.getState().online === true);
 
         expect(watchCalls).toBe(2);

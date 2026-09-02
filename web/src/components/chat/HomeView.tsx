@@ -21,7 +21,6 @@ function autosize(el: HTMLTextAreaElement | null) {
     el.style.height = `${el.scrollHeight}px`;
 }
 
-/** 主区首页：居中的新会话输入卡 */
 export function HomeView({ onSubmit, model, onModelChange }: HomeViewProps) {
     const { t } = useTranslation();
     const [value, setValue] = useState("");

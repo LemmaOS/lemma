@@ -32,7 +32,6 @@ const authInterceptor: Interceptor = (next) => async (req) => {
     try {
         return await next(req);
     } catch (e) {
-        // 认证服务自身的 401（如登录密码错）不触发刷新
         if (
             !(e instanceof ConnectError) ||
             e.code !== Code.Unauthenticated ||
