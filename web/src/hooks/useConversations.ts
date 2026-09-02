@@ -4,8 +4,10 @@ import { useConversationsStore } from "@/stores/conversations";
 
 export function useConversations() {
     const store = useConversationsStore();
+    const loaded = useConversationsStore((s) => s.loaded);
+    const refresh = useConversationsStore((s) => s.refresh);
     useEffect(() => {
-        if (!store.loaded) void store.refresh();
-    }, [store.loaded]);
+        if (!loaded) void refresh();
+    }, [loaded, refresh]);
     return store;
 }

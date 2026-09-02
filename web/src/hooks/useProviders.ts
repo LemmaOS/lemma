@@ -4,8 +4,10 @@ import { useProvidersStore } from "@/stores/providers";
 
 export function useProviders() {
     const store = useProvidersStore();
+    const loaded = useProvidersStore((s) => s.loaded);
+    const refresh = useProvidersStore((s) => s.refresh);
     useEffect(() => {
-        if (!store.loaded) void store.refresh();
-    }, [store.loaded]);
+        if (!loaded) void refresh();
+    }, [loaded, refresh]);
     return store;
 }

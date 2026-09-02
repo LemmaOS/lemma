@@ -16,7 +16,7 @@ import { useConversations } from "@/hooks/useConversations";
 import { useProviders } from "@/hooks/useProviders";
 import type { SessionSummary } from "@/lib/sessionGrouping";
 import { cn } from "@/lib/utils";
-import type { ChatItem } from "@/stores/chat";
+import { type ChatItem, useChat as useChatStore } from "@/stores/chat";
 
 const SIDEBAR_COLLAPSED_KEY = "sidebar-collapsed";
 const MODEL_KEY = "lemma.model";
@@ -86,11 +86,10 @@ export default function ChatPage() {
         setStored(selection);
     };
 
-    // The chat store hook is stable and deliberately omitted from the
-    // dependency list: only a conversation switch re-opens the chat.
+    const openConversation = useChatStore((s) => s.open);
     useEffect(() => {
-        if (activeId) void chat.open(activeId);
-    }, [activeId]);
+        if (activeId) void openConversation(activeId);
+    }, [activeId, openConversation]);
 
     useEffect(() => {
         const el = scrollRef.current;
