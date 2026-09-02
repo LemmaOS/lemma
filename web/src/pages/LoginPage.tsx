@@ -10,7 +10,6 @@ export default function LoginPage() {
     const { t } = useTranslation();
     const user = useAuth((s) => s.user);
 
-    // 已登录（含登录成功的瞬间）直接进聊天页
     if (user) return <Navigate to="/" replace />;
 
     return (

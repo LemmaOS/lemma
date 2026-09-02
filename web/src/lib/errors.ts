@@ -3,7 +3,6 @@ import type { TFunction } from "i18next";
 
 import { ErrorInfoSchema, ErrorReason } from "@/gen/lemma/v1/errors_pb";
 
-// reason → i18n 键的穷举映射：proto 加码不加文案，这里漏一项 tsc 就报错
 const reasonKeys: Record<ErrorReason, string> = {
     [ErrorReason.UNSPECIFIED]: "errors.unspecified",
     [ErrorReason.CREDENTIALS_INVALID]: "errors.credentialsInvalid",
@@ -39,10 +38,6 @@ const reasonKeys: Record<ErrorReason, string> = {
     [ErrorReason.BUCKET_NOT_FOUND]: "errors.bucketNotFound",
 };
 
-/**
- * ConnectError → 展示文案：带业务码走 i18n（attrs 作插值）；
- * 运维错误（internal）、未知码与非 connect 错误落英文/原始文案，永不本地化
- */
 export function errorText(e: unknown, t: TFunction): string {
     if (e instanceof ConnectError) {
         const info = e.findDetails(ErrorInfoSchema)[0];

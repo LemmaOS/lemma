@@ -3,11 +3,10 @@ import Dexie, { type EntityTable } from "dexie";
 
 import type { Conversation, Message } from "@/gen/lemma/v1/conversation_pb";
 
-// 缓存行：proto 实体拍平 + 同步元数据；Timestamp 转毫秒，bigint 转字符串
 export interface ConversationRow {
     id: string;
     title: string;
-    status: number; // ConversationStatus
+    status: number;
     archivedAtMs: number | null;
     messageCount: number;
     createdAtMs: number;
@@ -22,9 +21,8 @@ export interface MessageRow {
     content: string;
     providerId: string;
     model: string;
-    status: number; // MessageStatus
+    status: number;
     createdAtMs: number;
-    // 会话内单调序号（插入顺序）；number 安全到 2^53，现实不可能超
     seq: number;
     syncSeq: string;
 }

@@ -1,7 +1,6 @@
 import "fake-indexeddb/auto";
 import { beforeEach, expect, it, vi } from "vitest";
 
-// mock 掉整个客户端层：测试目标是状态机，不是网络
 vi.mock("@/lib/clients", () => ({
     chatClient: {
         sendMessage: vi.fn(),
@@ -28,7 +27,6 @@ const resumeStream = vi.mocked(chatClient.resumeStream);
 const abortMessage = vi.mocked(chatClient.abortMessage);
 const listMessages = vi.mocked(conversationClient.listMessages);
 
-// 造事件：状态机只读 kind.case / kind.value，直接字面量强转
 function ev<T>(kind: ChatEvent["kind"]): T {
     return { event: { kind } } as unknown as T;
 }
@@ -75,13 +73,11 @@ it("send 走通 started → delta → done", async () => {
 });
 
 it("断线后按已收字符数 offset 续传", async () => {
-    // 第一次：started + 一个 delta 后网络断开
     sendMessage.mockImplementationOnce(async function* () {
         yield started("m1");
         yield delta("你");
         throw new Error("network down");
     });
-    // 续传：补差额 + done
     resumeStream.mockImplementationOnce(async function* () {
         yield delta("好") as unknown as ResumeStreamResponse;
         yield done as unknown as ResumeStreamResponse;
@@ -101,7 +97,6 @@ it("abort 通知服务端并标记 aborted", async () => {
     sendMessage.mockImplementation(async function* (_req, opts) {
         yield started("m1");
         yield delta("半");
-        // 挂起直到本地掐流
         await new Promise((_, reject) => {
             opts?.signal?.addEventListener("abort", () =>
                 reject(new Error("aborted")),
@@ -111,7 +106,6 @@ it("abort 通知服务端并标记 aborted", async () => {
     abortMessage.mockResolvedValue({} as never);
 
     const p = useChat.getState().send("p1", "gpt-x", "你好");
-    // 等流式内容出现
     await vi.waitFor(() => {
         expect(useChat.getState().items[1]?.content).toBe("半");
     });
@@ -125,7 +119,6 @@ it("abort 通知服务端并标记 aborted", async () => {
 });
 
 it("open 加载历史并转正序", async () => {
-    // 服务端返回倒序（最新在前）
     listMessages.mockResolvedValue({
         messages: [
             {

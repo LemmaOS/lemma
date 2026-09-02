@@ -22,7 +22,6 @@ export default function ProvidersPage() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
 
-    // 未手选时默认选中第一个（派生值，避免 effect 里 setState）
     const effectiveSelectedId =
         selectedId ?? (store.loaded ? (store.list[0]?.id ?? null) : null);
     const selected =

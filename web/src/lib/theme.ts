@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from "react";
 
 export type ThemePreference = "light" | "dark" | "system";
 
-// 与 index.html 首帧脚本共用同一个键
 export const THEME_STORAGE_KEY = "lemma.theme";
 
 export function readThemePreference(): ThemePreference {
@@ -29,7 +28,6 @@ export function saveThemePreference(pref: ThemePreference) {
     localStorage.setItem(THEME_STORAGE_KEY, pref);
 }
 
-/** 三态主题偏好：读取/应用/持久化/跟随系统，全在这一个 hook 里 */
 export function useThemePreference(): readonly [
     ThemePreference,
     (pref: ThemePreference) => void,

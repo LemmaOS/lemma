@@ -11,7 +11,6 @@ import {
 
 interface AuthState {
     user: User | null;
-    // 启动时的会话恢复是否结束（路由守卫据此等待）
     ready: boolean;
     bootstrap: () => Promise<void>;
     login: (identifier: string, password: string) => Promise<void>;
@@ -27,7 +26,6 @@ export const useAuth = create<AuthState>()((set) => ({
     user: null,
     ready: false,
 
-    // 应用启动：有旧 token 就调 me 恢复会话；失败（含 refresh 失败）视为未登录
     bootstrap: async () => {
         if (getAccessToken()) {
             try {
@@ -40,7 +38,6 @@ export const useAuth = create<AuthState>()((set) => ({
         set({ ready: true });
     },
 
-    // 契约里 username 与 email 二选一：含 @ 视为邮箱
     login: async (identifier, password) => {
         const req = identifier.includes("@")
             ? { email: identifier, password }
@@ -59,12 +56,11 @@ export const useAuth = create<AuthState>()((set) => ({
     },
 
     logout: async () => {
-        // 尽力通知服务端吊销 refresh token，本地登出不依赖它成功
         try {
             const refreshToken = getRefreshToken();
             if (refreshToken) await authClient.logout({ refreshToken });
         } catch {
-            // 忽略：本地登出优先
+            // Intentionally empty.
         }
         clearTokens();
         set({ user: null });

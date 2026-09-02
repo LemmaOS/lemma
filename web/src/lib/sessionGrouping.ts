@@ -15,7 +15,6 @@ function startOfDayMs(ms: number): number {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
-/** 按更新时间倒序分组：今天/昨天/近 7 天/更早；空组不出现 */
 export function groupSessions(
     sessions: SessionSummary[],
 ): { key: GroupKey; items: SessionSummary[] }[] {

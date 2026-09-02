@@ -9,7 +9,7 @@ import { errorText } from "@/lib/errors";
 import { pullAll } from "@/lib/sync";
 
 export interface ChatItem {
-    id: string; // assistant 占位期是 `${clientMsgId}:ai`
+    id: string;
     role: "user" | "assistant";
     content: string;
     status: "streaming" | "done" | "aborted" | "error";
@@ -30,12 +30,10 @@ interface ChatState {
     abort: () => Promise<void>;
 }
 
-// 运行期句柄（不进 React 状态）：中断控制器、服务端消息 id、是否用户主动中断
 let controller: AbortController | null = null;
 let activeMessageId: string | null = null;
 let userAborted = false;
 
-// offset 与服务端 chars() 对齐：按 Unicode 字符数，不是 UTF-16 码元数
 const charLen = (s: string) => Array.from(s).length;
 
 const PAGE_SIZE = 50;
@@ -85,7 +83,6 @@ export const useChat = create<ChatState>()((set, get) => ({
     open: async (conversationId) => {
         const db = getDb();
         if (db) {
-            // 缓存副本是全量历史（Pull 覆盖 messages 表），无需分页
             const rows = await listMessages(db, conversationId);
             set({
                 conversationId,
@@ -100,13 +97,11 @@ export const useChat = create<ChatState>()((set, get) => ({
         });
         set({
             conversationId,
-            // 服务端返回倒序（最新在前），展示转为正序
             items: res.messages.map(protoToItem).reverse(),
             hasMore: res.hasMore,
         });
     },
 
-    // 同步引擎补拉完成后回调：用缓存刷新当前会话；流式期间不动（本地流是权威）
     syncFromCache: async () => {
         const { conversationId, streaming } = get();
         const db = getDb();

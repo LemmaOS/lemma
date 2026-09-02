@@ -48,7 +48,6 @@ interface AppSidebarProps {
     onCollapse: () => void;
 }
 
-/** 会话行：悬停出现 重命名/归档；重命名为非受控输入（defaultValue + 提交时取值） */
 function SessionRow({
     session,
     active,
@@ -144,7 +143,6 @@ function SessionRow({
     );
 }
 
-/** 归档行：悬停出现 恢复/彻底删除 */
 function ArchivedRow({
     session,
     onRestore,
@@ -184,7 +182,6 @@ function ArchivedRow({
     );
 }
 
-/** 应用侧边栏：产品名、新会话、分组会话列表、归档区、用户区 */
 export function AppSidebar({
     sessions,
     archived,
@@ -205,7 +202,6 @@ export function AppSidebar({
 
     return (
         <aside className="h-full w-[260px] shrink-0 bg-transparent text-sidebar-foreground flex flex-col">
-            {/* 产品名 + 收起 */}
             <div className="flex items-center justify-between px-3 pt-4">
                 <p className="text-sm font-semibold">{t("common.appName")}</p>
                 <Button
@@ -220,7 +216,6 @@ export function AppSidebar({
                 </Button>
             </div>
 
-            {/* 新会话 */}
             <div className="px-3 pt-3">
                 <button
                     type="button"
@@ -232,7 +227,6 @@ export function AppSidebar({
                 </button>
             </div>
 
-            {/* 会话列表 */}
             <div className="flex-1 overflow-y-auto px-2 pb-3">
                 {groups.map((group) => (
                     <div key={group.key}>

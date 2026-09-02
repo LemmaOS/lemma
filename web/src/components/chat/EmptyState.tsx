@@ -8,11 +8,9 @@ const SUGGESTION_KEYS = [
 ] as const;
 
 interface EmptyStateProps {
-    /** Fill the composer with the picked suggestion text. */
     onPickSuggestion: (text: string) => void;
 }
 
-/** Empty conversation onboarding (design.md §3.4). */
 export function EmptyState({ onPickSuggestion }: EmptyStateProps) {
     const { t } = useTranslation();
 

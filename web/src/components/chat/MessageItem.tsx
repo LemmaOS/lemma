@@ -8,14 +8,11 @@ import type { ChatItem } from "@/stores/chat";
 
 interface MessageItemProps {
     message: ChatItem;
-    /** 展示来源的标签，如 "DeepSeek · deepseek-v4-flash" */
     source?: string;
-    /** 仅最后一条 assistant 消息显示重新生成 */
     canRegenerate?: boolean;
     onRegenerate?: (id: string) => void;
 }
 
-/** 用户消息右对齐气泡；assistant 消息带头像、Markdown 渲染和操作按钮 */
 export function MessageItem({
     message,
     source,
@@ -41,7 +38,7 @@ export function MessageItem({
         try {
             await navigator.clipboard.writeText(message.content);
         } catch {
-            // 剪贴板不可用（非安全上下文）时静默
+            // Intentionally empty.
         }
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);

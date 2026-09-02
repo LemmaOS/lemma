@@ -14,7 +14,6 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-// 语言切换：LanguageDetector 会自动持久化到 localStorage（lemma.lang）
 export function LanguageToggle() {
     const { i18n, t } = useTranslation();
     return (

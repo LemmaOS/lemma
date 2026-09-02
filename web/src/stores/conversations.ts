@@ -23,7 +23,7 @@ interface ConversationsState {
     hydrateFromCache: () => Promise<void>;
     refresh: () => Promise<void>;
     refreshArchived: () => Promise<void>;
-    create: () => Promise<string>; // 返回新会话 id
+    create: () => Promise<string>;
     rename: (id: string, title: string) => Promise<void>;
     archive: (id: string) => Promise<void>;
     restore: (id: string) => Promise<void>;
@@ -56,7 +56,6 @@ export const useConversationsStore = create<ConversationsState>()(
         archived: [],
         loaded: false,
 
-        // 从 IndexedDB 缓存直接铺数据（离线也能秒开）
         hydrateFromCache: async () => {
             const db = getDb();
             if (!db) return;
@@ -71,7 +70,6 @@ export const useConversationsStore = create<ConversationsState>()(
             });
         },
 
-        // 缓存优先秒开；同步引擎补拉完成后会再 hydrate 收敛
         refresh: async () => {
             await get().hydrateFromCache();
             void pullAll().catch(() => {});
@@ -82,7 +80,6 @@ export const useConversationsStore = create<ConversationsState>()(
             void pullAll().catch(() => {});
         },
 
-        // 变更成功后立即补拉一次，让缓存即时收敛（watch hint 3s 内也会兜底）
         create: async () => {
             const res = await conversationClient.createConversation({});
             if (!res.conversation)
@@ -123,7 +120,6 @@ export const useConversationsStore = create<ConversationsState>()(
             void pullAll().catch(() => {});
         },
 
-        // 彻底删除，不可恢复
         deleteArchived: async (id) => {
             await conversationClient.deleteArchived({ id });
             set((s) => ({

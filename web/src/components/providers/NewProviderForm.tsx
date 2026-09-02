@@ -27,7 +27,6 @@ interface NewProviderFormProps {
     onCancel: () => void;
 }
 
-// 新建时切类型预填官方端点；用户改过就不动
 const DEFAULT_BASE_URLS: Partial<Record<ProviderKind, string>> = {
     [ProviderKind.OPENAI]: "https://api.openai.com/v1",
     [ProviderKind.ANTHROPIC]: "https://api.anthropic.com/v1",

@@ -3,7 +3,6 @@ import { create } from "zustand";
 import type { Provider, ProviderKind } from "@/gen/lemma/v1/provider_pb";
 import { providerClient } from "@/lib/clients";
 
-// 区分"未提供"与"清空"：未提供的字段不进请求
 export interface ProviderPatch {
     name?: string;
     baseUrl?: string;
@@ -31,7 +30,6 @@ interface ProvidersState {
     create: (input: NewProvider) => Promise<Provider>;
     update: (id: string, patch: ProviderPatch) => Promise<void>;
     remove: (id: string) => Promise<void>;
-    // 已存供应商传 id；表单未保存时传 kind/baseUrl/apiKey 试临时凭证
     fetchModels: (req: {
         id?: string;
         kind?: ProviderKind;
@@ -64,7 +62,6 @@ export const useProvidersStore = create<ProvidersState>()((set) => ({
             baseUrl: patch.baseUrl,
             apiKey: patch.apiKey,
             enabled: patch.enabled,
-            // models 是消息型 patch（区分未提供与清空），包一层
             models: patch.models ? { models: patch.models } : undefined,
             apiPath: patch.apiPath,
             modelsPath: patch.modelsPath,

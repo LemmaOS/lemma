@@ -10,7 +10,6 @@ import {
     setTokens,
 } from "./session";
 
-// 裸 transport 仅用于刷新 token，避免拦截器自递归
 const bareTransport = createConnectTransport({ baseUrl: "/" });
 
 async function tryRefresh(): Promise<boolean> {
@@ -27,7 +26,6 @@ async function tryRefresh(): Promise<boolean> {
     }
 }
 
-// Bearer 注入；401 → 刷新并重放一次；刷新失败清空登录态回登录页
 const authInterceptor: Interceptor = (next) => async (req) => {
     const token = getAccessToken();
     if (token) req.header.set("Authorization", `Bearer ${token}`);

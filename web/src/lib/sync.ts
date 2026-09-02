@@ -23,7 +23,6 @@ let running = false;
 let watchAbort: AbortController | null = null;
 let pulling: Promise<void> | null = null;
 
-// "一次补拉完成"监听器：stores 借此从缓存回灌，避免引擎反向 import stores 造成循环依赖
 type SyncListener = () => void;
 const listeners = new Set<SyncListener>();
 
@@ -36,7 +35,6 @@ export function onSynced(cb: SyncListener): () => void {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** 应用一页 Pull：LWW 落库 + 归档全量刷新（顺带清理彻底删除的残留） */
 export async function applyPull(db: LemmaDb, res: PullResponse): Promise<void> {
     const convRows = res.conversations.flatMap((e) =>
         e.conversation ? [conversationToRow(e.conversation, e.syncSeq)] : [],
@@ -44,12 +42,9 @@ export async function applyPull(db: LemmaDb, res: PullResponse): Promise<void> {
     const msgRows = res.messages.flatMap((e) =>
         e.message ? [messageToRow(e.message, e.syncSeq)] : [],
     );
-    // 归档列表不带 syncSeq，用 0 占位——增量条目的 seq 必更大，不会误覆盖
     const archivedRows = res.archived.map((c) => conversationToRow(c, 0n));
     await upsertConversations(db, convRows);
     await upsertMessages(db, msgRows);
-    // 活跃全量对账：名单之外的 active 行是僵尸（跨账号污染/DB 重建残留），连消息一起清。
-    // 放在 replaceArchived 之前：万一某会话在拉取间隙被归档，会被随后的归档全量刷新补回来
     const zombieIds = await pruneActiveExcept(
         db,
         new Set(res.active.map((c) => c.id)),
@@ -57,14 +52,12 @@ export async function applyPull(db: LemmaDb, res: PullResponse): Promise<void> {
     for (const id of zombieIds) await deleteConversationCascade(db, id);
     const removed = await replaceArchived(db, archivedRows);
     for (const id of removed) await deleteConversationCascade(db, id);
-    // 归档会话的消息只在服务端对象存储里：本地缓存清空，恢复时重插的消息带新 sync_seq 会拉回
     await deleteMessagesOf(
         db,
         res.archived.map((c) => c.id),
     );
 }
 
-/** 游标循环补拉直到追上服务端；并发触发合并成同一次 */
 export async function pullAll(): Promise<void> {
     const db = getDb();
     if (!db) return;
@@ -92,7 +85,6 @@ export async function pullAll(): Promise<void> {
     }
 }
 
-/** watch 循环：连上先补拉，hint 落后再拉；断流指数退避重连 */
 async function watchLoop(): Promise<void> {
     let backoff = BACKOFF_START_MS;
     while (running) {
@@ -111,7 +103,6 @@ async function watchLoop(): Promise<void> {
                 }
             }
         } catch {
-            // stopSync 主动掐断不算故障
             if (!running) break;
             useSyncStatus.getState().setOnline(false);
         }

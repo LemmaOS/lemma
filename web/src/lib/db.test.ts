@@ -62,7 +62,7 @@ describe("db", () => {
     beforeEach(async () => {
         closeDb();
         db = openDb("test-user");
-        await db.delete(); // 清掉上一轮的数据
+        await db.delete();
         await db.open();
     });
 

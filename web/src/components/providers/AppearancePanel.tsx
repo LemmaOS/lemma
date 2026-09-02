@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useThemePreference } from "@/lib/theme";
 
-/** 设置页里的三态主题面板 */
 export function AppearancePanel() {
     const { t } = useTranslation();
     const [preference, select] = useThemePreference();

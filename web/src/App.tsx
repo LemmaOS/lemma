@@ -9,7 +9,6 @@ import { closeDb, openDb } from "./lib/db";
 import { onSynced, startSync, stopSync } from "./lib/sync";
 import { useConversationsStore } from "./stores/conversations";
 
-// 三个页面各自拆成独立 chunk，访问对应路由时才下载
 const ChatPage = lazy(() => import("@/pages/ChatPage"));
 const LoginPage = lazy(() => import("@/pages/LoginPage"));
 const ProvidersPage = lazy(() => import("@/pages/ProvidersPage"));
@@ -23,7 +22,6 @@ function Loading() {
     );
 }
 
-// 等会话恢复完成再决定放行还是跳登录
 function RequireAuth() {
     const user = useAuth((s) => s.user);
     const ready = useAuth((s) => s.ready);
@@ -42,7 +40,6 @@ export default function App() {
 
     const userId = useAuth((s) => s.user?.id ?? null);
 
-    // 登录后：开用户专属缓存 → 缓存铺数据 → 启动同步引擎；登出/切号时全部关闭（缓存按用户保留）
     useEffect(() => {
         if (!userId) return;
         openDb(userId);

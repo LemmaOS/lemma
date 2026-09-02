@@ -48,7 +48,6 @@ interface ModelListProps {
     onFetch: () => Promise<string[]>;
 }
 
-/** 模型列表：搜索、远程拉取（合并去重）、手动增删 */
 function ModelList({ models, onChange, onFetch }: ModelListProps) {
     const { t } = useTranslation();
     const [query, setQuery] = useState("");

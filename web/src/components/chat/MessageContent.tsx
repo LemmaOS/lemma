@@ -12,12 +12,10 @@ import rehypeHighlight from "rehype-highlight";
 
 import { Button } from "@/components/ui/button";
 
-// rehype-highlight 的 detect 靠猜， fenced block 没写语言时容易猜错，关掉
 const rehypePlugins = [[rehypeHighlight, { detect: false }]] as ComponentProps<
     typeof ReactMarkdown
 >["rehypePlugins"];
 
-/** 代码块外壳：语言标签 + 复制按钮，配色全部来自 code 系列 token */
 function CodeBlock({ children }: { children?: ReactNode }) {
     const { t } = useTranslation();
     const [copied, setCopied] = useState(false);
@@ -35,7 +33,7 @@ function CodeBlock({ children }: { children?: ReactNode }) {
                 codeRef.current?.textContent ?? "",
             );
         } catch {
-            // 剪贴板不可用（非安全上下文）时静默
+            // Intentionally empty.
         }
         setCopied(true);
         window.setTimeout(() => setCopied(false), 1500);
@@ -71,7 +69,6 @@ function CodeBlock({ children }: { children?: ReactNode }) {
     );
 }
 
-// Markdown 排版预设（对齐设计稿 §3.2）：行间节奏、标题、列表、引用、行内代码
 const components: Components = {
     pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
     p: ({ node: _node, ...props }) => <p {...props} />,
@@ -116,7 +113,6 @@ interface MessageContentProps {
     content: string;
 }
 
-/** assistant 消息的 Markdown 渲染；行内代码样式用 :not(pre)>code 选择器避免误伤代码块 */
 export function MessageContent({ content }: MessageContentProps) {
     return (
         <div className="space-y-3 text-sm leading-relaxed [&_:not(pre)>code]:rounded [&_:not(pre)>code]:border [&_:not(pre)>code]:border-code-border [&_:not(pre)>code]:bg-code [&_:not(pre)>code]:px-1 [&_:not(pre)>code]:py-0.5 [&_:not(pre)>code]:font-mono [&_:not(pre)>code]:text-[0.8125rem] [&_:not(pre)>code]:text-code-foreground">

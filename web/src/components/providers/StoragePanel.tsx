@@ -69,7 +69,6 @@ function FieldRow({
     );
 }
 
-/** S3 归档存储设置：表单 + 连通性测试 + 后端迁移进度 */
 export function StoragePanel() {
     const { t } = useTranslation();
     const [endpoint, setEndpoint] = useState("");
@@ -89,7 +88,6 @@ export function StoragePanel() {
     const [migrating, setMigrating] = useState(false);
     const [migrateDone, setMigrateDone] = useState(false);
 
-    // 初次加载：回填已保存配置；密钥不回填（后端只返脱敏串，留空即保持）
     useEffect(() => {
         void (async () => {
             try {

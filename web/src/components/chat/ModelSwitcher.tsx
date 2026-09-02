@@ -21,7 +21,6 @@ interface ModelSwitcherProps {
     onSelect: (selection: ModelSelection) => void;
 }
 
-/** 输入区模型选择：列出所有已启用供应商的模型 */
 export function ModelSwitcher({ selection, onSelect }: ModelSwitcherProps) {
     const { t } = useTranslation();
     const providers = useProviders();

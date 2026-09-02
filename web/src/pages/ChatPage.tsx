@@ -50,8 +50,6 @@ export default function ChatPage() {
         localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? "1" : "0");
     };
 
-    // ---------- 模型选择（持久化 + 失效回退） ----------
-
     const enabledProviders = useMemo(
         () =>
             providersStore.list.filter((p) => p.enabled && p.models.length > 0),
@@ -88,12 +86,8 @@ export default function ChatPage() {
         setStored(selection);
     };
 
-    // ---------- 会话与消息 ----------
-
-    // 打开会话：chat store 缓存优先，离线也能开
     useEffect(() => {
         if (activeId) void chat.open(activeId);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeId]);
 
     useEffect(() => {
@@ -112,7 +106,7 @@ export default function ChatPage() {
             }
             await chat.send(model.providerId, model.model, text);
         } catch {
-            // create/open 的网络错误静默；流内错误由 store 转 error 项
+            // Intentionally empty.
         }
     };
 
@@ -127,7 +121,6 @@ export default function ChatPage() {
         void chat.abort();
     };
 
-    // 重新生成 = 用当前模型重发该回复前面最近一条用户消息
     const handleRegenerate = (messageId: string) => {
         if (chat.streaming || !model) return;
         const idx = chat.items.findIndex((m) => m.id === messageId);
@@ -154,7 +147,6 @@ export default function ChatPage() {
         await conversations.restore(id);
     };
 
-    // 彻底删除，二次确认
     const handleDelete = async (id: string) => {
         if (window.confirm(t("sessions.deleteConfirm"))) {
             await conversations.deleteArchived(id);
@@ -165,8 +157,6 @@ export default function ChatPage() {
         setDraft(text);
         inputRef.current?.focus();
     };
-
-    // ---------- 派生 ----------
 
     const summaries = useMemo(
         () => conversations.list.map(toSummary),
