@@ -45,6 +45,7 @@
         "zustand": "^5.0.15"
     },
     "devDependencies": {
+        "@codecov/vite-plugin": "^2.0.1",
         "@eslint/js": "^10.0.1",
         "@tailwindcss/vite": "^4.3.3",
         "@types/node": "^26.4.0",

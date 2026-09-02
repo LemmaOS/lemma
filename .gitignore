@@ -57,3 +57,4 @@ Thumbs.db
 # 覆盖率报告
 lcov.info
 web/coverage/
+web/junit.xml

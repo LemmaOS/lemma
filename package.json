@@ -9,6 +9,7 @@
         "gen:proto": "cd proto && buf generate"
     },
     "devDependencies": {
-        "@bufbuild/protoc-gen-es": "^2.14.1"
+        "@bufbuild/protoc-gen-es": "^2.14.1",
+        "typescript": "^5.9.3"
     }
 }

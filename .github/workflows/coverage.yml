@@ -61,16 +61,28 @@ jobs:
           tool: nextest,cargo-llvm-cov
 
       - name: Coverage
+        # NEXTEST_PROFILE selects the ci profile, which also writes JUnit
+        # XML for the test-results upload below.
         run: >
           cargo llvm-cov nextest --workspace --exclude lemma-server
           --lcov --output-path lcov.info
           --fail-under-lines 85
+        env:
+          NEXTEST_PROFILE: ci
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: lcov.info
+          flags: rust
+
+      - name: Upload test results to Codecov
+        if: always()
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: target/nextest/ci/junit.xml
           flags: rust
 
   web:
@@ -98,7 +110,12 @@ jobs:
         run: npm run gen:proto
 
       - name: Coverage
-        run: npm run test:cov -w web
+        # The junit reporter emits web/junit.xml for the test-results
+        # upload below; the default reporter keeps the console log.
+        run: >
+          npm run test:cov -w web --
+          --reporter=default --reporter=junit
+          --outputFile.junit=junit.xml
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v7
@@ -106,3 +123,18 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: web/coverage/lcov.info
           flags: web
+
+      - name: Upload test results to Codecov
+        if: always()
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: web/junit.xml
+          flags: web
+
+      # Bundle analysis uploads inside `vite build`; without the token env
+      # the plugin stays a no-op.
+      - name: Build with bundle analysis
+        run: npm run build -w web
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

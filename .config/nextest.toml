@@ -1,0 +1,4 @@
+# The ci profile additionally emits JUnit XML for Codecov Test Analytics;
+# local runs keep the default profile and produce no report files.
+[profile.ci.junit]
+path = "junit.xml"
