@@ -86,6 +86,8 @@ export default function ChatPage() {
         setStored(selection);
     };
 
+    // The chat store hook is stable and deliberately omitted from the
+    // dependency list: only a conversation switch re-opens the chat.
     useEffect(() => {
         if (activeId) void chat.open(activeId);
     }, [activeId]);
@@ -106,7 +108,7 @@ export default function ChatPage() {
             }
             await chat.send(model.providerId, model.model, text);
         } catch {
-            // Intentionally empty.
+            // chat.send already renders its failures on the message item.
         }
     };
 
@@ -188,7 +190,6 @@ export default function ChatPage() {
 
     return (
         <div className="flex h-dvh bg-sidebar text-foreground">
-            {/* 侧边栏：折叠时宽度/透明度动画 */}
             <div
                 aria-hidden={sidebarCollapsed}
                 className={cn(

@@ -52,6 +52,8 @@ export function HomeView({ onSubmit, model, onModelChange }: HomeViewProps) {
                             if (
                                 e.key === "Enter" &&
                                 !e.shiftKey &&
+                                // Enter during IME composition confirms a
+                                // candidate; it must not send.
                                 !e.nativeEvent.isComposing
                             ) {
                                 e.preventDefault();

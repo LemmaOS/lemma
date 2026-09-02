@@ -14,6 +14,8 @@ void i18n
             zh: { translation: zh },
         },
         fallbackLng: "en",
+        // React already escapes interpolated values; i18next doing it too
+        // would double-escape.
         interpolation: { escapeValue: false },
         detection: {
             order: ["localStorage", "navigator"],

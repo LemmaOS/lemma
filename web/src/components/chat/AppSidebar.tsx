@@ -270,7 +270,6 @@ export function AppSidebar({
                 )}
             </div>
 
-            {/* 用户区 */}
             <div className="border-t border-sidebar-border p-3 flex items-center gap-2">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>

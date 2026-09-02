@@ -238,6 +238,9 @@ export function ProviderDetail({
     onDelete,
 }: ProviderDetailProps) {
     const { t } = useTranslation();
+    // The key field stays empty: the backend's masked key only shows as the
+    // placeholder, and an empty field means "keep the current key".
+    // Prefilling the masked value would re-seal it as if it were real.
     const [apiKey, setApiKey] = useState("");
     const [showKey, setShowKey] = useState(false);
     const [baseUrl, setBaseUrl] = useState(provider.baseUrl);

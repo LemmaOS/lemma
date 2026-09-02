@@ -117,6 +117,8 @@ export function StoragePanel() {
                     total: frame.total,
                     skipped: frame.skipped,
                 });
+                // Migration failures arrive in-band on the final frame
+                // rather than as a stream error.
                 if (frame.finished) {
                     if (frame.error) {
                         setError(frame.error);
@@ -209,6 +211,8 @@ export function StoragePanel() {
         );
     }
 
+    // Secret fields always load empty: the backend only exposes masked
+    // values, and an empty field means "keep the current key".
     const fields: Field[] = [
         {
             id: "endpoint",
