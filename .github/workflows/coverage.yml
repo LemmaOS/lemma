@@ -79,11 +79,12 @@ jobs:
 
       - name: Upload test results to Codecov
         if: always()
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: target/nextest/ci/junit.xml
           flags: rust
+          report_type: test_results
 
   web:
     name: Web
@@ -126,11 +127,12 @@ jobs:
 
       - name: Upload test results to Codecov
         if: always()
-        uses: codecov/test-results-action@v1
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: web/junit.xml
           flags: web
+          report_type: test_results
 
       # Bundle analysis uploads inside `vite build`; without the token env
       # the plugin stays a no-op.
