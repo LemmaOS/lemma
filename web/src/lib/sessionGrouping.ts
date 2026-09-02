@@ -15,10 +15,12 @@ function startOfDayMs(ms: number): number {
     return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
 }
 
+/** Groups sessions newest-first into fixed buckets, omitting empty ones. */
 export function groupSessions(
     sessions: SessionSummary[],
 ): { key: GroupKey; items: SessionSummary[] }[] {
     const byGroup = new Map<GroupKey, SessionSummary[]>();
+    // Buckets are calendar days in local time, not rolling 24-hour windows.
     const today = startOfDayMs(Date.now());
     const sorted = [...sessions].sort((a, b) => b.updatedAtMs - a.updatedAtMs);
     for (const s of sorted) {

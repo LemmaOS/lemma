@@ -3,6 +3,9 @@ import type { TFunction } from "i18next";
 
 import { ErrorInfoSchema, ErrorReason } from "@/gen/lemma/v1/errors_pb";
 
+// Maps every business error reason (the closed set in errors.proto) to its
+// i18n key. The Record type makes the mapping exhaustive: adding a proto
+// reason without a translation here fails compilation.
 const reasonKeys: Record<ErrorReason, string> = {
     [ErrorReason.UNSPECIFIED]: "errors.unspecified",
     [ErrorReason.CREDENTIALS_INVALID]: "errors.credentialsInvalid",
@@ -38,6 +41,11 @@ const reasonKeys: Record<ErrorReason, string> = {
     [ErrorReason.BUCKET_NOT_FOUND]: "errors.bucketNotFound",
 };
 
+/**
+ * Renders an error for display. Business errors are localized by reason
+ * code; anything without an ErrorInfo detail (internal errors, network
+ * failures) shows as its raw English message and is never localized.
+ */
 export function errorText(e: unknown, t: TFunction): string {
     if (e instanceof ConnectError) {
         const info = e.findDetails(ErrorInfoSchema)[0];

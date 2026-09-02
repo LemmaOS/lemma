@@ -19,6 +19,8 @@ export function clearTokens(): void {
     localStorage.removeItem(REFRESH_KEY);
 }
 
+// Decodes the JWT payload without verifying the signature; used only to
+// tell which user a token belongs to, never for authorization.
 function userIdOf(token: string): string | null {
     try {
         const raw = token.split(".")[1] ?? "";
@@ -32,6 +34,12 @@ function userIdOf(token: string): string | null {
     }
 }
 
+/**
+ * Reloads this tab when another tab signs in as a different user. The
+ * storage event only fires in tabs that did not make the change, so the
+ * signing-in tab keeps running. The reload re-opens the per-user cache
+ * database and drops all in-memory state of the previous account.
+ */
 export function installCrossTabGuard(): void {
     window.addEventListener("storage", (event) => {
         if (event.key !== ACCESS_KEY) return;

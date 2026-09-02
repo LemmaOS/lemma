@@ -63,6 +63,7 @@ function hintRes(seq: bigint): WatchResponse {
     } as WatchResponse;
 }
 
+// Yields the events, then hangs forever like a real long-lived stream.
 function streamOf(events: WatchResponse[]): AsyncIterable<WatchResponse> {
     return (async function* () {
         for (const e of events) yield e;
@@ -70,6 +71,7 @@ function streamOf(events: WatchResponse[]): AsyncIterable<WatchResponse> {
     })();
 }
 
+// Rejects on the first read, simulating a connection that drops instantly.
 function errorStream(): AsyncIterable<WatchResponse> {
     return {
         [Symbol.asyncIterator]() {
@@ -238,6 +240,7 @@ describe("sync", () => {
 
         startSync();
         await waitFor(() => useSyncStatus.getState().online === false);
+        // The reconnect only happens after the 1s starting backoff.
         await waitFor(() => useSyncStatus.getState().online === true);
 
         expect(watchCalls).toBe(2);

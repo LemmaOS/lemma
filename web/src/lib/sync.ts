@@ -21,11 +21,13 @@ const BACKOFF_MAX_MS = 30000;
 
 let running = false;
 let watchAbort: AbortController | null = null;
+// Concurrent pullAll calls share this one in-flight pull.
 let pulling: Promise<void> | null = null;
 
 type SyncListener = () => void;
 const listeners = new Set<SyncListener>();
 
+/** Subscribes to post-pull notifications; call the result to unsubscribe. */
 export function onSynced(cb: SyncListener): () => void {
     listeners.add(cb);
     return () => {
@@ -35,6 +37,11 @@ export function onSynced(cb: SyncListener): () => void {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * Applies one pull page to the cache: upserts changed rows, prunes cached
+ * conversations absent from the server's active roster, full-refreshes the
+ * archived list, and drops cached messages of archived conversations.
+ */
 export async function applyPull(db: LemmaDb, res: PullResponse): Promise<void> {
     const convRows = res.conversations.flatMap((e) =>
         e.conversation ? [conversationToRow(e.conversation, e.syncSeq)] : [],
@@ -42,6 +49,8 @@ export async function applyPull(db: LemmaDb, res: PullResponse): Promise<void> {
     const msgRows = res.messages.flatMap((e) =>
         e.message ? [messageToRow(e.message, e.syncSeq)] : [],
     );
+    // Roster entries carry no per-entry syncSeq; stamping them with 0 lets
+    // the LWW check keep any newer row from the incremental feed.
     const archivedRows = res.archived.map((c) => conversationToRow(c, 0n));
     await upsertConversations(db, convRows);
     await upsertMessages(db, msgRows);
@@ -58,6 +67,7 @@ export async function applyPull(db: LemmaDb, res: PullResponse): Promise<void> {
     );
 }
 
+/** Pulls all pending changes page by page and persists the new cursor. */
 export async function pullAll(): Promise<void> {
     const db = getDb();
     if (!db) return;
@@ -93,11 +103,17 @@ async function watchLoop(): Promise<void> {
             const stream = syncClient.watch({}, { signal: watchAbort.signal });
             useSyncStatus.getState().setOnline(true);
             backoff = BACKOFF_START_MS;
+            // Catch up before consuming hints so nothing that changed
+            // while the stream was down is missed.
             await pullAll();
             for await (const res of stream) {
+                // Non-hint events are heartbeats keeping proxies from
+                // killing the idle stream.
                 if (res.kind.case !== "hint") continue;
                 const db = getDb();
                 if (!db) continue;
+                // A hint only says "something changed"; pull to find out.
+                // Hints at or below the cursor are already applied.
                 if (res.kind.value.syncSeq > (await getCursor(db))) {
                     await pullAll();
                 }
@@ -112,6 +128,7 @@ async function watchLoop(): Promise<void> {
     }
 }
 
+/** Starts the background watch loop; safe to call repeatedly. */
 export function startSync(): void {
     if (running) return;
     running = true;

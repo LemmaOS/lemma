@@ -10,8 +10,12 @@ import {
     setTokens,
 } from "./session";
 
+// The refresh call bypasses the interceptor below, or a 401 from refresh
+// itself would trigger another refresh.
 const bareTransport = createConnectTransport({ baseUrl: "/" });
 
+// Any failure (missing token, network, server rejection) reads as false;
+// the caller then drops the session.
 async function tryRefresh(): Promise<boolean> {
     const refreshToken = getRefreshToken();
     if (!refreshToken) return false;
@@ -32,6 +36,8 @@ const authInterceptor: Interceptor = (next) => async (req) => {
     try {
         return await next(req);
     } catch (e) {
+        // A 401 from AuthService itself (e.g. a wrong password at login)
+        // must not trigger a refresh.
         if (
             !(e instanceof ConnectError) ||
             e.code !== Code.Unauthenticated ||

@@ -20,6 +20,7 @@ export function resolveTheme(pref: ThemePreference): "light" | "dark" {
     return pref;
 }
 
+/** Applies the resolved theme via the data-theme attribute on <html>. */
 export function applyTheme(pref: ThemePreference) {
     document.documentElement.setAttribute("data-theme", resolveTheme(pref));
 }
