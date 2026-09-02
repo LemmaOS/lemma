@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, missing_docs)]
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};

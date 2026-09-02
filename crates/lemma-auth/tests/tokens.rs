@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, missing_docs)]
 
 use chrono::{DateTime, Duration, Utc};
 use lemma_auth::{tokens, users};

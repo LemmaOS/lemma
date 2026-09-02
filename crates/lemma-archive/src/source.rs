@@ -12,7 +12,10 @@ use crate::{ArchiveError, ArchiveStore, S3ArchiveStore, S3Config};
 /// Resolves the archive store for a user. `None` means the user has no
 /// storage configured, in which case archiving stays database-only.
 pub trait ArchiveSource: Send + Sync + 'static {
+    /// The store implementation this source produces.
     type Store: ArchiveStore;
+    /// Resolves the user's store, or `None` when no storage is
+    /// configured.
     fn store_for(
         &self,
         user_id: Uuid,
@@ -27,6 +30,8 @@ pub struct DbArchiveSource {
 }
 
 impl DbArchiveSource {
+    /// Creates the source. `secret_key` derives the key that opens the
+    /// sealed credentials stored in s3_configs.
     pub fn new(pool: PgPool, secret_key: impl Into<String>) -> Self {
         Self {
             pool,

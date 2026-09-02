@@ -5,6 +5,7 @@ use sqlx::types::Json;
 use uuid::Uuid;
 
 /// Fields for upserting a user's storage config.
+#[allow(missing_docs)]
 pub struct UpsertS3Config<'a> {
     pub user_id: Uuid,
     pub endpoint: &'a str,

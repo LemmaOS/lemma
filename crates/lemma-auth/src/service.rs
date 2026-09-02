@@ -28,6 +28,7 @@ pub struct AuthService {
 }
 
 impl AuthService {
+    /// Creates the handler. `secret` signs and verifies access tokens.
     pub fn new(pool: PgPool, secret: impl Into<String>) -> Self {
         Self {
             pool,

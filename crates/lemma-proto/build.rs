@@ -1,3 +1,5 @@
+//! Build script: compiles the proto contracts into Connect bindings.
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     connectrpc_build::Config::new()
         // New proto files must be added to this list explicitly. Nothing

@@ -5,12 +5,14 @@ use std::sync::Mutex;
 
 use crate::{ArchiveError, ArchiveStore};
 
+/// In-memory object store used as the archive backend in tests.
 #[derive(Default)]
 pub struct MemoryArchiveStore {
     objects: Mutex<BTreeMap<String, Vec<u8>>>,
 }
 
 impl MemoryArchiveStore {
+    /// Creates an empty store.
     pub fn new() -> Self {
         Self::default()
     }

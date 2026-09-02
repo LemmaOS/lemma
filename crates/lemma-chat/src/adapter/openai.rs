@@ -14,6 +14,7 @@ pub struct OpenAiCompatible {
 }
 
 impl OpenAiCompatible {
+    /// Creates the adapter.
     pub fn new() -> Self {
         Self {
             client: reqwest::Client::new(),

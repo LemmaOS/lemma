@@ -6,6 +6,9 @@
 
 /// Generated message and service types, rooted at `lemma::v1`.
 pub mod proto {
+    // Generated code carries no doc comments.
+    #![allow(missing_docs)]
+
     connectrpc::include_generated!();
 }
 

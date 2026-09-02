@@ -19,6 +19,7 @@ pub struct AnthropicMessages {
 }
 
 impl AnthropicMessages {
+    /// Creates the adapter.
     pub fn new() -> Self {
         Self {
             client: reqwest::Client::new(),

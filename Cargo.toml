@@ -75,3 +75,4 @@ unwrap_used = "deny"
 
 [workspace.lints.rust]
 linker_messages = "allow"
+missing_docs = "deny"

@@ -9,6 +9,7 @@ pub const ACCESS_TOKEN_TTL_SECS: i64 = 15 * 60;
 
 /// JWT claims. `sub` carries the user id.
 #[derive(Serialize, Deserialize)]
+#[allow(missing_docs)]
 pub struct Claims {
     pub sub: String,
     pub exp: usize,

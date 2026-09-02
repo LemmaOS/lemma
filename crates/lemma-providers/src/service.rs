@@ -27,6 +27,7 @@ pub struct ProviderService {
 }
 
 impl ProviderService {
+    /// Creates the handler.
     pub fn new(pool: PgPool, jwt_secret: impl Into<String>, secret_key: impl Into<String>) -> Self {
         Self {
             pool,

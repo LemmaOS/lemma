@@ -6,6 +6,7 @@ use sqlx::types::Json;
 use uuid::Uuid;
 
 /// Fields for inserting a provider.
+#[allow(missing_docs)]
 pub struct NewProvider<'a> {
     pub id: Uuid,
     pub user_id: Uuid,
@@ -21,6 +22,7 @@ pub struct NewProvider<'a> {
 
 /// Partial update: `None` fields are left untouched.
 #[derive(Default)]
+#[allow(missing_docs)]
 pub struct ProviderPatch {
     pub name: Option<String>,
     pub base_url: Option<String>,

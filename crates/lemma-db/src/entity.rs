@@ -3,6 +3,9 @@
 //! Field docs are limited to columns whose semantics are not obvious from
 //! the name: sealed credentials, the sync sequence, and lifecycle pointers.
 
+// Row structs are pure data carriers; field names are the documentation.
+#![allow(missing_docs)]
+
 use chrono::{DateTime, Utc};
 use sqlx::types::Json;
 use uuid::Uuid;

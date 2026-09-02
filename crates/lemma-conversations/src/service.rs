@@ -37,6 +37,7 @@ pub struct ConversationService<S: ArchiveSource> {
 }
 
 impl<S: ArchiveSource> ConversationService<S> {
+    /// Creates the handler with the given archive source.
     pub fn new(pool: PgPool, jwt_secret: impl Into<String>, archive: S) -> Self {
         Self {
             pool,

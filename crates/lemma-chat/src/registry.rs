@@ -15,6 +15,7 @@ use lemma_db::entity::TokenUsage;
 
 /// An event broadcast to the subscribers of a live stream.
 #[derive(Debug, Clone)]
+#[allow(missing_docs)]
 pub enum StreamEvent {
     Delta(String),
     Done(Option<TokenUsage>),
@@ -24,6 +25,7 @@ pub enum StreamEvent {
 
 /// Lifecycle state of a stream. Terminal states are sticky.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(missing_docs)]
 pub enum StreamStatus {
     Live,
     Done,
@@ -102,10 +104,12 @@ impl StreamHandle {
         (replay, rx)
     }
 
+    /// Current lifecycle state.
     pub fn status(&self) -> StreamStatus {
         *self.lock_status()
     }
 
+    /// The content accumulated so far.
     pub fn content(&self) -> String {
         self.lock_content().clone()
     }
@@ -129,20 +133,25 @@ pub struct StreamRegistry {
 }
 
 impl StreamRegistry {
+    /// Creates an empty registry.
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Registers a fresh handle for a message about to stream.
     pub fn register(&self, message_id: Uuid) -> Arc<StreamHandle> {
         let handle = Arc::new(StreamHandle::new());
         self.inner.insert(message_id, Arc::clone(&handle));
         handle
     }
 
+    /// Returns the handle for a message, if its stream is still live in
+    /// this process.
     pub fn get(&self, message_id: &Uuid) -> Option<Arc<StreamHandle>> {
         self.inner.get(message_id).map(|h| h.value().clone())
     }
 
+    /// Deregisters a message whose stream has ended.
     pub fn remove(&self, message_id: &Uuid) {
         self.inner.remove(message_id);
     }

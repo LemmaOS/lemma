@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, missing_docs)]
 
 use axum::extract::State;
 use axum::response::{IntoResponse, Response};

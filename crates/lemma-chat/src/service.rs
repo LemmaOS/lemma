@@ -38,6 +38,7 @@ pub struct ChatService {
 }
 
 impl ChatService {
+    /// Creates the handler with the given LLM adapter.
     pub fn new(
         pool: PgPool,
         jwt_secret: impl Into<String>,

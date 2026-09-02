@@ -27,6 +27,7 @@ pub type BoxChatFuture = Pin<Box<dyn Future<Output = Result<BoxEventStream, Adap
 pub(crate) type ByteStream = Pin<Box<dyn Stream<Item = Result<Vec<u8>, AdapterError>> + Send>>;
 
 /// One streaming chat call against a provider.
+#[allow(missing_docs)]
 pub struct ChatRequest {
     pub kind: ProviderKind,
     pub base_url: String,
@@ -37,6 +38,7 @@ pub struct ChatRequest {
     pub messages: Vec<ChatMessage>,
 }
 
+#[allow(missing_docs)]
 pub struct ChatMessage {
     pub role: String,
     pub content: String,
@@ -54,6 +56,7 @@ pub enum AdapterEvent {
 /// Any adapter failure, reduced to a message. These surface to clients
 /// as in-band error events, not coded business errors.
 #[derive(Debug)]
+#[allow(missing_docs)]
 pub struct AdapterError {
     pub message: String,
 }
@@ -78,6 +81,7 @@ impl AdapterError {
 
 /// A provider-specific streaming chat implementation.
 pub trait LlmAdapter: Send + Sync {
+    /// Starts a streaming chat call.
     fn stream_chat(&self, req: ChatRequest) -> BoxChatFuture;
 }
 
@@ -89,6 +93,7 @@ pub struct DispatchAdapter {
 }
 
 impl DispatchAdapter {
+    /// Creates a dispatcher with one adapter per known provider kind.
     pub fn new() -> Self {
         Self {
             openai: OpenAiCompatible::new(),

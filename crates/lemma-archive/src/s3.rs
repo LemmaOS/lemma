@@ -15,6 +15,7 @@ use crate::{ArchiveError, ArchiveStore};
 /// Connection parameters with credentials in plaintext; the caller opens
 /// the sealed values from the database.
 #[derive(Clone)]
+#[allow(missing_docs)]
 pub struct S3Config {
     pub endpoint: String,
     pub region: String,
@@ -23,12 +24,14 @@ pub struct S3Config {
     pub secret_access_key: String,
 }
 
+/// Archive store backed by an S3-compatible object storage.
 pub struct S3ArchiveStore {
     client: Client,
     bucket: String,
 }
 
 impl S3ArchiveStore {
+    /// Builds a client for the given config.
     pub fn new(cfg: &S3Config) -> Self {
         let creds = Credentials::new(
             &cfg.access_key_id,

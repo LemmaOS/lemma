@@ -29,6 +29,7 @@ pub struct SyncService {
 }
 
 impl SyncService {
+    /// Creates the handler.
     pub fn new(pool: PgPool, jwt_secret: impl Into<String>) -> Self {
         Self {
             pool,

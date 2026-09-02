@@ -1,4 +1,4 @@
-#![allow(clippy::unwrap_used)]
+#![allow(clippy::unwrap_used, missing_docs)]
 
 use lemma_auth::users;
 use lemma_providers::providers::{self, NewProvider, ProviderPatch};

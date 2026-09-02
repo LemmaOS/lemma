@@ -9,6 +9,7 @@ use crate::ArchiveError;
 
 /// Top-level archive object.
 #[derive(Serialize, Deserialize)]
+#[allow(missing_docs)]
 pub struct ArchiveEnvelope {
     /// Envelope schema version; currently 1.
     pub version: u32,
@@ -20,6 +21,7 @@ pub struct ArchiveEnvelope {
 /// A message as stored in the archive. Ids are strings because the
 /// envelope is a portable JSON document, not a database row.
 #[derive(Serialize, Deserialize)]
+#[allow(missing_docs)]
 pub struct ArchivedMessage {
     pub id: String,
     pub role: String,
