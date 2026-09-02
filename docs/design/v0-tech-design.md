@@ -103,13 +103,13 @@ lemma/
 
 契约放 `proto/lemma/v1/`，正式定义以 proto 为准（已全部定稿，buf STANDARD 通过）：
 
-| 服务                | 职责                                                          |
-| ------------------- | ------------------------------------------------------------- |
-| AuthService         | 注册（首个用户 owner）、登录、刷新（轮换）、登出、当前用户   |
-| ProviderService     | 供应商 CRUD（Key 脱敏返回）+ 远程模型列表拉取                 |
-| ConversationService | 会话/消息管理、归档、解档、归档列表、彻底删除                 |
-| ChatService         | 发消息（服务端流）、中断、续传（服务端流，按字符 offset 重放）|
-| SyncService         | 增量 Pull（游标 + 循环分页）+ 常驻 Watch 流（提示 + 心跳）    |
+| 服务                | 职责                                                           |
+| ------------------- | -------------------------------------------------------------- |
+| AuthService         | 注册（首个用户 owner）、登录、刷新（轮换）、登出、当前用户     |
+| ProviderService     | 供应商 CRUD（Key 脱敏返回）+ 远程模型列表拉取                  |
+| ConversationService | 会话/消息管理、归档、解档、归档列表、彻底删除                  |
+| ChatService         | 发消息（服务端流）、中断、续传（服务端流，按字符 offset 重放） |
+| SyncService         | 增量 Pull（游标 + 循环分页）+ 常驻 Watch 流（提示 + 心跳）     |
 
 约定：认证走 `Authorization: Bearer` 请求头；所有数据按当前用户做归属校验；响应一律独立命名的 XxxResponse 包裹，不复用实体消息；实体不带协议字段（sync_seq 等只出现在对应协议载荷中）。
 
@@ -121,13 +121,13 @@ React 19 + Vite + Tailwind v4 + shadcn（Radix 组件），状态用 zustand，�
 
 分层（依赖单向，自上而下）：
 
-| 层             | 位置                | 职责                                                        |
-| -------------- | ------------------- | ----------------------------------------------------------- |
-| 生成物         | `src/gen`           | buf 生成，不入 git                                           |
-| 客户端         | `src/lib/clients`   | connect-es 客户端 + transport（dev 走 vite proxy）          |
-| 缓存/引擎      | `src/lib/db`、`sync`| IndexedDB 缓存层 + 同步引擎（见 §5），不依赖 stores         |
-| 状态           | `src/stores`        | zustand：auth / conversations / chat / providers / sync     |
-| 视图           | `src/pages`、`components` | 页面与组件；`hooks/` 只是 store 的统一入口              |
+| 层        | 位置                      | 职责                                                    |
+| --------- | ------------------------- | ------------------------------------------------------- |
+| 生成物    | `src/gen`                 | buf 生成，不入 git                                      |
+| 客户端    | `src/lib/clients`         | connect-es 客户端 + transport（dev 走 vite proxy）      |
+| 缓存/引擎 | `src/lib/db`、`sync`      | IndexedDB 缓存层 + 同步引擎（见 §5），不依赖 stores     |
+| 状态      | `src/stores`              | zustand：auth / conversations / chat / providers / sync |
+| 视图      | `src/pages`、`components` | 页面与组件；`hooks/` 只是 store 的统一入口              |
 
 数据流：**缓存优先读**——打开 App 先从 IndexedDB 铺数据（离线也能秒开），同步引擎在后台收敛后通过 `onSynced` 回调让 stores 再读一遍缓存；**变更走 RPC**，成功后乐观更新 UI 并触发一次 `pullAll` 让缓存即时收敛（watch hint 3 秒内兜底）。
 
