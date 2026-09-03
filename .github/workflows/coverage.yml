@@ -35,10 +35,35 @@ jobs:
           --health-interval=5s
           --health-timeout=5s
           --health-retries=20
+      # Without a reachable S3 backend the s3 smoke tests skip after their
+      # 2s probe, leaving s3.rs uncovered here while it is covered locally.
+      rustfs:
+        image: rustfs/rustfs:latest
+        env:
+          RUSTFS_ACCESS_KEY: lemma
+          RUSTFS_SECRET_KEY: lemma-secret
+          RUSTFS_ADDRESS: ":9000"
+        ports:
+          - 9000:9000
+        options: >-
+          --health-cmd="curl -f http://localhost:9000/health"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
     env:
       DATABASE_URL: postgres://lemma:lemma@127.0.0.1:5432/lemma-db
     steps:
       - uses: actions/checkout@v7
+
+      # The smoke tests expect the lemma bucket to pre-exist; same role as
+      # the rustfs-init one-shot container in docker-compose.
+      - name: Create archive bucket
+        run: >
+          docker run --rm --network host
+          -e AWS_ACCESS_KEY_ID=lemma -e AWS_SECRET_ACCESS_KEY=lemma-secret
+          -e AWS_REGION=us-east-1
+          amazon/aws-cli s3api create-bucket --bucket lemma
+          --endpoint-url http://127.0.0.1:9000
 
       # lemma-server is process wiring with no tests; excluding it keeps
       # the gate meaningful and drops the web/dist embed dependency.
