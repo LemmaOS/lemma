@@ -34,11 +34,11 @@ rust-test:
 rust-fmt:
     cargo fmt --all
 
-# [rust] 服务端代码覆盖率（终端汇总；豁免 lemma-server 接线代码，与 CI 口径一致）
+# [rust] 服务端代码覆盖率（终端汇总）
 rust-cov:
     cargo llvm-cov --workspace --exclude lemma-server --summary-only
 
-# [rust] 服务端代码覆盖率（HTML 报告，口径同上）
+# [rust] 服务端代码覆盖率（HTML 报告）
 rust-cov-html:
     cargo llvm-cov --workspace --exclude lemma-server --html --open
 
