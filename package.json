@@ -3,7 +3,8 @@
     "version": "0.1.0",
     "private": true,
     "workspaces": [
-        "web"
+        "web",
+        "desktop"
     ],
     "scripts": {
         "gen:proto": "cd proto && buf generate"
@@ -14,5 +15,9 @@
     },
     "devDependencies": {
         "@bufbuild/protoc-gen-es": "^2.14.1"
+    },
+    "allowScripts": {
+        "electron-winstaller@5.4.4": true,
+        "esbuild@0.25.12": true
     }
 }

@@ -21,6 +21,8 @@ dist-ssr
 web/src/gen
 
 # Desktop（Electron Forge）
+desktop/out/
+desktop/.vite/
 
 # Android / KMP
 
