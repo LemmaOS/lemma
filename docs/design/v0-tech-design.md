@@ -1,6 +1,6 @@
 # Lemma — 技术设计文档（v0）
 
-> 对应 PRD：`docs/prd/v0-prd.md` | 版本：v0.7 | 状态：评审中
+> 对应 PRD：`docs/prd/v0-prd.md` | 版本：v0.8 | 状态：评审中
 >
 > 本文档只描述粗粒度架构与关键技术选型；各领域设计在实现推进到对应阶段时再逐节填写，填写前不预设实现细节。
 > 文档只保留当前状态，历史变更由 git 提交记录承载。
@@ -12,7 +12,7 @@ graph LR
     subgraph 客户端
         W[Web 端<br>React + connect-es]
         D[桌面端<br>Electron + connect-es]
-        M[Android<br>KMP + connect-kotlin]
+        M[移动端<br>Flutter / KMP+CMP 评估中]
     end
     subgraph 自部署服务器
         S[后端服务<br>Rust / axum + connect-rust]
@@ -40,14 +40,14 @@ graph LR
 
 | 领域          | 选择                                                                     | 说明                                                                               |
 | ------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| RPC 框架      | Connect RPC（connect-rust / connect-es / connect-kotlin）                | 一份 proto 契约驱动三端；connect-rust 尚 pre-1.0，退路 tonic + tonic-web，契约不变 |
+| RPC 框架      | Connect RPC（connect-rust / connect-es / 移动端随选型：connect-dart 或 connect-kotlin）                | 一份 proto 契约驱动三端；connect-rust 尚 pre-1.0，退路 tonic + tonic-web，契约不变 |
 | 后端          | Rust + axum + tokio + sqlx                                               | —                                                                                  |
 | 数据库        | ParadeDB（PostgreSQL，含 pgvector / pg_search）                          | 为未来 RAG 预留                                                                    |
 | 认证          | JWT access token（短寿命）+ refresh token（存库、轮换）；argon2 密码哈希 | 无状态校验 + 可吊销                                                                |
 | 对象存储      | aws-sdk-s3（自定义 endpoint）                                            | AWS S3 / R2 / MinIO 一套代码通吃                                                   |
-| Web / 桌面    | React（Vite）+ Electron 套壳                                             | Zustand 状态、Dexie 离线缓存、shadcn/ui + Tailwind v4                              |
-| 前端分发      | Web 构建产物嵌入后端二进制                                               | 与 API 同源服务，免 CORS，前后端版本天然一致                                       |
-| 移动端        | KMP + Compose Multiplatform                                              | SQLDelight 缓存；只做 Android，为 iOS 预留                                         |
+| Web / 桌面    | React（Vite）+ Electron                                             | Zustand 状态、Dexie 离线缓存、shadcn/ui + Tailwind v4；桌面端内置 Web 构建产物 + 版本握手；壳技术 Electron 为基线、与 Flutter/CMP 原型对比后定案                              |
+| 前端分发      | Web 构建产物双路分发                                               | 嵌后端二进制与 API 同源（浏览器场景免 CORS、版本天然一致）；同一产物打包进桌面端，握手防版本错配                                       |
+| 移动端        | 待定：Flutter 或 KMP+CMP                                              | 各做最小原型实测对比后定案；connect-dart 官方全平台；connect-kotlin 覆盖 Android/JVM（CMP 的 Android 与桌面端可用），iOS（Kotlin/Native）暂不支持、上游 KMP 转换进行中（connect-kotlin#498，仅 JVM target）——当前只做 Android 故不构成阻塞；缓存选型随实现定                                         |
 | 国际化 / 主题 | react-i18next（中英双语）；明 / 暗 / 跟随系统                            | 跟随浏览器/系统，可切换、持久化                                                    |
 
 ## 3. Monorepo 布局
@@ -65,18 +65,17 @@ lemma/
 ├── proto/                   # 契约唯一事实源（buf 管理）
 │   └── lemma/v1/
 ├── web/                     # React Web 端（Vite）
-├── desktop/                 # Electron 壳，复用 web/ 产物（M3）
-├── mobile/                  # KMP + CMP（M4）
-│   ├── shared/
-│   └── androidApp/
+├── desktop/                 # Electron 壳（基线方案），内置 web/ 构建产物（M3）
+├── mobile/                  # 移动端（M4，Flutter / KMP+CMP 对比评估中）
 ├── deploy/                  # 部署编排（server + db）+ .env.example（M5）
 └── docs/
 ```
 
-**双端代码生成管线**（Rust 与 TS 均从 `proto/` 生成，均不入 git）：
+**多端代码生成管线**（Rust / TS / 移动端均从 `proto/` 生成，均不入 git）：
 
 - Rust：`crates/proto/build.rs` 编译期经 connectrpc-build 生成到 OUT_DIR，`cargo build` 自动重生成
 - TS：`just proto-gen` 经 buf + 本地 protoc-gen-es 插件生成到 `web/src/gen/`
+- 移动端：随选型定案接入对应生成链（Flutter 走 protoc-gen-dart + connect-dart；KMP 走 connect-kotlin），同样不入 git
 - 契约变更后：`just proto-lint && just proto-build && just proto-gen && cargo build` 全绿再提交
 
 ## 4. 后端架构
@@ -95,13 +94,13 @@ lemma/
 - 归档存储：归档时消息搬进 S3 兼容对象存储（MinIO/R2 等），PG 只留会话元数据（`archive_key` 指向对象）。写入两阶段保一致：先 PUT 对象（幂等），再 PG 事务标记归档 + 删消息，中途失败只留下无害孤儿对象。恢复在同一事务里从对象读回消息重插（保留原 seq/时间戳，sync_seq 走新值成为增量），提交后尽力删对象；彻底删除先查 `archive_key`、PG 删完再尽力删对象。对象是带版本的 JSON 信封（`archives/<conversation_id>.json`），由 `lemma-archive` crate 的 `ArchiveStore` trait 抽象（S3 与内存两实现，后者供测试）。存储配置按用户存 `s3_configs` 表（凭证 AES-GCM 密封、设置页维护、运行时生效），未配置时降级为旧行为：消息留在 PG 不外搬；换后端（endpoint/bucket 变更）且有存量归档时，保存旧配置快照并由 MigrateArchives 流式逐对象复制到新后端（幂等可重跑）。
 - 冲突语义是 LWW：同一条目只接受 syncSeq 更大的版本。
 
-**客户端缓存**（web）：IndexedDB（Dexie），每个用户一个库 `lemma-<userId>`，登出不清、切号换库。三张表：conversations、messages（复合索引 `[conversationId+seq]`，seq 为会话内单调序号）、meta（存同步游标）。proto 实体拍平成行：Timestamp 转毫秒、bigint 转字符串（IndexedDB 索引不支持 bigint）。归档会话本地不留消息缓存：每次 Pull 按归档名单清空，恢复后随增量自动拉回。
+**客户端缓存**（web）：IndexedDB（Dexie），每个用户一个库 `lemma-<userId>`，登出不清、切号换库。三张表：conversations、messages（复合索引 `[conversationId+seq]`，seq 为会话内单调序号）、meta（存同步游标）。proto 实体拍平成行：Timestamp 转毫秒、bigint 转字符串（IndexedDB 索引不支持 bigint）。归档会话本地不留消息缓存：每次 Pull 按归档名单清空，恢复后随增量自动拉回。桌面端复用同一 web 构建与缓存层，断网浏览能力同源获得。
 
 **同步引擎**（`web/src/lib/sync.ts`）：`pullAll` 游标循环补拉、并发调用合并成同一次；`watchLoop` 连上先补拉再消费 hint，断流后指数退避重连（1s 起步、封顶 30s），Pull 失败也走同一个重连循环，不另开重试路径。引擎不反向 import stores，补拉完成后通过 `onSynced` 监听器通知上层回灌。
 
 ## 6. 接口设计
 
-契约放 `proto/lemma/v1/`，正式定义以 proto 为准（已全部定稿，buf STANDARD 通过）：
+契约放 `proto/lemma/v1/`，正式定义以 proto 为准（已定稿部分 buf STANDARD 通过；SystemService 随 M3 新增）：
 
 | 服务                | 职责                                                           |
 | ------------------- | -------------------------------------------------------------- |
@@ -110,6 +109,7 @@ lemma/
 | ConversationService | 会话/消息管理、归档、解档、归档列表、彻底删除                  |
 | ChatService         | 发消息（服务端流）、中断、续传（服务端流，按字符 offset 重放） |
 | SyncService         | 增量 Pull（游标 + 循环分页）+ 常驻 Watch 流（提示 + 心跳）     |
+| SystemService       | 服务器版本与客户端兼容区间查询（客户端启动握手；随 M3 定稿）   |
 
 约定：认证走 `Authorization: Bearer` 请求头；所有数据按当前用户做归属校验；响应一律独立命名的 XxxResponse 包裹，不复用实体消息；实体不带协议字段（sync_seq 等只出现在对应协议载荷中）。
 
@@ -134,6 +134,8 @@ React 19 + Vite + Tailwind v4 + shadcn（Radix 组件），状态用 zustand，�
 聊天特例：流式期间本地流是权威，`syncFromCache` 跳过回灌；断线续传按已收字符数 offset 重放（最多 3 次）；发送/中断结束后主动补拉。
 
 性能：三个路由页 + Markdown 渲染（MessageContent）各自懒加载拆包；生产构建由 rust-embed 嵌进服务端二进制，单文件部署。
+
+**桌面端**（M3，壳技术 Electron 为基线、与 Flutter/CMP 原型对比后定案）：renderer 为内置的 web 构建产物（本地加载，启动无白屏、断网可浏览缓存），服务器地址首启输入并本地持久化；连接失败 / 版本不兼容落到本地错误页（与首启地址页同一载体）。启动时经 SystemService 做版本握手，服务器版本不在兼容区间则引导升级。壳加载本地产物后跨源访问服务器 API，CORS 放行与握手一并设计；transport baseUrl 由硬编码 `/` 改为可配置。托盘、快捷键、自动更新等壳能力随 M3 推进补充。
 
 ## 8. 部署
 

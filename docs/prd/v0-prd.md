@@ -1,6 +1,6 @@
 # Lemma — PRD（产品需求文档）
 
-> 版本：v0.5 | 状态：评审中（开放问题已全部对齐）
+> 版本：v0.6 | 状态：评审中（开放问题已全部对齐）
 > 文档只保留当前状态，历史变更由 git 提交记录承载。
 
 ## 1. 背景与目标
@@ -24,8 +24,8 @@
 | ------ | --------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | 服务端 | Rust                                                      | 自部署，对外提供 API                                                                    |
 | Web 端 | React                                                     | 浏览器直接使用，与桌面端共用代码                                                        |
-| 桌面端 | Electron（React 套壳）                                    | Windows / macOS / Linux 三平台                                                          |
-| 移动端 | KMP + CMP（Kotlin Multiplatform + Compose Multiplatform） | 当前只做 Android（无 Apple 设备，无法开发调试 iOS）；选 KMP+CMP 是为日后扩展 iOS 做准备 |
+| 桌面端 | Electron（基线）；Flutter / CMP 原型对比后定案                                    | Windows / macOS / Linux 三平台；启动时与服务器版本握手，离线经本地缓存浏览历史                                                          |
+| 移动端 | Flutter 或 KMP + CMP（原型对比中） | 两者各做最小原型实测后定案；当前只做 Android（无 Apple 设备，无法开发调试 iOS），iOS 仅作架构预留 |
 
 ## 4. 功能需求
 
@@ -99,16 +99,16 @@
 ## 6. 技术架构（初步）
 
 - **后端**：Rust + axum + connect-rust（Connect RPC，proto + buf 契约），ParadeDB（PostgreSQL 18，含 pgvector/pg_search，为后续 RAG 预留）
-- **Web / 桌面**：React + 构建工具（Vite），Electron 套壳，一套代码
-- **移动端**：Kotlin Multiplatform + Compose Multiplatform，共享业务逻辑层
+- **Web / 桌面**：React + 构建工具（Vite），一套代码；桌面端内置 UI + 版本握手 + 离线缓存的路线已定，壳技术 Electron 为基线、与 Flutter/CMP 原型对比后定案
+- **移动端**：Flutter 或 KMP+CMP（原型对比后定案），Connect 客户端从同一份 proto 契约生成
 - **部署**：Docker Compose（后端镜像 + PostgreSQL）
 
 ## 7. 里程碑
 
 - **M1**：后端可用 —— 用户体系 + 一家供应商跑通 + 流式对话 API
 - **M2**：Web 端可用 —— 完整对话体验（多会话、历史、流式）
-- **M3**：桌面端可用 —— Electron 打包三平台
-- **M4**：移动端可用 —— Android（iOS 留待未来有 Apple 设备和开发者账号后再做，KMP+CMP 架构已为此预留）
+- **M3**：桌面端可用 —— 打包三平台（内置 UI + 版本握手 + 离线可读；壳技术对比定案，Electron 为基线）
+- **M4**：移动端可用 —— Android（Flutter / KMP+CMP 原型对比后定案；iOS 留待未来有 Apple 设备和开发者账号后再做，架构为此预留）
 - **M5**：开源发布 —— 文档、部署脚本、仓库整理
 
 ## 8. 验收标准（MVP）
