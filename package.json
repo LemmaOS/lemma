@@ -8,6 +8,10 @@
     "scripts": {
         "gen:proto": "cd proto && buf generate"
     },
+    "author": {
+        "name": "wanzhao-ysy",
+        "email": "wanzhao_ysy@qq.com"
+    },
     "devDependencies": {
         "@bufbuild/protoc-gen-es": "^2.14.1"
     }
