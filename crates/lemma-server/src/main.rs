@@ -71,6 +71,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             connect_service.clone(),
         );
     }
+    // The desktop shell loads its UI from file://, so its API calls arrive
+    // cross-origin (Origin: null). Auth is Bearer-only with no cookies, so
+    // an open CORS policy does not weaken browser security.
+    let app = app.layer(
+        tower_http::cors::CorsLayer::new()
+            .allow_origin(tower_http::cors::Any)
+            .allow_methods(tower_http::cors::Any)
+            .allow_headers(tower_http::cors::Any),
+    );
     let listener = tokio::net::TcpListener::bind("0.0.0.0:1025").await?;
     println!("listening on {}", listener.local_addr()?);
     axum::serve(listener, app).await?;
