@@ -3,7 +3,7 @@ import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 
 import { AuthService } from "@/gen/lemma/v1/auth_pb";
-import { resolveBaseUrl } from "./server-url";
+import { appPath, resolveBaseUrl } from "./server-url";
 import {
     clearTokens,
     getAccessToken,
@@ -48,7 +48,7 @@ const authInterceptor: Interceptor = (next) => async (req) => {
         }
         if (!(await tryRefresh())) {
             clearTokens();
-            window.location.href = "/login";
+            window.location.href = appPath("/login");
             throw e;
         }
         const fresh = getAccessToken();

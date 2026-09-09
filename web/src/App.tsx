@@ -1,6 +1,13 @@
 import { lazy, Suspense, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from "react-router";
+import {
+    BrowserRouter,
+    HashRouter,
+    Navigate,
+    Outlet,
+    Route,
+    Routes,
+} from "react-router";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/stores/auth";
@@ -30,6 +37,8 @@ function RequireAuth() {
     if (!user) return <Navigate to="/login" replace />;
     return <Outlet />;
 }
+
+const Router = window.location.protocol === "file:" ? HashRouter : BrowserRouter;
 
 export default function App() {
     const bootstrap = useAuth((s) => s.bootstrap);
@@ -61,7 +70,7 @@ export default function App() {
 
     return (
         <TooltipProvider>
-            <BrowserRouter>
+            <Router>
                 <Suspense fallback={<Loading />}>
                     <Routes>
                         <Route path="/login" element={<LoginPage />} />
@@ -75,7 +84,7 @@ export default function App() {
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Routes>
                 </Suspense>
-            </BrowserRouter>
+            </Router>
         </TooltipProvider>
     );
 }

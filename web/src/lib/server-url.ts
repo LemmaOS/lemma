@@ -13,3 +13,7 @@ export function resolveBaseUrl(): string {
             : null;
     return injected || stored || "/";
 }
+
+export function appPath(path: string): string {
+    return window.location.protocol === "file:" ? `#${path}` : path;
+}
