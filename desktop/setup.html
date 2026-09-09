@@ -1,0 +1,27 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <title>Connect to your Lemma server</title>
+    </head>
+    <body>
+        <main class="card">
+            <h1>Lemma</h1>
+            <p class="desc">
+                Enter the address of your self-hosted Lemma server.
+            </p>
+            <p id="reason" class="reason" hidden></p>
+            <form id="form">
+                <input
+                    id="url"
+                    type="text"
+                    placeholder="http://127.0.0.1:1025"
+                    autocomplete="off"
+                    spellcheck="false"
+                />
+                <button type="submit">Connect</button>
+            </form>
+        </main>
+        <script type="module" src="/src/setup.ts"></script>
+    </body>
+</html>

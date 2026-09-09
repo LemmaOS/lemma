@@ -1,0 +1,88 @@
+:root {
+    color-scheme: dark;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #151615;
+    color: #e6e6e4;
+    font-family:
+        system-ui,
+        -apple-system,
+        "Segoe UI",
+        sans-serif;
+}
+
+.card {
+    width: 380px;
+    padding: 32px;
+    background: #1c1e1b;
+    border: 1px solid #2a2c29;
+    border-radius: 16px;
+}
+
+h1 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.desc {
+    margin: 0 0 20px;
+    font-size: 14px;
+    color: #8f918c;
+}
+
+.reason {
+    margin: 0 0 16px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #fbbf24;
+    background: #451a03;
+    border: 1px solid #92400e;
+}
+
+form {
+    display: flex;
+    gap: 8px;
+}
+
+input {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 14px;
+    color: inherit;
+    background: #151615;
+    border: 1px solid #2a2c29;
+    border-radius: 8px;
+    outline: none;
+}
+
+input:focus {
+    border-color: #60b1ff;
+    box-shadow: 0 0 0 3px #60b1ff33;
+}
+
+button {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #151615;
+    background: #e6e6e4;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #ffffff;
+}
