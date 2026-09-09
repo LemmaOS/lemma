@@ -66,6 +66,14 @@ web-lint:
 web-fmt:
     cd web && npm run format
 
+# [desktop] 桌面端 eslint 检查
+desktop-lint:
+    cd desktop && npm run lint
+
+# [desktop] 桌面端代码格式化
+desktop-fmt:
+    cd desktop && npm run format
+
 # [docker] 构建镜像
 docker-build:
     docker build -t lemma:latest .

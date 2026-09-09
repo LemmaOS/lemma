@@ -10,7 +10,9 @@
         "package": "electron-forge package",
         "make": "electron-forge make",
         "publish": "electron-forge publish",
-        "lint": "eslint ."
+        "lint": "eslint .",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
     },
     "author": {
         "name": "wanzhao-ysy",
@@ -31,6 +33,7 @@
         "electron": "44.2.0",
         "eslint": "^10.9.1",
         "globals": "^17.12.0",
+        "prettier": "^3.9.6",
         "typescript": "~6.0.3",
         "typescript-eslint": "^8.69.0",
         "vite": "^6.4.3"
