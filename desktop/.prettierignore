@@ -1,4 +1,5 @@
 out
 .vite
+web-dist
 node_modules
 package-lock.json

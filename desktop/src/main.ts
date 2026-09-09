@@ -31,8 +31,13 @@ const loadApp = () => {
         loadSetupPage();
         return;
     }
-    // Failures surface through did-fail-load below.
-    mainWindow.loadURL(serverUrl).catch(() => {});
+    if (app.isPackaged) {
+        mainWindow.loadFile(path.join(__dirname, "../../web-dist/index.html"));
+    } else {
+        // Dev mode loads the app from the server itself; failures surface
+        // through did-fail-load below.
+        mainWindow.loadURL(serverUrl).catch(() => {});
+    }
 };
 
 const createWindow = () => {
@@ -41,7 +46,6 @@ const createWindow = () => {
         height: 800,
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
-            additionalArguments: [`--lemma-server-url=${getServerUrl() ?? ""}`],
         },
     });
     mainWindow = window;
@@ -67,6 +71,9 @@ ipcMain.handle("get-server-url", () => getServerUrl());
 ipcMain.handle("set-server-url", (_event, url: string) => {
     setServerUrl(url);
     loadApp();
+});
+ipcMain.on("get-server-url-sync", (event) => {
+    event.returnValue = getServerUrl() ?? "";
 });
 
 const gotTheLock = app.requestSingleInstanceLock();

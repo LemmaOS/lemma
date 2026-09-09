@@ -10,6 +10,12 @@ import { FuseV1Options, FuseVersion } from "@electron/fuses";
 const config: ForgeConfig = {
     packagerConfig: {
         asar: true,
+        // Mirrors plugin-vite's default ignore (which only keeps .vite) and
+        // additionally keeps the bundled web build.
+        ignore: (file) => {
+            if (!file) return false;
+            return !file.startsWith("/.vite") && !file.startsWith("/web-dist");
+        },
     },
     rebuildConfig: {},
     makers: [
@@ -36,10 +42,6 @@ const config: ForgeConfig = {
                 },
             ],
             renderer: [
-                {
-                    name: "main_window",
-                    config: "vite.renderer.config.mts",
-                },
                 {
                     name: "setup",
                     config: "vite.setup.config.mts",

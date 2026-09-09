@@ -16,6 +16,7 @@ lerna-debug.log*
 # Web（Vite）
 dist
 dist-ssr
+web/dist-electron
 *.local
 # proto 生成的 TS 代码
 web/src/gen
@@ -23,6 +24,7 @@ web/src/gen
 # Desktop（Electron Forge）
 desktop/out/
 desktop/.vite/
+desktop/web-dist/
 
 # Android / KMP
 

@@ -1,11 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 
-const serverUrlArg = process.argv.find((arg) =>
-    arg.startsWith("--lemma-server-url="),
-);
-const serverUrl = serverUrlArg
-    ? serverUrlArg.slice("--lemma-server-url=".length)
-    : "";
+const serverUrl = ipcRenderer.sendSync("get-server-url-sync");
 
 contextBridge.exposeInMainWorld("__LEMMA_SERVER_URL__", serverUrl);
 contextBridge.exposeInMainWorld("lemmaDesktop", {
