@@ -3,6 +3,7 @@ import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 
 import { AuthService } from "@/gen/lemma/v1/auth_pb";
+import { resolveBaseUrl } from "./server-url";
 import {
     clearTokens,
     getAccessToken,
@@ -12,7 +13,7 @@ import {
 
 // The refresh call bypasses the interceptor below, or a 401 from refresh
 // itself would trigger another refresh.
-const bareTransport = createConnectTransport({ baseUrl: "/" });
+const bareTransport = createConnectTransport({ baseUrl: resolveBaseUrl() });
 
 // Any failure (missing token, network, server rejection) reads as false;
 // the caller then drops the session.
@@ -57,6 +58,6 @@ const authInterceptor: Interceptor = (next) => async (req) => {
 };
 
 export const transport = createConnectTransport({
-    baseUrl: "/",
+    baseUrl: resolveBaseUrl(),
     interceptors: [authInterceptor],
 });
