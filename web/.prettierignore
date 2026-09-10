@@ -1,5 +1,4 @@
 dist
-dist-electron
 node_modules
 src/gen
 package-lock.json

@@ -54,7 +54,7 @@ web-dev:
 web-test:
     cd web && npm test
 
-# [web] 网页前端覆盖率（阈值与 CI 一致）
+# [web] 网页前端覆盖率
 web-cov:
     cd web && npm run test:cov
 
@@ -66,7 +66,7 @@ web-lint:
 web-fmt:
     cd web && npm run format
 
-# [web] 网页前端构建（桌面端变体：相对 base + 独立产物目录）
+# [web] 桌面端的网页前端构建
 web-build-desktop:
     cd web && npm run build:desktop
 
@@ -78,11 +78,10 @@ desktop-lint:
 desktop-fmt:
     cd desktop && npm run format
 
-# [desktop] 桌面端打包（先出 web 桌面变体并拷入）
+# [desktop] 桌面端打包
 desktop-package:
     just proto-gen
     just web-build-desktop
-    node -e "const fs=require('fs');fs.rmSync('desktop/web-dist',{recursive:true,force:true});fs.cpSync('web/dist-electron','desktop/web-dist',{recursive:true})"
     cd desktop && npm run package
 
 # [docker] 构建镜像
