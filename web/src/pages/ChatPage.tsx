@@ -2,6 +2,7 @@ import { timestampDate } from "@bufbuild/protobuf/wkt";
 import { PanelLeft } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router";
 
 import { AppSidebar } from "@/components/chat/AppSidebar";
 import { ChatComposer } from "@/components/chat/ChatComposer";
@@ -35,8 +36,9 @@ export default function ChatPage() {
     const conversations = useConversations();
     const chat = useChat();
     const providersStore = useProviders();
+    const navigate = useNavigate();
 
-    const [activeId, setActiveId] = useState<string | null>(null);
+    const activeId = useParams().id ?? null;
     const [sidebarCollapsed, setSidebarCollapsed] = useState(
         () => localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1",
     );
@@ -102,7 +104,7 @@ export default function ChatPage() {
             let cid = activeId;
             if (!cid) {
                 cid = await conversations.create();
-                setActiveId(cid);
+                navigate(`/conversations/${cid}`);
                 await chat.open(cid);
             }
             await chat.send(model.providerId, model.model, text);
@@ -137,7 +139,7 @@ export default function ChatPage() {
 
     const handleArchive = async (id: string) => {
         await conversations.archive(id);
-        if (id === activeId) setActiveId(null);
+        if (id === activeId) navigate("/");
     };
 
     const handleRename = async (id: string, title: string) => {
@@ -202,8 +204,8 @@ export default function ChatPage() {
                     sessions={summaries}
                     archived={archivedSummaries}
                     activeSessionId={activeId}
-                    onGoHome={() => setActiveId(null)}
-                    onOpenSession={setActiveId}
+                    onGoHome={() => navigate("/")}
+                    onOpenSession={(id) => navigate(`/conversations/${id}`)}
                     onArchiveSession={(id) => void handleArchive(id)}
                     onRenameSession={(id, title) =>
                         void handleRename(id, title)

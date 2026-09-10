@@ -296,7 +296,7 @@ export function AppSidebar({
                         </div>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
-                            <Link to="/settings/providers">
+                            <Link to="/settings">
                                 <Settings className="size-4" />
                                 {t("sidebar.appSettings")}
                             </Link>

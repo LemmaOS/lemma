@@ -38,7 +38,8 @@ function RequireAuth() {
     return <Outlet />;
 }
 
-const Router = window.location.protocol === "file:" ? HashRouter : BrowserRouter;
+const Router =
+    window.location.protocol === "file:" ? HashRouter : BrowserRouter;
 
 export default function App() {
     const bootstrap = useAuth((s) => s.bootstrap);
@@ -77,7 +78,20 @@ export default function App() {
                         <Route element={<RequireAuth />}>
                             <Route path="/" element={<ChatPage />} />
                             <Route
-                                path="/settings/providers"
+                                path="/conversations/:id"
+                                element={<ChatPage />}
+                            />
+                            <Route
+                                path="/settings"
+                                element={
+                                    <Navigate
+                                        to="/settings/appearance"
+                                        replace
+                                    />
+                                }
+                            />
+                            <Route
+                                path="/settings/:section"
                                 element={<ProvidersPage />}
                             />
                         </Route>
