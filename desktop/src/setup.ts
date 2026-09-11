@@ -44,6 +44,11 @@ const probe = async (url: string): Promise<void> => {
     const timer = setTimeout(() => controller.abort(), 5000);
     try {
         await fetch(`${url}/`, { signal: controller.signal });
+    } catch (error) {
+        if (error instanceof Error) throw error;
+        // fetch rejects with TypeError, but DOMException or a plain string
+        // can surface depending on the runtime; normalize to Error.
+        throw new Error(String(error), { cause: error });
     } finally {
         clearTimeout(timer);
     }

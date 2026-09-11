@@ -83,6 +83,13 @@
     --code-foreground: oklch(0.28 0.02 260);
     --code-border: oklch(0.91 0.005 260);
     --composer: #ffffff;
+    /* Scrollbar thumbs derive from foreground so they follow the theme. */
+    --scrollbar-thumb: color-mix(in srgb, var(--foreground) 18%, transparent);
+    --scrollbar-thumb-hover: color-mix(
+        in srgb,
+        var(--foreground) 32%,
+        transparent
+    );
 }
 
 [data-theme="dark"] {
