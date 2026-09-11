@@ -103,7 +103,7 @@ jobs:
       - name: Setup protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: "36.0"
+          version: "36.x"
 
       - name: Clippy
         run: cargo clippy --workspace --all-targets -- -D warnings
@@ -171,7 +171,7 @@ jobs:
       - name: Setup protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: "36.0"
+          version: "36.x"
 
       - name: Install nextest
         uses: taiki-e/install-action@nextest

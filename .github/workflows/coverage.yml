@@ -78,7 +78,7 @@ jobs:
       - name: Setup protoc
         uses: arduino/setup-protoc@v3
         with:
-          version: "36.0"
+          version: "36.x"
 
       - name: Install nextest and cargo-llvm-cov
         uses: taiki-e/install-action@v2
