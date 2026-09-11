@@ -16,3 +16,42 @@
 html.desktop body {
     padding-top: 40px;
 }
+
+/* The strip reservation must not inflate page height, or full-height pages
+   overflow the window and spawn a phantom document scrollbar. */
+html.desktop .min-h-dvh {
+    min-height: calc(100dvh - 40px);
+}
+
+html.desktop .h-dvh {
+    height: calc(100dvh - 40px);
+}
+
+/* Thin, theme-aware scrollbars; the default Chromium scrollbar reads as
+   browser chrome inside the desktop shell. */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background: var(--scrollbar-thumb);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-corner {
+    background: transparent;
+}
