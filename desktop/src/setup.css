@@ -88,3 +88,34 @@ button {
 button:hover {
     background: #ffffff;
 }
+
+button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+button.secondary {
+    color: #e6e6e4;
+    background: transparent;
+    border: 1px solid #2a2c29;
+}
+
+button.secondary:hover {
+    background: #2a2c29;
+}
+
+.server-url {
+    margin: 0 0 20px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    word-break: break-all;
+    color: #8f918c;
+    background: #151615;
+    border: 1px solid #2a2c29;
+}
+
+.actions {
+    display: flex;
+    justify-content: space-between;
+}

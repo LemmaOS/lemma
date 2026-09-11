@@ -5,7 +5,7 @@
         <title>Connect to your Lemma server</title>
     </head>
     <body>
-        <main class="card">
+        <main class="card" id="connect-view">
             <h1>Lemma</h1>
             <p class="desc">
                 Enter the address of your self-hosted Lemma server.
@@ -19,8 +19,22 @@
                     autocomplete="off"
                     spellcheck="false"
                 />
-                <button type="submit">Connect</button>
+                <button type="submit" id="connect">Connect</button>
             </form>
+        </main>
+        <main class="card" id="done-view" hidden>
+            <h1>Connected</h1>
+            <p class="desc">
+                Lemma will sync your conversations and settings with this
+                server.
+            </p>
+            <p class="server-url" id="connected-url"></p>
+            <div class="actions">
+                <button type="button" id="change" class="secondary">
+                    Change server
+                </button>
+                <button type="button" id="done">Done</button>
+            </div>
         </main>
         <script type="module" src="/src/setup.ts"></script>
     </body>
