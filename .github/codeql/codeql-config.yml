@@ -1,0 +1,13 @@
+name: lemma-codeql
+
+queries:
+  - uses: security-extended
+
+# Rust integration tests and vitest files contain hard-coded fixtures
+# (password hashes, JWT secrets) that keep raising
+# hard-coded-cryptographic-value; dismissals do not survive line moves.
+# Inline #[cfg(test)] modules in src files cannot be path-excluded and
+# still rely on dismissal.
+paths-ignore:
+  - "**/tests/**"
+  - "**/*.test.ts"
