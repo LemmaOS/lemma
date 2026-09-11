@@ -1,38 +1,30 @@
-import { Link } from "react-router";
+import { Link, NavLink } from "react-router";
 import { useTranslation } from "react-i18next";
 import { ArrowLeft, Bot, Database, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type SettingsSection = "appearance" | "providers" | "storage";
-
-interface SettingsNavProps {
-    section: SettingsSection;
-    onSelect: (section: SettingsSection) => void;
-}
-
 interface NavItemProps {
     icon: React.ComponentType<{ className?: string }>;
     label: string;
-    selected: boolean;
-    onClick: () => void;
+    to: string;
 }
 
-function NavItem({ icon: Icon, label, selected, onClick }: NavItemProps) {
+function NavItem({ icon: Icon, label, to }: NavItemProps) {
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            aria-pressed={selected}
-            className={cn(
-                "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                selected
-                    ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                    : "text-sidebar-foreground hover:bg-accent/60",
-            )}
+        <NavLink
+            to={to}
+            className={({ isActive }) =>
+                cn(
+                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
+                    isActive
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground hover:bg-accent/60",
+                )
+            }
         >
             <Icon className="size-4 shrink-0" />
             <span className="truncate">{label}</span>
-        </button>
+        </NavLink>
     );
 }
 
@@ -53,7 +45,7 @@ function NavGroup({
     );
 }
 
-export function SettingsNav({ section, onSelect }: SettingsNavProps) {
+export function SettingsNav() {
     const { t } = useTranslation();
     return (
         <aside className="flex w-[220px] shrink-0 flex-col bg-transparent p-3">
@@ -74,24 +66,21 @@ export function SettingsNav({ section, onSelect }: SettingsNavProps) {
                     <NavItem
                         icon={Palette}
                         label={t("settings.appearance")}
-                        selected={section === "appearance"}
-                        onClick={() => onSelect("appearance")}
+                        to="/settings/appearance"
                     />
                 </NavGroup>
                 <NavGroup label={t("settings.groupAgent")}>
                     <NavItem
                         icon={Bot}
                         label={t("settings.aiProviders")}
-                        selected={section === "providers"}
-                        onClick={() => onSelect("providers")}
+                        to="/settings/providers"
                     />
                 </NavGroup>
                 <NavGroup label={t("settings.groupData")}>
                     <NavItem
                         icon={Database}
                         label={t("settings.storage")}
-                        selected={section === "storage"}
-                        onClick={() => onSelect("storage")}
+                        to="/settings/storage"
                     />
                 </NavGroup>
             </nav>

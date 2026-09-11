@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Navigate, useParams } from "react-router";
 
 import { AppearancePanel } from "@/components/providers/AppearancePanel";
 import {
@@ -9,15 +10,13 @@ import {
 import { ProviderDetail } from "@/components/providers/ProviderDetail";
 import { ProviderListPane } from "@/components/providers/ProviderListPane";
 import { StoragePanel } from "@/components/providers/StoragePanel";
-import {
-    SettingsNav,
-    type SettingsSection,
-} from "@/components/providers/SettingsNav";
+import { SettingsNav } from "@/components/providers/SettingsNav";
 import { useProviders } from "@/hooks/useProviders";
+import { parseSettingsSection } from "@/lib/settingsSection";
 
 export default function ProvidersPage() {
     const { t } = useTranslation();
-    const [section, setSection] = useState<SettingsSection>("providers");
+    const section = parseSettingsSection(useParams().section);
     const store = useProviders();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [creating, setCreating] = useState(false);
@@ -44,9 +43,13 @@ export default function ProvidersPage() {
         setSelectedId(null);
     };
 
+    if (!section) {
+        return <Navigate to="/settings/appearance" replace />;
+    }
+
     return (
         <div className="flex h-dvh gap-2 bg-sidebar p-2 text-foreground">
-            <SettingsNav section={section} onSelect={setSection} />
+            <SettingsNav />
             {section === "appearance" ? (
                 <main className="min-w-0 flex-1 overflow-y-auto rounded-lg border border-border app-canvas">
                     <AppearancePanel />

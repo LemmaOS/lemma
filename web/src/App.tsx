@@ -78,7 +78,20 @@ export default function App() {
                         <Route element={<RequireAuth />}>
                             <Route path="/" element={<ChatPage />} />
                             <Route
-                                path="/settings/providers"
+                                path="/conversations/:id"
+                                element={<ChatPage />}
+                            />
+                            <Route
+                                path="/settings"
+                                element={
+                                    <Navigate
+                                        to="/settings/appearance"
+                                        replace
+                                    />
+                                }
+                            />
+                            <Route
+                                path="/settings/:section"
                                 element={<ProvidersPage />}
                             />
                         </Route>
