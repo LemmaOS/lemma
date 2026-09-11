@@ -3,6 +3,12 @@ name: lemma-codeql
 queries:
   - uses: security-extended
 
+# Pinning actions by tag is accepted project policy; dependabot tracks the
+# github-actions ecosystem, so the unpinned-tag hardening query is noise here.
+query-filters:
+  - exclude:
+      id: actions/unpinned-tag
+
 # Rust integration tests and vitest files contain hard-coded fixtures
 # (password hashes, JWT secrets) that keep raising
 # hard-coded-cryptographic-value; dismissals do not survive line moves.
