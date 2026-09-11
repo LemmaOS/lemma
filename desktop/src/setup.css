@@ -19,6 +19,7 @@ body {
         -apple-system,
         "Segoe UI",
         sans-serif;
+    -webkit-app-region: drag;
 }
 
 .card {
@@ -27,6 +28,7 @@ body {
     background: #1c1e1b;
     border: 1px solid #2a2c29;
     border-radius: 16px;
+    -webkit-app-region: no-drag;
 }
 
 h1 {

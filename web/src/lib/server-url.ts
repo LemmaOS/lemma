@@ -1,7 +1,16 @@
 declare global {
     interface Window {
         __LEMMA_SERVER_URL__?: string;
+        lemmaDesktop?: {
+            getServerUrl(): Promise<string | undefined>;
+            setServerUrl(url: string): Promise<void>;
+            toggleMaximize(): void;
+        };
     }
+}
+
+export function isDesktop(): boolean {
+    return typeof window !== "undefined" && window.lemmaDesktop !== undefined;
 }
 
 export function resolveBaseUrl(): string {

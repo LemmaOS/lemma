@@ -8,4 +8,7 @@ contextBridge.exposeInMainWorld("lemmaDesktop", {
         ipcRenderer.invoke("get-server-url"),
     setServerUrl: (url: string): Promise<void> =>
         ipcRenderer.invoke("set-server-url", url),
+    toggleMaximize: (): void => {
+        ipcRenderer.send("toggle-maximize");
+    },
 });

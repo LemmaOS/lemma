@@ -38,7 +38,8 @@ function RequireAuth() {
     return <Outlet />;
 }
 
-const Router = window.location.protocol === "file:" ? HashRouter : BrowserRouter;
+const Router =
+    window.location.protocol === "file:" ? HashRouter : BrowserRouter;
 
 export default function App() {
     const bootstrap = useAuth((s) => s.bootstrap);

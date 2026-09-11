@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { resolveBaseUrl } from "@/lib/server-url";
+import { isDesktop, resolveBaseUrl } from "@/lib/server-url";
 
 describe("resolveBaseUrl", () => {
     beforeEach(() => {
@@ -32,5 +32,20 @@ describe("resolveBaseUrl", () => {
         vi.stubGlobal("window", { __LEMMA_SERVER_URL__: "" });
         vi.stubGlobal("localStorage", { getItem: () => "" });
         expect(resolveBaseUrl()).toBe("/");
+    });
+});
+
+describe("isDesktop", () => {
+    beforeEach(() => {
+        vi.unstubAllGlobals();
+    });
+
+    it("is false in a plain browser", () => {
+        expect(isDesktop()).toBe(false);
+    });
+
+    it("is true when the desktop preload bridge is present", () => {
+        vi.stubGlobal("window", { lemmaDesktop: {} });
+        expect(isDesktop()).toBe(true);
     });
 });

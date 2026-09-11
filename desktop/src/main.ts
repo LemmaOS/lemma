@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain, Menu, nativeTheme } from "electron";
 import started from "electron-squirrel-startup";
 import path from "node:path";
 import { getServerUrl, setServerUrl } from "./settings";
@@ -44,6 +44,15 @@ const createWindow = () => {
     const window = new BrowserWindow({
         width: 1280,
         height: 800,
+        backgroundColor: "#151615",
+        titleBarStyle: "hidden",
+        titleBarOverlay: {
+            color: nativeTheme.shouldUseDarkColors ? "#151615" : "#ffffff",
+            symbolColor: nativeTheme.shouldUseDarkColors
+                ? "#e6e6e4"
+                : "#1f1f1f",
+            height: 40,
+        },
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
         },
@@ -51,6 +60,18 @@ const createWindow = () => {
     mainWindow = window;
     window.on("closed", () => {
         mainWindow = null;
+    });
+
+    window.webContents.on("before-input-event", (_event, input) => {
+        if (input.type !== "keyDown") return;
+        const devtoolsKey =
+            input.key === "F12" ||
+            ((input.control || input.meta) &&
+                input.shift &&
+                input.key.toLowerCase() === "i");
+        if (devtoolsKey) {
+            window.webContents.toggleDevTools();
+        }
     });
 
     window.webContents.on(
@@ -75,6 +96,14 @@ ipcMain.handle("set-server-url", (_event, url: string) => {
 ipcMain.on("get-server-url-sync", (event) => {
     event.returnValue = getServerUrl() ?? "";
 });
+ipcMain.on("toggle-maximize", () => {
+    if (!mainWindow) return;
+    if (mainWindow.isMaximized()) {
+        mainWindow.unmaximize();
+    } else {
+        mainWindow.maximize();
+    }
+});
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -90,7 +119,10 @@ if (!gotTheLock) {
         }
     });
 
-    app.on("ready", createWindow);
+    app.on("ready", () => {
+        Menu.setApplicationMenu(null);
+        createWindow();
+    });
 
     app.on("window-all-closed", () => {
         if (process.platform !== "darwin") {
